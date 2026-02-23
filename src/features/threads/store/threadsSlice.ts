@@ -50,13 +50,26 @@ export const fetchTopicById = createAsyncThunk(
   'topics/fetchById',
   async (topicId: string, { rejectWithValue }) => {
     try {
+      const { data: { user } } = await supabase.auth.getUser()
       const { data, error } = await supabase
         .from('topics')
         .select(`*, author:profiles(id, username, avatar_url, role), channel:channels(id, name, slug, icon)`)
         .eq('id', topicId)
         .single()
       if (error) throw error
-      return data as Topic
+
+      let is_starred = false
+      if (user) {
+        const { data: star } = await supabase
+          .from('topic_stars')
+          .select('id')
+          .eq('topic_id', topicId)
+          .eq('user_id', user.id)
+          .single()
+        is_starred = !!star
+      }
+
+      return { ...data, is_starred } as Topic
     } catch (error: any) {
       return rejectWithValue(error.message)
     }
@@ -112,6 +125,13 @@ const topicsSlice = createSlice({
         state.currentTopic.replies_count += 1
       }
     },
+    setRepliesCount: (state, action: PayloadAction<{ topicId: string; count: number }>) => {
+      const topic = state.items.find((t) => t.id === action.payload.topicId)
+      if (topic) topic.replies_count = action.payload.count
+      if (state.currentTopic?.id === action.payload.topicId) {
+        state.currentTopic.replies_count = action.payload.count
+      }
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -156,5 +176,5 @@ const topicsSlice = createSlice({
   },
 })
 
-export const { clearTopics, clearError, incrementRepliesCount } = topicsSlice.actions
+export const { clearTopics, clearError, incrementRepliesCount, setRepliesCount } = topicsSlice.actions
 export default topicsSlice.reducer

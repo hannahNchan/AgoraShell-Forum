@@ -5,7 +5,7 @@ import { Plus, Star, MessageSquare, Clock, X, ChevronDown, ChevronUp } from 'luc
 import { formatDistanceToNow } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { type AppDispatch, type RootState } from '../../../store'
-import { fetchTopicsByChannel, createTopic, toggleStar, incrementRepliesCount } from '../store/threadsSlice'
+import { fetchTopicsByChannel, createTopic, toggleStar, setRepliesCount } from '../store/threadsSlice'
 import { useAuth } from '../../auth/hooks/useAuth'
 import Spinner from '../../../components/shared/Spinner'
 import RichTextEditor from '../../../components/shared/RichTextEditor'
@@ -167,13 +167,13 @@ const TopicCard = ({ topic }: { topic: any }) => {
       {topic.replies_count > 0 && (
         <button
           onClick={handleToggle}
-          className={`w-full flex items-center justify-center gap-2 py-2 text-xs font-medium border-t transition-colors ${expanded
+          className={`w-full flex items-center justify-center gap-2 py-2 text-xs font-medium hover:cursor-pointer border-t transition-colors ${expanded
             ? 'border-indigo-100 bg-indigo-50 text-indigo-600 hover:bg-indigo-100'
             : 'border-slate-100 bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-slate-600'
             }`}
         >
           {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-          {expanded ? 'Ocultar respuestas' : `Ver ${topic.replies_count} ${topic.replies_count === 1 ? 'respuesta' : 'respuestas'}`}
+          {expanded ? 'Ocultar respuestas' : `Previsualizar ${topic.replies_count === 1 ? 'respuesta' : 'respuestas'}`}
         </button>
       )}
 
@@ -190,18 +190,23 @@ const TopicCard = ({ topic }: { topic: any }) => {
               <div className="absolute left-0 top-0 bottom-0 w-px bg-slate-200" />
               <div className="flex items-center gap-1.5 pt-3 pb-2">
                 <div className="flex -space-x-2">
-                  {replies.slice(0, 4).map((r: any) => (
-                    <div
-                      key={r.id}
-                      className="w-6 h-6 rounded-full bg-indigo-100 border-2 border-white flex items-center justify-center text-indigo-700 font-semibold text-[10px] overflow-hidden flex-shrink-0"
-                    >
-                      {r.author?.avatar_url ? (
-                        <img src={r.author.avatar_url} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        r.author?.username?.charAt(0).toUpperCase()
-                      )}
-                    </div>
-                  ))}
+                  {replies
+                    .filter((r: any, idx: number, arr: any[]) =>
+                      arr.findIndex((x: any) => x.author?.username === r.author?.username) === idx
+                    )
+                    .slice(0, 4)
+                    .map((r: any) => (
+                      <div
+                        key={r.author?.username}
+                        className="w-6 h-6 rounded-full bg-indigo-100 border-2 border-white flex items-center justify-center text-indigo-700 font-semibold text-[10px] overflow-hidden flex-shrink-0"
+                      >
+                        {r.author?.avatar_url ? (
+                          <img src={r.author.avatar_url} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          r.author?.username?.charAt(0).toUpperCase()
+                        )}
+                      </div>
+                    ))}
                 </div>
                 <span className="text-xs text-slate-400 ml-1">
                   {topic.replies_count} {topic.replies_count === 1 ? 'respuesta' : 'respuestas'}
@@ -249,7 +254,7 @@ export const ThreadsPage = () => {
   const [showCreate, setShowCreate] = useState(false)
 
   const { items: topics, loading } = useSelector((state: RootState) => state.topics)
-  const channel = useSelector((state: RootState) =>
+  const currentChannel = useSelector((state: RootState) =>
     state.channels.items.find((c) => c.id === channelId)
   )
 
@@ -258,18 +263,24 @@ export const ThreadsPage = () => {
 
     dispatch(fetchTopicsByChannel(channelId))
 
-    const channel = supabase
+    const realtimeChannel = supabase
       .channel(`replies-count:${channelId}`)
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'replies' },
-        (payload) => {
-          dispatch(incrementRepliesCount(payload.new.topic_id))
+        async (payload) => {
+          const topicId = payload.new.topic_id
+          const { data } = await supabase
+            .from('topics')
+            .select('replies_count')
+            .eq('id', topicId)
+            .single()
+          if (data) dispatch(setRepliesCount({ topicId, count: data.replies_count }))
         }
       )
       .subscribe()
 
-    return () => { supabase.removeChannel(channel) }
+    return () => { supabase.removeChannel(realtimeChannel) }
   }, [channelId, dispatch])
 
   return (
@@ -277,11 +288,11 @@ export const ThreadsPage = () => {
       <div className="flex items-start justify-between">
         <div>
           <div className="flex items-center gap-2">
-            <span className="text-2xl">{channel?.icon}</span>
-            <h1 className="text-2xl font-bold text-slate-800">{channel?.name || 'Canal'}</h1>
+            <span className="text-2xl">{currentChannel?.icon}</span>
+            <h1 className="text-2xl font-bold text-slate-800">{currentChannel?.name || 'Canal'}</h1>
           </div>
-          {channel?.description && (
-            <p className="text-slate-500 text-sm mt-1">{channel.description}</p>
+          {currentChannel?.description && (
+            <p className="text-slate-500 text-sm mt-1">{currentChannel.description}</p>
           )}
         </div>
         {isAuthenticated && (
