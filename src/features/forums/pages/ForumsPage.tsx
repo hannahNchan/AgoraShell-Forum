@@ -1,9 +1,7 @@
 import { useSelector } from 'react-redux'
 import { Link } from 'react-router-dom'
-import { MessageSquare, Flame, Users } from 'lucide-react'
+import { MessageSquare, Flame } from 'lucide-react'
 import { type RootState } from '../../../store'
-import { format } from 'date-fns'
-import { es } from 'date-fns/locale'
 
 export const ForumsPage = () => {
   const channels = useSelector((state: RootState) => state.channels.items)
