@@ -62,7 +62,7 @@ export const RichTextEditor = ({
   const editor = useEditor({
     extensions: [
       StarterKit,
-      ImageResize.configure({ HTMLAttributes: { class: 'rounded-lg max-w-full' } }),
+      ImageResize,
       Link.configure({ openOnClick: false, HTMLAttributes: { class: 'text-indigo-600 underline' } }),
       Placeholder.configure({ placeholder }),
     ],
@@ -128,7 +128,7 @@ export const RichTextEditor = ({
       const file = (e.target as HTMLInputElement).files?.[0]
       if (!file) return
       const url = await uploadImage(file)
-      if (url) editor.chain().focus().setImage({ src: url }).run()
+      if (url) editor.chain().focus().insertContent(`<img src="${url}" />`).run()
     }
     input.click()
   }
