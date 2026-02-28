@@ -1,7 +1,7 @@
 import { createSlice, createAsyncThunk, type PayloadAction } from '@reduxjs/toolkit'
 import { supabase } from '../../../services/supabase'
 import { type Reply, type ReplyReaction, type ReactionGroup } from '../../../types'
-import { incrementRepliesCount } from '../../threads/store/threadsSlice'
+import { incrementRepliesCount, decrementRepliesCount } from '../../threads/store/threadsSlice'
 
 interface PostsState {
   items: Reply[]
@@ -15,6 +15,25 @@ const initialState: PostsState = {
   error: null,
 }
 
+const buildTree = (replies: Reply[]): Reply[] => {
+  const map = new Map<string, Reply>()
+  const roots: Reply[] = []
+
+  for (const reply of replies) {
+    map.set(reply.id, { ...reply, children: [] })
+  }
+
+  for (const reply of map.values()) {
+    if (reply.parent_id && map.has(reply.parent_id)) {
+      map.get(reply.parent_id)!.children!.push(reply)
+    } else {
+      roots.push(reply)
+    }
+  }
+
+  return roots
+}
+
 export const fetchRepliesByTopic = createAsyncThunk(
   'posts/fetchByTopic',
   async (topicId: string, { rejectWithValue }) => {
@@ -25,7 +44,7 @@ export const fetchRepliesByTopic = createAsyncThunk(
         .eq('topic_id', topicId)
         .order('created_at', { ascending: true })
       if (error) throw error
-      return data as Reply[]
+      return buildTree(data as Reply[])
     } catch (error: any) {
       return rejectWithValue(error.message)
     }
@@ -34,12 +53,15 @@ export const fetchRepliesByTopic = createAsyncThunk(
 
 export const createReply = createAsyncThunk(
   'posts/create',
-  async ({ topicId, content }: { topicId: string; content: string }, { dispatch, rejectWithValue }) => {
+  async (
+    { topicId, content, parentId }: { topicId: string; content: string; parentId?: string },
+    { dispatch, rejectWithValue }
+  ) => {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       const { data, error } = await supabase
         .from('replies')
-        .insert([{ topic_id: topicId, content, author_id: user?.id }])
+        .insert([{ topic_id: topicId, content, author_id: user?.id, parent_id: parentId ?? null }])
         .select(`*, author:profiles(id, username, avatar_url, role), reactions:reply_reactions(id, user_id, emoji)`)
         .single()
       if (error) throw error
@@ -79,6 +101,31 @@ export const toggleReaction = createAsyncThunk(
   }
 )
 
+export const deleteReply = createAsyncThunk(
+  'posts/delete',
+  async ({ replyId, topicId }: { replyId: string; topicId: string }, { dispatch, rejectWithValue }) => {
+    try {
+      const { error } = await supabase.from('replies').delete().eq('id', replyId)
+      if (error) throw error
+      dispatch(decrementRepliesCount(topicId))
+      return replyId
+    } catch (error: any) {
+      return rejectWithValue(error.message)
+    }
+  }
+)
+
+const findReplyById = (replies: Reply[], id: string): Reply | null => {
+  for (const reply of replies) {
+    if (reply.id === id) return reply
+    if (reply.children?.length) {
+      const found = findReplyById(reply.children, id)
+      if (found) return found
+    }
+  }
+  return null
+}
+
 const postsSlice = createSlice({
   name: 'posts',
   initialState,
@@ -86,10 +133,26 @@ const postsSlice = createSlice({
     clearPosts: (state) => { state.items = [] },
     clearError: (state) => { state.error = null },
     addReplyRealtime: (state, action: PayloadAction<Reply>) => {
-      const exists = state.items.find((r) => r.id === action.payload.id)
-      if (!exists) {
-        state.items.push(action.payload)
+      const reply = action.payload
+      const exists = findReplyById(state.items, reply.id)
+      if (exists) return
+
+      if (!reply.parent_id) {
+        state.items.push({ ...reply, children: [] })
+      } else {
+        const parent = findReplyById(state.items, reply.parent_id)
+        if (parent) {
+          if (!parent.children) parent.children = []
+          parent.children.push({ ...reply, children: [] })
+        }
       }
+    },
+    deleteReplyRealtime: (state, action: PayloadAction<string>) => {
+      const removeFromTree = (replies: Reply[]): Reply[] =>
+        replies
+          .filter((r) => r.id !== action.payload)
+          .map((r) => ({ ...r, children: r.children ? removeFromTree(r.children) : [] }))
+      state.items = removeFromTree(state.items)
     },
   },
   extraReducers: (builder) => {
@@ -105,8 +168,19 @@ const postsSlice = createSlice({
       })
 
       .addCase(createReply.fulfilled, (state, action) => {
-        const exists = state.items.find((r) => r.id === action.payload.id)
-        if (!exists) state.items.push(action.payload)
+        const reply = action.payload
+        const exists = findReplyById(state.items, reply.id)
+        if (exists) return
+
+        if (!reply.parent_id) {
+          state.items.push({ ...reply, children: [] })
+        } else {
+          const parent = findReplyById(state.items, reply.parent_id)
+          if (parent) {
+            if (!parent.children) parent.children = []
+            parent.children.push({ ...reply, children: [] })
+          }
+        }
       })
 
       .addCase(toggleReaction.fulfilled, (state, action) => {
@@ -120,10 +194,17 @@ const postsSlice = createSlice({
           reply.reactions.push({ id: Date.now().toString(), reply_id: replyId, user_id: userId, emoji, created_at: new Date().toISOString() })
         }
       })
+      .addCase(deleteReply.fulfilled, (state, action) => {
+        const removeFromTree = (replies: Reply[]): Reply[] =>
+          replies
+            .filter((r) => r.id !== action.payload)
+            .map((r) => ({ ...r, children: r.children ? removeFromTree(r.children) : [] }))
+        state.items = removeFromTree(state.items)
+      })
   },
 })
 
-export const { clearPosts, clearError, addReplyRealtime } = postsSlice.actions
+export const { clearPosts, clearError, addReplyRealtime, deleteReplyRealtime } = postsSlice.actions
 export default postsSlice.reducer
 
 export const groupReactions = (reactions: ReplyReaction[], currentUserId?: string): ReactionGroup[] => {

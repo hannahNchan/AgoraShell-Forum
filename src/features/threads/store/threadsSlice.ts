@@ -112,6 +112,19 @@ export const toggleStar = createAsyncThunk(
   }
 )
 
+export const deleteTopic = createAsyncThunk(
+  'topics/delete',
+  async (topicId: string, { rejectWithValue }) => {
+    try {
+      const { error } = await supabase.from('topics').delete().eq('id', topicId)
+      if (error) throw error
+      return topicId
+    } catch (error: any) {
+      return rejectWithValue(error.message)
+    }
+  }
+)
+
 const topicsSlice = createSlice({
   name: 'topics',
   initialState,
@@ -130,6 +143,13 @@ const topicsSlice = createSlice({
       if (topic) topic.replies_count = action.payload.count
       if (state.currentTopic?.id === action.payload.topicId) {
         state.currentTopic.replies_count = action.payload.count
+      }
+    },
+    decrementRepliesCount: (state, action: PayloadAction<string>) => {
+      const topic = state.items.find((t) => t.id === action.payload)
+      if (topic) topic.replies_count = Math.max(0, topic.replies_count - 1)
+      if (state.currentTopic?.id === action.payload) {
+        state.currentTopic.replies_count = Math.max(0, state.currentTopic.replies_count - 1)
       }
     },
   },
@@ -173,8 +193,16 @@ const topicsSlice = createSlice({
             : state.currentTopic.stars_count - 1
         }
       })
+
+      .addCase(deleteTopic.fulfilled, (state, action) => {
+        state.items = state.items.filter((t) => t.id !== action.payload)
+        if (state.currentTopic?.id === action.payload) {
+          state.currentTopic = null
+        }
+      })
+
   },
 })
 
-export const { clearTopics, clearError, incrementRepliesCount, setRepliesCount } = topicsSlice.actions
+export const { clearTopics, clearError, incrementRepliesCount, setRepliesCount, decrementRepliesCount } = topicsSlice.actions
 export default topicsSlice.reducer

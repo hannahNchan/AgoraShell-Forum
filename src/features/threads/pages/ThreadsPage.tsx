@@ -5,6 +5,7 @@ import { Plus, Star, MessageSquare, Clock, X, ChevronDown, ChevronUp } from 'luc
 import { formatDistanceToNow } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { type AppDispatch, type RootState } from '../../../store'
+import { useRole } from '../../auth/hooks/useRole'
 import { fetchTopicsByChannel, createTopic, toggleStar, setRepliesCount } from '../store/threadsSlice'
 import { useAuth } from '../../auth/hooks/useAuth'
 import Spinner from '../../../components/shared/Spinner'
@@ -251,6 +252,7 @@ export const ThreadsPage = () => {
   const { channelId } = useParams<{ channelId: string }>()
   const dispatch = useDispatch<AppDispatch>()
   const { isAuthenticated } = useAuth()
+  const { isBanned } = useRole()
   const [showCreate, setShowCreate] = useState(false)
 
   const { items: topics, loading } = useSelector((state: RootState) => state.topics)
@@ -295,7 +297,7 @@ export const ThreadsPage = () => {
             <p className="text-slate-500 text-sm mt-1">{currentChannel.description}</p>
           )}
         </div>
-        {isAuthenticated && (
+        {isAuthenticated && !isBanned && (
           <button
             onClick={() => setShowCreate(true)}
             className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors flex-shrink-0"
@@ -314,7 +316,7 @@ export const ThreadsPage = () => {
         <div className="text-center py-16 text-slate-400">
           <MessageSquare size={40} className="mx-auto mb-3 opacity-30" />
           <p className="font-medium">Nadie ha publicado aún</p>
-          {isAuthenticated && (
+          {isAuthenticated && !isBanned && (
             <button
               onClick={() => setShowCreate(true)}
               className="mt-4 text-indigo-600 text-sm font-medium hover:underline"

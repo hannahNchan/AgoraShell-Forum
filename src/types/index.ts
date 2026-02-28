@@ -1,11 +1,12 @@
-export type UserRole = 'admin' | 'moderator' | 'member'
+export type UserRole = 'admin' | 'moderator' | 'user' | 'banned'
 
 export interface Profile {
   id: string
   username: string
   avatar_url: string | null
   bio: string | null
-  role: UserRole
+  role_id: number
+  role?: UserRole
   created_at: string
 }
 
@@ -39,13 +40,14 @@ export interface Topic {
 export interface Reply {
   id: string
   topic_id: string
+  parent_id: string | null
   content: string
   author_id: string
   created_at: string
   updated_at: string
-  // Joined
   author?: Profile
   reactions?: ReplyReaction[]
+  children?: Reply[]
 }
 
 export interface TopicStar {

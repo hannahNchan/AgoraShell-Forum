@@ -4,6 +4,7 @@ import { LoginPage, RegisterPage } from '../features/auth/pages/LoginPage'
 import ForumsPage from '../features/forums/pages/ForumsPage'
 import ThreadsPage from '../features/threads/pages/ThreadsPage'
 import ThreadDetailPage from '../features/threads/pages/ThreadDetailPage'
+import AdminPage from '../../src/features/auth/pages/AdminPage.tsx'
 
 const router = createBrowserRouter([
   {
@@ -16,6 +17,7 @@ const router = createBrowserRouter([
       { path: 'saved', element: <div className="text-slate-400 text-center py-16">Temas guardados — próximamente</div> },
       { path: 'hot', element: <div className="text-slate-400 text-center py-16">Hot Topics — próximamente</div> },
       { path: 'settings', element: <div className="text-slate-400 text-center py-16">Configuración — próximamente</div> },
+      { path: 'admin', element: <AdminPage /> },
     ],
   },
   { path: '/login', element: <LoginPage /> },

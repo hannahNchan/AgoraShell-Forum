@@ -1,15 +1,18 @@
 import { useState } from 'react'
+import { useSelector } from 'react-redux'
 import { Link } from 'react-router-dom'
 import { useDispatch } from 'react-redux'
-import { Star, MessageSquare, Clock, ChevronDown, ChevronUp } from 'lucide-react'
+import { Trash2, Star, MessageSquare, Clock, ChevronDown, ChevronUp } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { type AppDispatch } from '../../../store'
 import { toggleStar } from '../store/threadsSlice'
 import { useAuth } from '../../auth/hooks/useAuth'
+import { selectProfile } from '../../auth/store/authSelectors'
 import { supabase } from '../../../services/supabase'
 import Spinner from '../../../components/shared/Spinner'
 import { type Topic } from '../../../types'
+import { useRole } from '../../auth/hooks/useRole'
 
 interface TopicCardProps {
   topic: Topic
@@ -24,6 +27,9 @@ const stripHtml = (html: string) => {
 const TopicCard = ({ topic }: TopicCardProps) => {
   const dispatch = useDispatch<AppDispatch>()
   const { isAuthenticated } = useAuth()
+  const profile = useSelector(selectProfile)
+  const { isModerator } = useRole()
+  const canDelete = isModerator || profile?.id === topic.author_id
   const [expanded, setExpanded] = useState(false)
   const [replies, setReplies] = useState<any[]>([])
   const [loadingReplies, setLoadingReplies] = useState(false)
@@ -66,6 +72,21 @@ const TopicCard = ({ topic }: TopicCardProps) => {
             topic.author?.username?.charAt(0).toUpperCase()
           )}
         </div>
+
+        {canDelete && isAuthenticated && (
+          <button
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              if (!window.confirm('¿Eliminar este topic? Esta acción no se puede deshacer.')) return
+              console.log('delete', topic.id)
+            }}
+            className="flex items-center gap-1 text-xs text-slate-400 hover:text-red-500 transition-colors"
+            title="Eliminar topic"
+          >
+            <Trash2 size={14} />
+          </button>
+        )}
 
         <div className="flex-1 min-w-0">
           <Link

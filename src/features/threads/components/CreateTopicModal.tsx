@@ -5,6 +5,7 @@ import { type AppDispatch } from '../../../store'
 import { createTopic } from '../store/threadsSlice'
 import Spinner from '../../../components/shared/Spinner'
 import RichTextEditor from '../../../components/shared/RichTextEditor'
+import { useRole } from '../../auth/hooks/useRole'
 
 interface CreateTopicModalProps {
   channelId: string
@@ -13,6 +14,7 @@ interface CreateTopicModalProps {
 
 const CreateTopicModal = ({ channelId, onClose }: CreateTopicModalProps) => {
   const dispatch = useDispatch<AppDispatch>()
+  const { isBanned } = useRole()
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -28,6 +30,15 @@ const CreateTopicModal = ({ channelId, onClose }: CreateTopicModalProps) => {
       setSubmitting(false)
     }
   }
+
+  if (isBanned) return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 text-center space-y-4">
+        <p className="text-slate-700 font-medium">Tu cuenta ha sido suspendida y no puedes publicar contenido.</p>
+        <button onClick={onClose} className="text-sm text-slate-500 hover:text-slate-700 transition-colors">Cerrar</button>
+      </div>
+    </div>
+  )
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 backdrop-blur-sm pt-10 pb-4 px-4 overflow-y-auto">

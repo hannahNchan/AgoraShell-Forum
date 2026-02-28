@@ -9,6 +9,7 @@ import { type AppDispatch, type RootState } from '../store'
 import { fetchChannels, createChannel, deleteChannel } from '../features/forums/store/forumsSlice'
 import { logout } from '../features/auth/store/authSlice'
 import { useAuth } from '../features/auth/hooks/useAuth'
+import { useRole } from '../features/auth/hooks/useRole'
 import Spinner from '../components/shared/Spinner'
 import { type Channel } from '../types'
 
@@ -107,7 +108,6 @@ const CreateChannelModal = ({ onClose }: { onClose: () => void }) => {
   )
 }
 
-// ─── Main Layout ────────────────────────────────────────────────────────────
 export const MainLayout = () => {
   const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -120,6 +120,7 @@ export const MainLayout = () => {
   const { channelId } = useParams()
 
   const { profile, isAuthenticated, isModerator } = useAuth()
+  const { isAdmin } = useRole()
   const channels = useSelector((state: RootState) => state.channels.items)
   const channelsLoading = useSelector((state: RootState) => state.channels.loading)
 
@@ -143,10 +144,8 @@ export const MainLayout = () => {
 
   const isActiveChannel = (id: string) => channelId === id
 
-  // ─── Sidebar Content ──────────────────────────────────────────────────────
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
-      {/* Logo */}
       <div className={`flex items-center gap-3 px-4 py-5 border-b border-slate-800 ${collapsed ? 'justify-center' : ''}`}>
         <div className="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center flex-shrink-0 text-white font-bold text-sm">
           A
@@ -160,7 +159,6 @@ export const MainLayout = () => {
       </div>
 
       <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-1">
-        {/* Quick links */}
         {[
           { to: '/', icon: <Home size={16} />, label: 'Inicio' },
           { to: '/saved', icon: <Bookmark size={16} />, label: 'Guardados' },
@@ -180,7 +178,6 @@ export const MainLayout = () => {
           </Link>
         ))}
 
-        {/* Channels */}
         {!collapsed && (
           <div className="pt-4 pb-1 px-3">
             <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Canales</p>
@@ -221,7 +218,6 @@ export const MainLayout = () => {
           ))
         )}
 
-        {/* Create channel button */}
         {isModerator && (
           <button
             onClick={() => setShowCreateChannel(true)}
@@ -234,7 +230,6 @@ export const MainLayout = () => {
         )}
       </nav>
 
-      {/* User section */}
       {isAuthenticated && profile && (
         <div className="p-3 border-t border-slate-800">
           <Link
@@ -245,10 +240,19 @@ export const MainLayout = () => {
             <Settings size={16} />
             {!collapsed && <span>Configuración</span>}
           </Link>
+          {isAdmin && (
+            <Link
+              to="/admin"
+              onClick={() => setUserMenuOpen(false)}
+              className="flex items-center gap-3 px-4 py-2.5 text-sm text-purple-600 hover:bg-purple-50 transition-colors"
+            >
+              <Settings size={15} />
+              Administración
+            </Link>
+          )}
         </div>
       )}
 
-      {/* Collapse button */}
       <button
         onClick={() => setCollapsed(!collapsed)}
         className="hidden lg:flex items-center justify-center p-3 border-t border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
@@ -258,7 +262,6 @@ export const MainLayout = () => {
     </div>
   )
 
-  // ─── Breadcrumb ───────────────────────────────────────────────────────────
   const Breadcrumb = () => {
     const parts = location.pathname.split('/').filter(Boolean)
     const activeChannel = channels.find((c) => c.id === channelId)
@@ -289,7 +292,6 @@ export const MainLayout = () => {
 
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden">
-      {/* Mobile overlay */}
       {mobileOpen && (
         <div
           className="fixed inset-0 bg-black/50 z-30 lg:hidden"
@@ -297,7 +299,6 @@ export const MainLayout = () => {
         />
       )}
 
-      {/* Sidebar */}
       <aside
         className={`
           fixed lg:relative z-40 lg:z-auto h-full bg-slate-900 flex flex-col transition-all duration-300 ease-in-out
@@ -308,9 +309,7 @@ export const MainLayout = () => {
         <SidebarContent />
       </aside>
 
-      {/* Main area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Header */}
         <header className="bg-white border-b border-slate-200 px-4 py-3 flex items-center gap-4 sticky top-0 z-20 flex-shrink-0">
           <button
             className="lg:hidden text-slate-500 hover:text-slate-700 transition-colors"
@@ -382,10 +381,8 @@ export const MainLayout = () => {
           </div>
         </header>
 
-        {/* Breadcrumb */}
         <Breadcrumb />
 
-        {/* Page content */}
         <main className="flex-1 overflow-y-auto">
           <div className="max-w-4xl mx-auto px-4 py-6">
             <Outlet />

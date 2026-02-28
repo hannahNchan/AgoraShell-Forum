@@ -1,7 +1,7 @@
 import { createSlice, createAsyncThunk, type PayloadAction } from '@reduxjs/toolkit'
 import { type Session, type User } from '@supabase/supabase-js'
 import { supabase } from '../../../services/supabase'
-import { type Profile } from '../../../types'
+import { type UserRole, type Profile } from '../../../types'
 
 interface AuthState {
   user: User | null
@@ -27,11 +27,15 @@ export const loadAuthUser = createAsyncThunk('auth/loadAuthUser', async (_, { re
 
     const { data: profile } = await supabase
       .from('profiles')
-      .select('*')
+      .select('*, roles(name)')
       .eq('id', session.user.id)
       .single()
 
-    return { session, user: session.user, profile }
+    const profileWithRole = profile
+      ? { ...profile, role: profile.roles?.name as UserRole }
+      : null
+
+    return { session, user: session.user, profile: profileWithRole }
   } catch (error: any) {
     return rejectWithValue(error.message)
   }
@@ -46,11 +50,15 @@ export const loginWithEmail = createAsyncThunk(
 
       const { data: profile } = await supabase
         .from('profiles')
-        .select('*')
+        .select('*, roles(name)')
         .eq('id', data.user.id)
         .single()
 
-      return { session: data.session, user: data.user, profile }
+      const profileWithRole = profile
+        ? { ...profile, role: profile.roles?.name as UserRole }
+        : null
+
+      return { session: data.session, user: data.user, profile: profileWithRole }
     } catch (error: any) {
       return rejectWithValue(error.message)
     }
