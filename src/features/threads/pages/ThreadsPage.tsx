@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
-import { Plus, Star, MessageSquare, Clock, X, ChevronDown, ChevronUp } from 'lucide-react'
+import { Plus, Star, MessageSquare, Clock, X, ChevronDown, ChevronUp, Trash2 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { type AppDispatch, type RootState } from '../../../store'
 import { useRole } from '../../auth/hooks/useRole'
-import { fetchTopicsByChannel, createTopic, toggleStar, setRepliesCount } from '../store/threadsSlice'
+import { selectProfile } from '../../auth/store/authSelectors'
+import { fetchTopicsByChannel, createTopic, toggleStar, setRepliesCount, deleteTopic } from '../store/threadsSlice'
 import { useAuth } from '../../auth/hooks/useAuth'
 import Spinner from '../../../components/shared/Spinner'
 import RichTextEditor from '../../../components/shared/RichTextEditor'
@@ -35,7 +36,7 @@ const CreateTopicModal = ({ channelId, onClose }: { channelId: string; onClose: 
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl">
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
           <h3 className="text-lg font-semibold text-slate-800">Nuevo tema</h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition-colors">
+          <button onClick={onClose} className="hover:cursor-pointer text-slate-400 hover:text-slate-600 transition-colors">
             <X size={20} />
           </button>
         </div>
@@ -84,6 +85,9 @@ const CreateTopicModal = ({ channelId, onClose }: { channelId: string; onClose: 
 const TopicCard = ({ topic }: { topic: any }) => {
   const dispatch = useDispatch<AppDispatch>()
   const { isAuthenticated } = useAuth()
+  const profile = useSelector(selectProfile)
+  const { isModerator } = useRole()
+  const canDelete = isModerator || profile?.id === topic.author_id
   const [expanded, setExpanded] = useState(false)
   const [replies, setReplies] = useState<any[]>([])
   const [loadingReplies, setLoadingReplies] = useState(false)
@@ -149,19 +153,37 @@ const TopicCard = ({ topic }: { topic: any }) => {
           </div>
         </div>
 
-        <div className="flex items-center gap-4 text-slate-400 flex-shrink-0">
-          <button
-            onClick={handleStar}
-            className={`flex items-center gap-1 text-xs transition-colors ${topic.is_starred ? 'text-amber-500' : 'hover:text-amber-500'}`}
-          >
-            <Star size={14} fill={topic.is_starred ? 'currentColor' : 'none'} />
-            <span>{topic.stars_count}</span>
-          </button>
+        <div className="flex flex-col items-start md:flex-row md:items-center gap-4 text-slate-400 flex-shrink-0">
+          <div className="flex flex-row gap-4">
+            <button
+              onClick={handleStar}
+              className={`flex items-center gap-1 text-xs transition-colors ${topic.is_starred ? 'text-amber-500' : 'hover:text-amber-500'}`}
+            >
+              <Star size={14} fill={topic.is_starred ? 'currentColor' : 'none'} />
+              <span>{topic.stars_count}</span>
+            </button>
 
-          <span className="flex items-center gap-1 text-xs text-slate-400">
-            <MessageSquare size={14} />
-            <span>{topic.replies_count} {topic.replies_count === 1 ? 'respuesta' : 'respuestas'}</span>
-          </span>
+            <span className="flex items-center gap-1 text-xs text-slate-400">
+              <MessageSquare size={14} />
+              <span>{topic.replies_count} {topic.replies_count === 1 ? 'respuesta' : 'respuestas'}</span>
+            </span>
+          </div>
+
+          {canDelete && isAuthenticated && (
+            <button
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                if (!window.confirm('¿Eliminar este tema? Esta acción no se puede deshacer.')) return
+                dispatch(deleteTopic(topic.id))
+              }}
+              className="px-2 py-1 rounded-sm bg-red-100 hover:bg-red-200 hover:cursor-pointer flex items-center gap-1 text-xs text-red-400 hover:text-red-500 transition-colors"
+              title="Eliminar tema"
+            >
+              <Trash2 size={18} />
+              Eliminar tema
+            </button>
+          )}
         </div>
       </div>
 
@@ -300,7 +322,7 @@ export const ThreadsPage = () => {
         {isAuthenticated && !isBanned && (
           <button
             onClick={() => setShowCreate(true)}
-            className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors flex-shrink-0"
+            className="flex hover:cursor-pointer items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors flex-shrink-0"
           >
             <Plus size={16} />
             Nuevo tema
