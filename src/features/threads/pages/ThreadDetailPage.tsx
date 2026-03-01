@@ -1,3 +1,4 @@
+import { useCodeCollapse } from '../../../hooks/useCodeCollapse'
 import { useEffect, useState, useRef } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
@@ -16,6 +17,7 @@ import Spinner from '../../../components/shared/Spinner'
 import RichTextEditor from '../../../components/shared/RichTextEditor'
 import { type Reply } from '../../../types'
 import { useConfirm } from '../../../hooks/useConfirm'
+import { useHighlightCode } from '../../../hooks/useHighlightCode'
 
 const Avatar = ({ profile, size = 'md' }: { profile: any; size?: 'sm' | 'md' }) => {
   const s = size === 'sm' ? 'w-7 h-7 text-xs' : 'w-9 h-9 text-sm'
@@ -47,6 +49,9 @@ const ReplyCard = ({ reply, topicId, depth = 0 }: ReplyCardProps) => {
   const [replyContent, setReplyContent] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const linesRef = useRef<any[]>([])
+  const replyContentRef = useRef<HTMLDivElement>(null)
+  useHighlightCode(replyContentRef)
+  useCodeCollapse(replyContentRef)
   const { confirm } = useConfirm()
 
   const reactionGroups = groupReactions(reply.reactions || [], user?.id)
@@ -171,6 +176,7 @@ const ReplyCard = ({ reply, topicId, depth = 0 }: ReplyCardProps) => {
             </div>
 
             <div
+              ref={replyContentRef}
               className="prose prose-sm max-w-none text-slate-700"
               dangerouslySetInnerHTML={{ __html: reply.content }}
             />
@@ -289,7 +295,9 @@ const ThreadDetailPage = () => {
   const { isBanned } = useRole()
   const [replyContent, setReplyContent] = useState('')
   const [submitting, setSubmitting] = useState(false)
-
+  const topicContentRef = useRef<HTMLDivElement>(null)
+  useHighlightCode(topicContentRef)
+  useCodeCollapse(topicContentRef)
   const topic = useSelector((state: RootState) => state.topics.currentTopic)
   const topicLoading = useSelector((state: RootState) => state.topics.loading)
   const replies = useSelector((state: RootState) => state.posts.items)
@@ -380,6 +388,7 @@ const ThreadDetailPage = () => {
         </div>
 
         <div
+          ref={topicContentRef}
           className="prose prose-sm max-w-none mt-5 text-slate-700"
           dangerouslySetInnerHTML={{ __html: topic.content }}
         />

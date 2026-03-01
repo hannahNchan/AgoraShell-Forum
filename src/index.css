@@ -20,3 +20,45 @@
   scrollbar-width: thin;
   scrollbar-color: #e2e8f0 transparent;
 }
+
+/* ── Syntax highlighting (Catppuccin Mocha) ─────────────────────── */
+.hljs { color: #cdd6f4; }
+.hljs-keyword { color: #cba6f7; }
+.hljs-built_in { color: #89dceb; }
+.hljs-type { color: #f9e2af; }
+.hljs-literal { color: #fab387; }
+.hljs-number { color: #fab387; }
+.hljs-operator { color: #89dceb; }
+.hljs-string { color: #a6e3a1; }
+.hljs-regexp { color: #f38ba8; }
+.hljs-comment { color: #6c7086; font-style: italic; }
+.hljs-title { color: #89b4fa; }
+.hljs-attr { color: #f9e2af; }
+.hljs-variable { color: #cdd6f4; }
+.hljs-params { color: #cdd6f4; }
+.hljs-punctuation { color: #89dceb; }
+.hljs-tag { color: #f38ba8; }
+.hljs-name { color: #cba6f7; }
+.hljs-selector-class { color: #f9e2af; }
+.hljs-selector-id { color: #fab387; }
+.hljs-meta { color: #7f849c; }
+.hljs-symbol { color: #f38ba8; }
+
+/* ── Code blocks en posts publicados ────────────────────────────── */
+.prose pre {
+  background: #1e1e2e !important;
+  border: 1px solid #313244;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  overflow-x: auto;
+  position: relative;
+  white-space: pre;
+}
+
+.prose pre code {
+  background: transparent !important;
+  color: #cdd6f4;
+  font-size: 0.75rem;
+  line-height: 1.5rem;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+}

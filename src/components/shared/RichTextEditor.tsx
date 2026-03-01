@@ -1,13 +1,64 @@
-import { useEditor, EditorContent } from '@tiptap/react'
+import { useEditor, EditorContent, NodeViewWrapper, NodeViewContent, ReactNodeViewRenderer } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Link from '@tiptap/extension-link'
 import Placeholder from '@tiptap/extension-placeholder'
 import ImageResize from 'tiptap-extension-resize-image'
+import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
+import { createLowlight, common } from 'lowlight'
+import type { NodeViewProps } from '@tiptap/react'
 import {
   Bold, Italic, Strikethrough, Code, List, ListOrdered,
-  Link as LinkIcon, Image as ImageIcon, Quote, Minus,
+  Link as LinkIcon, Image as ImageIcon, Quote, Minus, FileCode,
 } from 'lucide-react'
 import { supabase } from '../../services/supabase'
+
+const lowlight = createLowlight(common)
+
+const LANGUAGES = ['plaintext', 'javascript', 'typescript', 'tsx', 'jsx', 'python', 'bash', 'sql', 'css', 'html', 'json', 'rust', 'go', 'java', 'php']
+
+const CodeBlockView = ({ node, updateAttributes }: NodeViewProps) => {
+  const lines = node.textContent.split('\n')
+  const lang = node.attrs.language || 'plaintext'
+
+  return (
+    <NodeViewWrapper className="code-block-node-view">
+      <div className="relative rounded-lg overflow-hidden border border-slate-700 bg-[#1e1e2e] my-3">
+        <div className="flex items-center justify-between px-4 py-2 bg-[#181825] border-b border-slate-700">
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full bg-red-500/70" />
+            <div className="w-3 h-3 rounded-full bg-yellow-500/70" />
+            <div className="w-3 h-3 rounded-full bg-green-500/70" />
+          </div>
+          <select
+            value={lang}
+            onChange={(e) => updateAttributes({ language: e.target.value })}
+            contentEditable={false}
+            className="bg-transparent text-slate-400 text-xs border border-slate-600 rounded px-2 py-0.5 focus:outline-none focus:border-indigo-500 cursor-pointer"
+          >
+            {LANGUAGES.map((l) => (
+              <option key={l} value={l} className="bg-slate-900">{l}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex overflow-x-auto">
+          <div
+            contentEditable={false}
+            className="select-none text-right pr-4 pl-3 py-4 text-slate-600 text-xs font-mono leading-6 border-r border-slate-700 bg-[#181825] min-w-[3rem]"
+          >
+            {lines.map((_, i) => (
+              <div key={i}>{i + 1}</div>
+            ))}
+          </div>
+
+          <pre className="flex-1 p-4 m-0 bg-transparent overflow-visible">
+            <NodeViewContent as={"code" as any} className={`language-${lang} text-xs font-mono leading-6 text-slate-200`} />
+          </pre>
+        </div>
+      </div>
+    </NodeViewWrapper>
+  )
+}
 
 interface RichTextEditorProps {
   content?: string
@@ -44,10 +95,6 @@ const uploadImage = async (file: File): Promise<string | null> => {
   const ext = file.name.split('.').pop()
   const fileName = `forum/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
   const { data, error } = await supabase.storage.from('images').upload(fileName, file)
-  if (error || !data) {
-    console.error('Storage error:', error)
-    return null
-  }
   if (error || !data) return null
   const { data: urlData } = supabase.storage.from('images').getPublicUrl(data.path)
   return urlData.publicUrl
@@ -61,10 +108,15 @@ export const RichTextEditor = ({
 }: RichTextEditorProps) => {
   const editor = useEditor({
     extensions: [
-      StarterKit,
+      StarterKit.configure({ codeBlock: false }),
       ImageResize,
       Link.configure({ openOnClick: false, HTMLAttributes: { class: 'text-indigo-600 underline' } }),
       Placeholder.configure({ placeholder }),
+      CodeBlockLowlight.extend({
+        addNodeView() {
+          return ReactNodeViewRenderer(CodeBlockView)
+        },
+      }).configure({ lowlight, defaultLanguage: 'plaintext' }),
     ],
     content,
     onUpdate: ({ editor }) => {
@@ -165,9 +217,16 @@ export const RichTextEditor = ({
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleCode().run()}
           active={editor.isActive('code')}
-          title="Código"
+          title="Código inline"
         >
           <Code size={15} />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() => editor.chain().focus().toggleCodeBlock().run()}
+          active={editor.isActive('codeBlock')}
+          title="Bloque de código"
+        >
+          <FileCode size={15} />
         </ToolbarButton>
 
         <div className="w-px h-5 bg-slate-200 mx-1" />
