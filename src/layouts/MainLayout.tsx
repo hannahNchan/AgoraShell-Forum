@@ -12,6 +12,8 @@ import { useAuth } from '../features/auth/hooks/useAuth'
 import { useRole } from '../features/auth/hooks/useRole'
 import Spinner from '../components/shared/Spinner'
 import { type Channel } from '../types'
+import ConfirmModal from '../components/shared/ConfirmModal'
+import { useConfirm } from '../hooks/useConfirm'
 
 const CreateChannelModal = ({ onClose }: { onClose: () => void }) => {
   const dispatch = useDispatch<AppDispatch>()
@@ -123,6 +125,7 @@ export const MainLayout = () => {
   const { isAdmin } = useRole()
   const channels = useSelector((state: RootState) => state.channels.items)
   const channelsLoading = useSelector((state: RootState) => state.channels.loading)
+  const { confirm } = useConfirm()
 
   useEffect(() => {
     dispatch(fetchChannels())
@@ -134,7 +137,8 @@ export const MainLayout = () => {
   }
 
   const handleDeleteChannel = async (channel: Channel) => {
-    if (!window.confirm(`¿Eliminar el canal "${channel.name}"? Solo se puede eliminar si está vacío.`)) return
+    const ok = await confirm('Eliminar canal', `¿Eliminar "${channel.name}"? Solo se puede eliminar si está vacío.`)
+    if (!ok) return
     try {
       await dispatch(deleteChannel(channel.id)).unwrap()
     } catch (err: any) {
@@ -391,6 +395,7 @@ export const MainLayout = () => {
       </div>
 
       {showCreateChannel && <CreateChannelModal onClose={() => setShowCreateChannel(false)} />}
+      <ConfirmModal />
     </div>
   )
 }

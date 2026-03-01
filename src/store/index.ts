@@ -3,6 +3,7 @@ import authReducer from '../features/auth/store/authSlice'
 import channelsReducer from '../features/forums/store/forumsSlice'
 import topicsReducer from '../features/threads/store/threadsSlice'
 import postsReducer from '../features/posts/store/postsSlice'
+import confirmReducer from './confirmSlice'
 
 export const store = configureStore({
   reducer: {
@@ -10,6 +11,7 @@ export const store = configureStore({
     channels: channelsReducer,
     topics: topicsReducer,
     posts: postsReducer,
+    confirm: confirmReducer
   },
 })
 

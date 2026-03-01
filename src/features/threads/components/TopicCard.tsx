@@ -6,13 +6,14 @@ import { Trash2, Star, MessageSquare, Clock, ChevronDown, ChevronUp } from 'luci
 import { formatDistanceToNow } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { type AppDispatch } from '../../../store'
-import { toggleStar } from '../store/threadsSlice'
+import { toggleStar, deleteTopic } from '../store/threadsSlice'
 import { useAuth } from '../../auth/hooks/useAuth'
 import { selectProfile } from '../../auth/store/authSelectors'
 import { supabase } from '../../../services/supabase'
 import Spinner from '../../../components/shared/Spinner'
 import { type Topic } from '../../../types'
 import { useRole } from '../../auth/hooks/useRole'
+import { useConfirm } from '../../../hooks/useConfirm'
 
 interface TopicCardProps {
   topic: Topic
@@ -34,6 +35,7 @@ const TopicCard = ({ topic }: TopicCardProps) => {
   const [replies, setReplies] = useState<any[]>([])
   const [loadingReplies, setLoadingReplies] = useState(false)
   const [fetched, setFetched] = useState(false)
+  const { confirm } = useConfirm()
 
   const handleStar = (e: React.MouseEvent) => {
     e.preventDefault()
@@ -62,6 +64,14 @@ const TopicCard = ({ topic }: TopicCardProps) => {
     setExpanded(!expanded)
   }
 
+  const handleDeleteTopic = async (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const ok = await confirm('Eliminar tema', '¿Eliminar este tema? Esta acción no se puede deshacer.')
+    if (!ok) return
+    dispatch(deleteTopic(topic.id))
+  }
+
   return (
     <div className="bg-white rounded-xl border border-slate-200 hover:border-indigo-200 hover:shadow-sm transition-all overflow-hidden">
       <div className="flex items-start gap-4 p-5">
@@ -75,12 +85,7 @@ const TopicCard = ({ topic }: TopicCardProps) => {
 
         {canDelete && isAuthenticated && (
           <button
-            onClick={(e) => {
-              e.preventDefault()
-              e.stopPropagation()
-              if (!window.confirm('¿Eliminar este topic? Esta acción no se puede deshacer.')) return
-              console.log('delete', topic.id)
-            }}
+            onClick={handleDeleteTopic}
             className="flex items-center gap-1 text-xs text-slate-400 hover:text-red-500 transition-colors"
             title="Eliminar topic"
           >

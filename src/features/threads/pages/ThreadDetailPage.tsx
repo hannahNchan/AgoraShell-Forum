@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { Star, Clock, Smile, Send, Trash2, MessageCircle } from 'lucide-react'
@@ -15,7 +15,7 @@ import { supabase } from '../../../services/supabase'
 import Spinner from '../../../components/shared/Spinner'
 import RichTextEditor from '../../../components/shared/RichTextEditor'
 import { type Reply } from '../../../types'
-
+import { useConfirm } from '../../../hooks/useConfirm'
 
 const Avatar = ({ profile, size = 'md' }: { profile: any; size?: 'sm' | 'md' }) => {
   const s = size === 'sm' ? 'w-7 h-7 text-xs' : 'w-9 h-9 text-sm'
@@ -46,8 +46,82 @@ const ReplyCard = ({ reply, topicId, depth = 0 }: ReplyCardProps) => {
   const [showReplyEditor, setShowReplyEditor] = useState(false)
   const [replyContent, setReplyContent] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const linesRef = useRef<any[]>([])
+  const { confirm } = useConfirm()
 
   const reactionGroups = groupReactions(reply.reactions || [], user?.id)
+
+  const scrollHandlerRef = useRef<(() => void) | null>(null)
+
+  const handleReposition = () => {
+    const timers = [50, 100, 200, 350].map((delay) =>
+      setTimeout(() => {
+        linesRef.current.forEach((l) => { try { l.position() } catch (_) { } })
+      }, delay)
+    )
+    repositionTimersRef.current = timers
+  }
+  window.addEventListener('reply-editor-toggle', handleReposition)
+  const repositionTimersRef = useRef<ReturnType<typeof setTimeout>[]>([])
+
+
+  useEffect(() => {
+    if (!reply.children?.length) return
+    const raf = requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        linesRef.current.forEach((l) => { try { l.remove() } catch (_) { } })
+        linesRef.current = []
+        const LL = (window as any).LeaderLine
+        const parentEl = document.getElementById(`avatar-${reply.id}`)
+        if (!parentEl || !LL) return
+        reply.children!.forEach((child) => {
+          const childEl = document.getElementById(`avatar-${child.id}`)
+          if (!childEl) return
+          try {
+            const line = new LL(parentEl, childEl, {
+              path: 'grid',
+              startSocket: 'bottom',
+              endSocket: 'left',
+              color: '#cbd5e1',
+              size: 2,
+              startPlug: 'behind',
+              endPlug: 'arrow2',
+            })
+            linesRef.current.push(line)
+          } catch (_) { }
+        })
+
+        const handleScroll = () => {
+          linesRef.current.forEach((l) => { try { l.position() } catch (_) { } })
+        }
+        scrollHandlerRef.current = handleScroll
+        window.addEventListener('scroll', handleScroll, true)
+      })
+    })
+    return () => {
+      cancelAnimationFrame(raf)
+      if (scrollHandlerRef.current) {
+        window.removeEventListener('scroll', scrollHandlerRef.current, true)
+      }
+      window.removeEventListener('reply-editor-toggle', handleReposition)
+      repositionTimersRef.current.forEach(clearTimeout)
+      linesRef.current.forEach((l) => { try { l.remove() } catch (_) { } })
+      linesRef.current = []
+    }
+  }, [reply.children?.length, reply.id])
+
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!containerRef.current) return
+
+    const observer = new ResizeObserver(() => {
+      linesRef.current.forEach((l) => { try { l.position() } catch (_) { } })
+    })
+
+    observer.observe(containerRef.current)
+    return () => observer.disconnect()
+  }, [reply.children?.length])
 
   const handleReaction = (emoji: string) => {
     if (!isAuthenticated) return
@@ -67,12 +141,20 @@ const ReplyCard = ({ reply, topicId, depth = 0 }: ReplyCardProps) => {
     }
   }
 
+  const handleDeleteReply = async () => {
+    const ok = await confirm('Eliminar respuesta', '¿Seguro que quieres eliminar esta respuesta?')
+    if (!ok) return
+    dispatch(deleteReply({ replyId: reply.id, topicId }))
+  }
+
   const isNested = depth > 0
 
   return (
-    <div className={isNested ? 'relative pl-5 border-l-2 border-slate-200' : ''}>
+    <div ref={containerRef} className={isNested ? 'relative pl-5' : ''}>
       <div className="flex items-start gap-3">
-        <Avatar profile={reply.author} />
+        <div id={`avatar-${reply.id}`} style={{ flexShrink: 0 }}>
+          <Avatar profile={reply.author} />
+        </div>
         <div className="flex-1 min-w-0">
           <div className="bg-white rounded-xl border border-slate-100 p-5">
             <div className="flex items-center gap-2 mb-2">
@@ -111,7 +193,11 @@ const ReplyCard = ({ reply, topicId, depth = 0 }: ReplyCardProps) => {
 
               {isAuthenticated && !isBanned && (
                 <button
-                  onClick={() => setShowReplyEditor(!showReplyEditor)}
+                  onClick={() => {
+                    const next = !showReplyEditor
+                    setShowReplyEditor(next)
+                    window.dispatchEvent(new CustomEvent('reply-editor-toggle'))
+                  }}
                   className="hover:cursor-pointer flex items-center gap-1 px-2 py-0.5 rounded-full border border-slate-200 text-slate-400 hover:bg-slate-50 hover:text-indigo-500 hover:border-indigo-300 transition-colors text-xs"
                 >
                   <MessageCircle size={13} />
@@ -121,10 +207,7 @@ const ReplyCard = ({ reply, topicId, depth = 0 }: ReplyCardProps) => {
 
               {canDelete && isAuthenticated && (
                 <button
-                  onClick={() => {
-                    if (!window.confirm('¿Eliminar esta respuesta?')) return
-                    dispatch(deleteReply({ replyId: reply.id, topicId }))
-                  }}
+                  onClick={handleDeleteReply}
                   className="hover:cursor-pointer ml-auto flex items-center gap-1 text-xs text-red-400 hover:text-red-500 transition-colors"
                   title="Eliminar respuesta"
                 >
