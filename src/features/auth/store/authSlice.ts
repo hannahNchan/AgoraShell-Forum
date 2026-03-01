@@ -94,6 +94,46 @@ export const logout = createAsyncThunk('auth/logout', async (_, { rejectWithValu
   }
 })
 
+export const updateAvatar = createAsyncThunk(
+  'auth/updateAvatar',
+  async ({ userId, blob }: { userId: string; blob: Blob | null }, { rejectWithValue }) => {
+    try {
+      if (!blob) {
+        const { error } = await supabase
+          .from('profiles')
+          .update({ avatar_url: null })
+          .eq('id', userId)
+        if (error) throw error
+        return null
+      }
+
+      const ext = 'webp'
+      const fileName = `${userId}.${ext}`
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(fileName, blob, { upsert: true, contentType: 'image/webp' })
+
+      if (uploadError) throw uploadError
+
+      const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(fileName)
+      const publicUrl = urlData.publicUrl
+      const displayUrl = `${publicUrl}?t=${Date.now()}`
+
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: publicUrl })  // ← guarda sin ?t=
+        .eq('id', userId)
+
+      if (updateError) throw updateError
+
+      return displayUrl
+    } catch (error: any) {
+      return rejectWithValue(error.message)
+    }
+  }
+)
+
 const authSlice = createSlice({
   name: 'auth',
   initialState,
@@ -140,6 +180,12 @@ const authSlice = createSlice({
         state.user = null
         state.profile = null
         state.session = null
+      })
+
+      .addCase(updateAvatar.fulfilled, (state, action) => {
+        if (state.profile) {
+          state.profile.avatar_url = action.payload
+        }
       })
   },
 })

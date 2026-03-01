@@ -20,7 +20,7 @@ import { useConfirm } from '../../../hooks/useConfirm'
 import { useHighlightCode } from '../../../hooks/useHighlightCode'
 
 const Avatar = ({ profile, size = 'md' }: { profile: any; size?: 'sm' | 'md' }) => {
-  const s = size === 'sm' ? 'w-7 h-7 text-xs' : 'w-9 h-9 text-sm'
+  const s = size === 'sm' ? 'w-5 h-5 text-xs' : 'w-7 h-7 text-sm'
   return (
     <div className={`${s} rounded-full bg-indigo-100 flex-shrink-0 flex items-center justify-center text-indigo-700 font-semibold overflow-hidden`}>
       {profile?.avatar_url ? (
@@ -88,9 +88,10 @@ const ReplyCard = ({ reply, topicId, depth = 0 }: ReplyCardProps) => {
               startSocket: 'bottom',
               endSocket: 'left',
               color: '#cbd5e1',
-              size: 2,
+              size: 1,
               startPlug: 'behind',
               endPlug: 'arrow2',
+              endSocketGravity: 8,
             })
             linesRef.current.push(line)
           } catch (_) { }
@@ -155,13 +156,13 @@ const ReplyCard = ({ reply, topicId, depth = 0 }: ReplyCardProps) => {
   const isNested = depth > 0
 
   return (
-    <div ref={containerRef} className={isNested ? 'relative pl-5' : ''}>
-      <div className="flex items-start gap-3">
+    <div ref={containerRef} className={isNested ? 'relative pl-0 md:pl-5' : ''}>
+      <div className="flex items-start gap-1">
         <div id={`avatar-${reply.id}`} style={{ flexShrink: 0 }}>
           <Avatar profile={reply.author} />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="bg-white rounded-xl border border-slate-100 p-5">
+          <div className="bg-white border rounded-xl border-slate-100 px-3 py-2">
             <div className="flex items-center gap-2 mb-2">
               <span className="text-sm font-semibold text-slate-800">{reply.author?.username}</span>
               {reply.author?.role && reply.author.role !== 'user' && (
@@ -250,7 +251,8 @@ const ReplyCard = ({ reply, topicId, depth = 0 }: ReplyCardProps) => {
           </div>
 
           {showReplyEditor && (
-            <div className="mt-2 bg-slate-50 rounded-xl border border-slate-200 p-4 space-y-3">
+            <div
+              className="mt-2 bg-slate-50 rounded-xl border border-slate-200 p-4 space-y-3">
               <RichTextEditor
                 onChange={setReplyContent}
                 placeholder={`Respondiendo a ${reply.author?.username}...`}
@@ -276,7 +278,7 @@ const ReplyCard = ({ reply, topicId, depth = 0 }: ReplyCardProps) => {
           )}
 
           {reply.children && reply.children.length > 0 && (
-            <div className="mt-2 space-y-2">
+            <div className="mt-4 space-y-2">
               {reply.children.map((child) => (
                 <ReplyCard key={child.id} reply={child} topicId={topicId} depth={depth + 1} />
               ))}

@@ -6,6 +6,7 @@ import ThreadsPage from '../features/threads/pages/ThreadsPage'
 import ThreadDetailPage from '../features/threads/pages/ThreadDetailPage'
 import AdminPage from '../../src/features/auth/pages/AdminPage.tsx'
 import HotTopicsPage from '../features/threads/pages/HotTopicsPage'
+import SettingsPage from '../features/auth/pages/SettingsPage.tsx'
 
 const router = createBrowserRouter([
   {
@@ -16,9 +17,9 @@ const router = createBrowserRouter([
       { path: 'channels/:channelId', element: <ThreadsPage /> },
       { path: 'channels/:channelId/topics/:topicId', element: <ThreadDetailPage /> },
       { path: 'saved', element: <div className="text-slate-400 text-center py-16">Temas guardados — próximamente</div> },
-      { path: 'settings', element: <div className="text-slate-400 text-center py-16">Configuración — próximamente</div> },
       { path: 'admin', element: <AdminPage /> },
-      { path: 'hot', element: <HotTopicsPage /> }
+      { path: 'hot', element: <HotTopicsPage /> },
+      { path: 'settings', element: <SettingsPage /> },
     ],
   },
   { path: '/login', element: <LoginPage /> },

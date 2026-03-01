@@ -126,6 +126,7 @@ export const MainLayout = () => {
   const channels = useSelector((state: RootState) => state.channels.items)
   const channelsLoading = useSelector((state: RootState) => state.channels.loading)
   const { confirm } = useConfirm()
+  const isHome = location.pathname === '/'
 
   useEffect(() => {
     dispatch(fetchChannels())
@@ -335,7 +336,7 @@ export const MainLayout = () => {
               <div className="relative">
                 <button
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
-                  className="flex items-center gap-2 rounded-full hover:bg-slate-50 p-1 transition-colors"
+                  className="flex items-center gap-2 rounded-full hover:bg-slate-50 p-1 transition-colors hover:cursor-pointer"
                 >
                   <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-700 font-semibold text-sm">
                     {profile.avatar_url ? (
@@ -388,7 +389,7 @@ export const MainLayout = () => {
         <Breadcrumb />
 
         <main className="flex-1 overflow-y-auto">
-          <div className="max-w-4xl mx-auto px-4 py-6">
+          <div className={`${isHome ? 'max-w-7xl' : 'max-w-4xl'} mx-auto px-4 py-6`}>
             <Outlet />
           </div>
         </main>

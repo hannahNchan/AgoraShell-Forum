@@ -17,7 +17,7 @@ export const ForumsPage = () => {
       </div>
 
       <div className="flex flex-col md:flex-row gap-4">
-        <div className="grid gap-3 w-full">
+        <div className="grid gap-3 w-full md:w-3/5 lg:w-4/6">
           {channels.map((channel) => (
             <Link
               key={channel.id}
@@ -50,7 +50,7 @@ export const ForumsPage = () => {
         </div>
 
         {hotTopics.length > 0 && (
-          <div className="space-y-3">
+          <div className="space-y-3 w-full md:w-2/5  lg:w-2/6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Flame size={16} className="text-orange-500" />
