@@ -16,7 +16,7 @@ export const ForumsPage = () => {
         <p className="text-slate-500 text-sm mt-1">Elige un canal para ver los temas de discusión</p>
       </div>
 
-      <div className="flex flex-col md:flex-row gap-4">
+      <div className="flex flex-col md:flex-row gap-4 items-start">
         <div className="grid gap-3 w-full md:w-3/5 lg:w-4/6">
           {channels.map((channel) => (
             <Link
@@ -50,7 +50,7 @@ export const ForumsPage = () => {
         </div>
 
         {hotTopics.length > 0 && (
-          <div className="space-y-3 w-full md:w-2/5  lg:w-2/6">
+          <div className="space-y-3 w-full md:w-2/5  lg:w-2/6 bg-slate-300 p-4 rounded-xl">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Flame size={16} className="text-orange-500" />
