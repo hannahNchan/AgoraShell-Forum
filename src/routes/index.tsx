@@ -7,8 +7,15 @@ import ThreadDetailPage from '../features/threads/pages/ThreadDetailPage'
 import AdminPage from '../../src/features/auth/pages/AdminPage.tsx'
 import HotTopicsPage from '../features/threads/pages/HotTopicsPage'
 import SettingsPage from '../features/auth/pages/SettingsPage.tsx'
+import ComingSoon from '../components/ComingSoon'
 
-const router = createBrowserRouter([
+const MAINTENANCE_MODE = true
+
+const maintenanceRoutes = [
+  { path: '*', element: <ComingSoon /> },
+]
+
+const appRoutes = [
   {
     path: '/',
     element: <MainLayout />,
@@ -25,8 +32,9 @@ const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
   { path: '/register', element: <RegisterPage /> },
   { path: '*', element: <Navigate to="/" replace /> },
-])
+]
+
+const router = createBrowserRouter(MAINTENANCE_MODE ? maintenanceRoutes : appRoutes)
 
 export const AppRouter = () => <RouterProvider router={router} />
-
 export default AppRouter
