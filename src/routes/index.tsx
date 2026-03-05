@@ -8,6 +8,7 @@ import AdminPage from '../../src/features/auth/pages/AdminPage.tsx'
 import HotTopicsPage from '../features/threads/pages/HotTopicsPage'
 import SettingsPage from '../features/auth/pages/SettingsPage.tsx'
 import ComingSoon from '../components/ComingSoon'
+import SearchPage from '../features/search/pages/SearchPage'
 
 const MAINTENANCE_MODE = false
 
@@ -27,6 +28,7 @@ const appRoutes = [
       { path: 'admin', element: <AdminPage /> },
       { path: 'hot', element: <HotTopicsPage /> },
       { path: 'settings', element: <SettingsPage /> },
+      { path: 'search', element: <SearchPage /> },
     ],
   },
   { path: '/login', element: <LoginPage /> },

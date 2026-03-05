@@ -15,6 +15,7 @@ import { type Channel } from '../types'
 import ConfirmModal from '../components/shared/ConfirmModal'
 import { useConfirm } from '../hooks/useConfirm'
 import EmojiPicker, { type EmojiClickData } from 'emoji-picker-react'
+import GlobalSearch from '../components/GlobalSearch'
 
 const CreateChannelModal = ({ onClose }: { onClose: () => void }) => {
   const dispatch = useDispatch<AppDispatch>()
@@ -192,8 +193,11 @@ export const MainLayout = () => {
 
   const SidebarContent = () => (
     <div className="flex flex-col h-full" style={{ background: '#0e1e40' }}>
-      <div className={`flex items-center gap-3 px-4 py-5 border-b border-slate-800 ${collapsed ? 'justify-center' : ''}`}>
-        <img src="/images/big_logo.svg" alt="Logo Agora shell" />
+      <div
+        className={`flex items-center gap-3 px-4 py-5 ${collapsed ? 'justify-center' : ''}`}
+        style={{ borderBottom: '1px solid rgba(85,205,252,0.15)' }}
+      >
+        <img src="/images/big_logo.svg" alt="Logo Agora shell" className="w-auto" />
       </div>
 
       <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-1">
@@ -394,38 +398,31 @@ export const MainLayout = () => {
   }
 
   return (
-    <div className="flex h-screen bg-slate-50 overflow-hidden">
-      {mobileOpen && (
-        <div
-          className="fixed inset-0 bg-black/60 z-30 lg:hidden"
-          onClick={() => setMobileOpen(false)}
-        />
-      )}
-
+    <div className="flex h-screen bg-slate-50 overflow-hidden" style={{ position: 'relative' }}>
       <aside
         className={`
-          fixed lg:relative z-40 lg:z-auto h-full flex flex-col transition-all duration-300 ease-in-out
+          fixed lg:relative z-40 lg:z-auto h-full flex flex-col transition-all duration-300 ease-in-out flex-shrink-0
           ${collapsed ? 'lg:w-16' : 'lg:w-64'}
-          ${mobileOpen ? 'w-full translate-x-0' : 'w-64 -translate-x-full lg:translate-x-0'}
+          w-[80vw] lg:w-64
+          ${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}
         style={{ background: '#0e1e40' }}
       >
-        {mobileOpen && (
-          <button
-            onClick={() => setMobileOpen(false)}
-            className="lg:hidden absolute top-4 right-4 z-50 hover:cursor-pointer transition-colors"
-            style={{ color: 'rgba(255,255,255,0.5)' }}
-            onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = '#ffffff'}
-            onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.5)'}
-          >
-            <X size={22} />
-          </button>
-        )}
         <SidebarContent />
       </aside>
 
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <header className="bg-white border-b border-slate-200 px-4 py-3 flex items-center gap-4 sticky top-0 z-20 flex-shrink-0">
+      <div
+        className="flex-1 flex flex-col min-w-0 overflow-hidden transition-all duration-300 ease-in-out"
+        style={{ marginLeft: mobileOpen ? '80vw' : undefined }}
+      >
+        {mobileOpen && (
+          <div
+            className="fixed inset-0 z-30 lg:hidden"
+            style={{ marginLeft: '80vw' }}
+            onClick={() => setMobileOpen(false)}
+          />
+        )}
+        <header className="bg-white border-b border-slate-200 px-4 py-3 flex items-center gap-4 sticky top-0 z-20 flex-shrink-0 relative">
           <button
             className="lg:hidden text-slate-500 hover:text-slate-700 hover:cursor-pointer transition-colors"
             onClick={() => setMobileOpen(!mobileOpen)}
@@ -437,11 +434,20 @@ export const MainLayout = () => {
             <span className="text-slate-800 font-bold text-lg">AgoraShell</span>
           </div>
 
+          {/* Desktop: centrado absoluto. Mobile: oculto aquí */}
+          <div className="hidden lg:block absolute left-1/2 -translate-x-1/2 w-full max-w-md">
+            <GlobalSearch />
+          </div>
+
+          {/* Mobile: en flujo normal */}
+          <div className="lg:hidden flex-1">
+            <GlobalSearch />
+          </div>
+
           <div className="flex items-center gap-3">
             <button className="text-slate-400 hover:text-slate-600 hover:cursor-pointer transition-colors relative">
               <Bell size={20} />
             </button>
-
             {isAuthenticated && profile ? (
               <div className="relative">
                 <button
@@ -457,7 +463,6 @@ export const MainLayout = () => {
                   </div>
                   <ChevronDown size={14} className="text-slate-400" />
                 </button>
-
                 {userMenuOpen && (
                   <>
                     <div className="fixed inset-0 z-10" onClick={() => setUserMenuOpen(false)} />
