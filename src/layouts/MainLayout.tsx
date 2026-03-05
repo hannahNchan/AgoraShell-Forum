@@ -49,7 +49,6 @@ const CreateChannelModal = ({ onClose }: { onClose: () => void }) => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 overflow-hidden">
-
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
           <h3 className="text-lg font-semibold text-slate-800">Crear canal</h3>
           <button
@@ -61,8 +60,6 @@ const CreateChannelModal = ({ onClose }: { onClose: () => void }) => {
         </div>
 
         <div className="flex flex-col md:flex-row">
-
-          {/* Mobile: picker fullscreen overlay */}
           {showPicker && (
             <div className="md:hidden fixed inset-0 z-50 bg-white flex flex-col">
               <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
@@ -76,32 +73,20 @@ const CreateChannelModal = ({ onClose }: { onClose: () => void }) => {
                 </button>
               </div>
               <div className="flex-1 overflow-auto">
-                <EmojiPicker
-                  onEmojiClick={handleEmojiClick}
-                  width="100%"
-                  height="100%"
-                />
+                <EmojiPicker onEmojiClick={handleEmojiClick} width="100%" height="100%" />
               </div>
             </div>
           )}
 
-          {/* Desktop: left column picker */}
           <div className="hidden md:flex flex-col items-center bg-slate-50 border-r border-slate-100 p-4 min-w-[340px]">
             <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-3">Icono del canal</p>
             <div className="text-4xl mb-4 p-3 bg-white rounded-xl border-2 border-indigo-200 shadow-sm">
               {icon}
             </div>
-            <EmojiPicker
-              onEmojiClick={handleEmojiClick}
-              width={320}
-              height={380}
-            />
+            <EmojiPicker onEmojiClick={handleEmojiClick} width={320} height={380} />
           </div>
 
-          {/* Right column: form */}
           <form onSubmit={handleSubmit} className="flex-1 p-6 space-y-4">
-
-            {/* Mobile: icon button trigger */}
             <div className="md:hidden">
               <label className="block text-sm font-medium text-slate-700 mb-2">
                 Icono <span className="text-slate-400 font-normal">— toca para elegir</span>
@@ -134,7 +119,8 @@ const CreateChannelModal = ({ onClose }: { onClose: () => void }) => {
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Descripción breve del canal"
                 rows={2}
-                className="w-full create-channel-modal__description border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                style={{ fieldSizing: 'content' } as React.CSSProperties}
+                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
               />
             </div>
 
@@ -198,14 +184,14 @@ export const MainLayout = () => {
     try {
       await dispatch(deleteChannel(channel.id)).unwrap()
     } catch (err: any) {
-      alert(err || 'No se puede eliminar un canal con temas existentes.')
+      console.error(err)
     }
   }
 
   const isActiveChannel = (id: string) => channelId === id
 
   const SidebarContent = () => (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full" style={{ background: '#0e1e40' }}>
       <div className={`flex items-center gap-3 px-4 py-5 border-b border-slate-800 ${collapsed ? 'justify-center' : ''}`}>
         <img src="/images/big_logo.svg" alt="Logo Agora shell" />
       </div>
@@ -219,10 +205,24 @@ export const MainLayout = () => {
           <Link
             key={to}
             to={to}
-            className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${location.pathname === to
-              ? 'bg-indigo-600 text-white'
-              : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-              } ${collapsed ? 'justify-center' : ''}`}
+            className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors hover:cursor-pointer ${collapsed ? 'justify-center' : ''}`}
+            style={
+              location.pathname === to
+                ? { background: 'rgba(85,205,252,0.18)', color: '#55cdfc' }
+                : { color: 'rgba(255,255,255,0.65)' }
+            }
+            onMouseEnter={e => {
+              if (location.pathname !== to) {
+                (e.currentTarget as HTMLElement).style.background = 'rgba(85,205,252,0.08)'
+                  ; (e.currentTarget as HTMLElement).style.color = '#ffffff'
+              }
+            }}
+            onMouseLeave={e => {
+              if (location.pathname !== to) {
+                (e.currentTarget as HTMLElement).style.background = 'transparent'
+                  ; (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.65)'
+              }
+            }}
             title={collapsed ? label : undefined}
           >
             {icon}
@@ -232,10 +232,10 @@ export const MainLayout = () => {
 
         {!collapsed && (
           <div className="pt-4 pb-1 px-3">
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Canales</p>
+            <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'rgba(247,168,184,0.6)' }}>Canales</p>
           </div>
         )}
-        {collapsed && <div className="my-2 border-t border-slate-800" />}
+        {collapsed && <div className="my-2" style={{ borderTop: '1px solid rgba(85,205,252,0.15)' }} />}
 
         {channelsLoading ? (
           <div className={`flex ${collapsed ? 'justify-center' : ''} py-2`}>
@@ -246,20 +246,35 @@ export const MainLayout = () => {
             <div key={channel.id} className="group relative">
               <Link
                 to={`/channels/${channel.id}`}
-                className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${isActiveChannel(channel.id)
-                  ? 'bg-slate-700 text-white'
-                  : 'text-slate-300 hover:bg-slate-800 hover:text-white hover:cursor-pointer'
-                  } ${collapsed ? 'justify-center' : ''}`}
+                className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors hover:cursor-pointer ${collapsed ? 'justify-center' : ''}`}
+                style={
+                  isActiveChannel(channel.id)
+                    ? { background: 'rgba(247,168,184,0.15)', color: '#f7a8b8' }
+                    : { color: 'rgba(255,255,255,0.65)' }
+                }
+                onMouseEnter={e => {
+                  if (!isActiveChannel(channel.id)) {
+                    (e.currentTarget as HTMLElement).style.background = 'rgba(85,205,252,0.08)'
+                      ; (e.currentTarget as HTMLElement).style.color = '#ffffff'
+                  }
+                }}
+                onMouseLeave={e => {
+                  if (!isActiveChannel(channel.id)) {
+                    (e.currentTarget as HTMLElement).style.background = 'transparent'
+                      ; (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.65)'
+                  }
+                }}
                 title={collapsed ? channel.name : undefined}
               >
                 <span className="text-base shrink-0">{channel.icon}</span>
-                {!collapsed && (
-                  <span className="truncate flex-1">{channel.name}</span>
-                )}
+                {!collapsed && <span className="truncate flex-1">{channel.name}</span>}
                 {!collapsed && isModerator && (
                   <button
                     onClick={(e) => { e.preventDefault(); handleDeleteChannel(channel) }}
-                    className="hover:cursor-pointer opacity-0 group-hover:opacity-100 text-slate-500 hover:text-red-500 transition-all ml-auto"
+                    className="hover:cursor-pointer opacity-0 group-hover:opacity-100 transition-all ml-auto"
+                    style={{ color: 'rgba(255,255,255,0.3)' }}
+                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = '#f7a8b8'}
+                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.3)'}
                     title="Eliminar canal"
                   >
                     <X size={18} />
@@ -273,7 +288,16 @@ export const MainLayout = () => {
         {isModerator && (
           <button
             onClick={() => setShowCreateChannel(true)}
-            className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm hover:cursor-pointer text-slate-400 hover:text-white hover:bg-slate-800 transition-colors w-full ${collapsed ? 'justify-center' : ''}`}
+            className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm hover:cursor-pointer transition-colors w-full ${collapsed ? 'justify-center' : ''}`}
+            style={{ color: 'rgba(0,255,136,0.7)' }}
+            onMouseEnter={e => {
+              (e.currentTarget as HTMLElement).style.background = 'rgba(0,255,136,0.08)'
+                ; (e.currentTarget as HTMLElement).style.color = '#00ff88'
+            }}
+            onMouseLeave={e => {
+              (e.currentTarget as HTMLElement).style.background = 'transparent'
+                ; (e.currentTarget as HTMLElement).style.color = 'rgba(0,255,136,0.7)'
+            }}
             title={collapsed ? 'Crear canal' : undefined}
           >
             <Plus size={18} />
@@ -283,10 +307,19 @@ export const MainLayout = () => {
       </nav>
 
       {isAuthenticated && profile && (
-        <div className="p-3 border-t border-slate-800">
+        <div className="p-3" style={{ borderTop: '1px solid rgba(85,205,252,0.15)' }}>
           <Link
             to="/settings"
-            className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors ${collapsed ? 'justify-center' : ''}`}
+            className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors hover:cursor-pointer ${collapsed ? 'justify-center' : ''}`}
+            style={{ color: 'rgba(255,255,255,0.65)' }}
+            onMouseEnter={e => {
+              (e.currentTarget as HTMLElement).style.background = 'rgba(85,205,252,0.08)'
+                ; (e.currentTarget as HTMLElement).style.color = '#ffffff'
+            }}
+            onMouseLeave={e => {
+              (e.currentTarget as HTMLElement).style.background = 'transparent'
+                ; (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.65)'
+            }}
             title={collapsed ? 'Configuración' : undefined}
           >
             <Settings size={16} />
@@ -296,10 +329,19 @@ export const MainLayout = () => {
             <Link
               to="/admin"
               onClick={() => setUserMenuOpen(false)}
-              className="flex items-center gap-3 px-4 py-2.5 text-sm text-purple-600 hover:bg-purple-50 transition-colors"
+              className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors hover:cursor-pointer ${collapsed ? 'justify-center' : ''}`}
+              style={{ color: '#f7a8b8' }}
+              onMouseEnter={e => {
+                (e.currentTarget as HTMLElement).style.background = 'rgba(247,168,184,0.1)'
+                  ; (e.currentTarget as HTMLElement).style.color = '#f7a8b8'
+              }}
+              onMouseLeave={e => {
+                (e.currentTarget as HTMLElement).style.background = 'transparent'
+                  ; (e.currentTarget as HTMLElement).style.color = '#f7a8b8'
+              }}
             >
               <Settings size={15} />
-              Administración
+              {!collapsed && <span>Administración</span>}
             </Link>
           )}
         </div>
@@ -307,7 +349,16 @@ export const MainLayout = () => {
 
       <button
         onClick={() => setCollapsed(!collapsed)}
-        className="hidden lg:flex items-center justify-center p-3 border-t border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+        className="hidden lg:flex items-center justify-center p-3 transition-colors hover:cursor-pointer"
+        style={{ borderTop: '1px solid rgba(85,205,252,0.15)', color: 'rgba(255,255,255,0.4)' }}
+        onMouseEnter={e => {
+          (e.currentTarget as HTMLElement).style.background = 'rgba(85,205,252,0.08)'
+            ; (e.currentTarget as HTMLElement).style.color = '#55cdfc'
+        }}
+        onMouseLeave={e => {
+          (e.currentTarget as HTMLElement).style.background = 'transparent'
+            ; (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.4)'
+        }}
       >
         {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
       </button>
@@ -346,25 +397,37 @@ export const MainLayout = () => {
     <div className="flex h-screen bg-slate-50 overflow-hidden">
       {mobileOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-30 lg:hidden"
+          className="fixed inset-0 bg-black/60 z-30 lg:hidden"
           onClick={() => setMobileOpen(false)}
         />
       )}
 
       <aside
         className={`
-          fixed lg:relative z-40 lg:z-auto h-full bg-slate-900 flex flex-col transition-all duration-300 ease-in-out
+          fixed lg:relative z-40 lg:z-auto h-full flex flex-col transition-all duration-300 ease-in-out
           ${collapsed ? 'lg:w-16' : 'lg:w-64'}
-          ${mobileOpen ? 'w-64 translate-x-0' : 'w-64 -translate-x-full lg:translate-x-0'}
+          ${mobileOpen ? 'w-full translate-x-0' : 'w-64 -translate-x-full lg:translate-x-0'}
         `}
+        style={{ background: '#0e1e40' }}
       >
+        {mobileOpen && (
+          <button
+            onClick={() => setMobileOpen(false)}
+            className="lg:hidden absolute top-4 right-4 z-50 hover:cursor-pointer transition-colors"
+            style={{ color: 'rgba(255,255,255,0.5)' }}
+            onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = '#ffffff'}
+            onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.5)'}
+          >
+            <X size={22} />
+          </button>
+        )}
         <SidebarContent />
       </aside>
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <header className="bg-white border-b border-slate-200 px-4 py-3 flex items-center gap-4 sticky top-0 z-20 flex-shrink-0">
           <button
-            className="lg:hidden text-slate-500 hover:text-slate-700 transition-colors"
+            className="lg:hidden text-slate-500 hover:text-slate-700 hover:cursor-pointer transition-colors"
             onClick={() => setMobileOpen(!mobileOpen)}
           >
             <Menu size={22} />
@@ -375,7 +438,7 @@ export const MainLayout = () => {
           </div>
 
           <div className="flex items-center gap-3">
-            <button className="text-slate-400 hover:text-slate-600 transition-colors relative">
+            <button className="text-slate-400 hover:text-slate-600 hover:cursor-pointer transition-colors relative">
               <Bell size={20} />
             </button>
 
@@ -385,7 +448,7 @@ export const MainLayout = () => {
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
                   className="flex items-center gap-2 rounded-full hover:bg-slate-50 p-1 transition-colors hover:cursor-pointer"
                 >
-                  <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-700 font-semibold text-sm">
+                  <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-700 font-semibold text-sm overflow-hidden">
                     {profile.avatar_url ? (
                       <img src={profile.avatar_url} alt="" className="w-8 h-8 rounded-full object-cover" />
                     ) : (
@@ -406,14 +469,14 @@ export const MainLayout = () => {
                       <Link
                         to="/settings"
                         onClick={() => setUserMenuOpen(false)}
-                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50 transition-colors"
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50 hover:cursor-pointer transition-colors"
                       >
                         <Settings size={15} />
                         Configuración
                       </Link>
                       <button
                         onClick={handleLogout}
-                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors w-full"
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 hover:cursor-pointer transition-colors w-full"
                       >
                         <LogOut size={15} />
                         Cerrar sesión
@@ -425,7 +488,7 @@ export const MainLayout = () => {
             ) : (
               <Link
                 to="/login"
-                className="flex items-center gap-2 text-sm text-slate-600 hover:text-slate-800"
+                className="flex items-center gap-2 text-sm text-slate-600 hover:text-slate-800 hover:cursor-pointer"
               >
                 <User size={20} />
               </Link>
