@@ -15,6 +15,7 @@ export interface Channel {
   name: string
   description: string | null
   slug: string
+  created_by_profile?: { username: string } | null
   icon: string
   created_by: string | null
   created_at: string

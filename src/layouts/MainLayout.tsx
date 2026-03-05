@@ -207,15 +207,7 @@ export const MainLayout = () => {
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
       <div className={`flex items-center gap-3 px-4 py-5 border-b border-slate-800 ${collapsed ? 'justify-center' : ''}`}>
-        <div className="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center flex-shrink-0 text-white font-bold text-sm">
-          A
-        </div>
-        {!collapsed && (
-          <div>
-            <p className="text-white font-bold text-sm leading-tight">AgoraShell</p>
-            <p className="text-slate-400 text-xs">Forum</p>
-          </div>
-        )}
+        <img src="/images/big_logo.svg" alt="Logo Agora shell" />
       </div>
 
       <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-1">
