@@ -9,7 +9,7 @@ import HotTopicsPage from '../features/threads/pages/HotTopicsPage'
 import SettingsPage from '../features/auth/pages/SettingsPage.tsx'
 import ComingSoon from '../components/ComingSoon'
 
-const MAINTENANCE_MODE = true
+const MAINTENANCE_MODE = false
 
 const maintenanceRoutes = [
   { path: '*', element: <ComingSoon /> },

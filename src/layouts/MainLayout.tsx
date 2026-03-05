@@ -14,6 +14,7 @@ import Spinner from '../components/shared/Spinner'
 import { type Channel } from '../types'
 import ConfirmModal from '../components/shared/ConfirmModal'
 import { useConfirm } from '../hooks/useConfirm'
+import EmojiPicker, { type EmojiClickData } from 'emoji-picker-react'
 
 const CreateChannelModal = ({ onClose }: { onClose: () => void }) => {
   const dispatch = useDispatch<AppDispatch>()
@@ -22,8 +23,12 @@ const CreateChannelModal = ({ onClose }: { onClose: () => void }) => {
   const [icon, setIcon] = useState('💬')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const [showPicker, setShowPicker] = useState(false)
 
-  const ICONS = ['💬', '📢', '🆘', '🎯', '🔥', '💡', '📚', '🎮', '🛠️', '🌍']
+  const handleEmojiClick = (emojiData: EmojiClickData) => {
+    setIcon(emojiData.emoji)
+    setShowPicker(false)
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -43,68 +48,118 @@ const CreateChannelModal = ({ onClose }: { onClose: () => void }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 overflow-hidden">
+
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
           <h3 className="text-lg font-semibold text-slate-800">Crear canal</h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition-colors">
+          <button
+            onClick={onClose}
+            className="text-slate-400 hover:text-slate-600 hover:cursor-pointer transition-colors"
+          >
             <X size={20} />
           </button>
         </div>
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Icono</label>
-            <div className="flex gap-2 flex-wrap">
-              {ICONS.map((i) => (
+
+        <div className="flex flex-col md:flex-row">
+
+          {/* Mobile: picker fullscreen overlay */}
+          {showPicker && (
+            <div className="md:hidden fixed inset-0 z-50 bg-white flex flex-col">
+              <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+                <span className="font-medium text-slate-800">Elige un icono</span>
                 <button
-                  key={i}
                   type="button"
-                  onClick={() => setIcon(i)}
-                  className={`text-xl p-2 rounded-lg border-2 transition-colors ${icon === i ? 'border-indigo-500 bg-indigo-50' : 'border-transparent hover:bg-slate-50'
-                    }`}
+                  onClick={() => setShowPicker(false)}
+                  className="text-slate-400 hover:text-slate-600 hover:cursor-pointer transition-colors"
                 >
-                  {i}
+                  <X size={20} />
                 </button>
-              ))}
+              </div>
+              <div className="flex-1 overflow-auto">
+                <EmojiPicker
+                  onEmojiClick={handleEmojiClick}
+                  width="100%"
+                  height="100%"
+                />
+              </div>
             </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Nombre *</label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="ej. Diseño Web"
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          )}
+
+          {/* Desktop: left column picker */}
+          <div className="hidden md:flex flex-col items-center bg-slate-50 border-r border-slate-100 p-4 min-w-[340px]">
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-3">Icono del canal</p>
+            <div className="text-4xl mb-4 p-3 bg-white rounded-xl border-2 border-indigo-200 shadow-sm">
+              {icon}
+            </div>
+            <EmojiPicker
+              onEmojiClick={handleEmojiClick}
+              width={320}
+              height={380}
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Descripción</label>
-            <input
-              type="text"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Descripción breve del canal"
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-          </div>
-          {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
-          <div className="flex gap-3 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 border border-slate-200 text-slate-600 rounded-lg py-2 text-sm font-medium hover:bg-slate-50 transition-colors"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={submitting || !name.trim()}
-              className="flex-1 bg-indigo-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-            >
-              {submitting ? <Spinner size="sm" /> : 'Crear canal'}
-            </button>
-          </div>
-        </form>
+
+          {/* Right column: form */}
+          <form onSubmit={handleSubmit} className="flex-1 p-6 space-y-4">
+
+            {/* Mobile: icon button trigger */}
+            <div className="md:hidden">
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Icono <span className="text-slate-400 font-normal">— toca para elegir</span>
+              </label>
+              <button
+                type="button"
+                onClick={() => setShowPicker(true)}
+                className="flex items-center gap-3 px-4 py-3 rounded-xl border-2 border-indigo-300 bg-indigo-50 hover:bg-indigo-100 hover:cursor-pointer transition-colors w-full"
+              >
+                <span className="text-3xl">{icon}</span>
+                <span className="text-sm text-indigo-600 font-medium">Cambiar icono</span>
+              </button>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Nombre *</label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="ej. Diseño Web"
+                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Descripción</label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Descripción breve del canal"
+                rows={2}
+                className="w-full create-channel-modal__description border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+              />
+            </div>
+
+            {error && (
+              <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>
+            )}
+
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex-1 border border-slate-200 text-slate-600 rounded-lg py-2 text-sm font-medium hover:bg-slate-50 hover:cursor-pointer transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                disabled={submitting || !name.trim()}
+                className="flex-1 bg-indigo-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-indigo-700 hover:cursor-pointer transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {submitting ? <Spinner size="sm" /> : 'Crear canal'}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   )
@@ -201,21 +256,21 @@ export const MainLayout = () => {
                 to={`/channels/${channel.id}`}
                 className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${isActiveChannel(channel.id)
                   ? 'bg-slate-700 text-white'
-                  : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                  : 'text-slate-300 hover:bg-slate-800 hover:text-white hover:cursor-pointer'
                   } ${collapsed ? 'justify-center' : ''}`}
                 title={collapsed ? channel.name : undefined}
               >
-                <span className="text-base flex-shrink-0">{channel.icon}</span>
+                <span className="text-base shrink-0">{channel.icon}</span>
                 {!collapsed && (
                   <span className="truncate flex-1">{channel.name}</span>
                 )}
                 {!collapsed && isModerator && (
                   <button
                     onClick={(e) => { e.preventDefault(); handleDeleteChannel(channel) }}
-                    className="opacity-0 group-hover:opacity-100 text-slate-500 hover:text-red-400 transition-all ml-auto"
+                    className="hover:cursor-pointer opacity-0 group-hover:opacity-100 text-slate-500 hover:text-red-500 transition-all ml-auto"
                     title="Eliminar canal"
                   >
-                    <X size={12} />
+                    <X size={18} />
                   </button>
                 )}
               </Link>
@@ -226,10 +281,10 @@ export const MainLayout = () => {
         {isModerator && (
           <button
             onClick={() => setShowCreateChannel(true)}
-            className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-400 hover:text-white hover:bg-slate-800 transition-colors w-full ${collapsed ? 'justify-center' : ''}`}
+            className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm hover:cursor-pointer text-slate-400 hover:text-white hover:bg-slate-800 transition-colors w-full ${collapsed ? 'justify-center' : ''}`}
             title={collapsed ? 'Crear canal' : undefined}
           >
-            <Plus size={16} />
+            <Plus size={18} />
             {!collapsed && <span>Crear canal</span>}
           </button>
         )}
