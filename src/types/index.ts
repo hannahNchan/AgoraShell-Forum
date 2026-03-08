@@ -1,5 +1,4 @@
 export type UserRole = 'admin' | 'moderator' | 'user' | 'banned'
-
 export interface Profile {
   id: string
   username: string
@@ -9,7 +8,6 @@ export interface Profile {
   role?: UserRole
   created_at: string
 }
-
 export interface Channel {
   id: string
   name: string
@@ -21,7 +19,6 @@ export interface Channel {
   created_at: string
   topics_count?: number
 }
-
 export interface Topic {
   id: string
   channel_id: string
@@ -32,12 +29,10 @@ export interface Topic {
   replies_count: number
   created_at: string
   updated_at: string
-  // Joined
   author?: Profile
   channel?: Channel
   is_starred?: boolean
 }
-
 export interface Reply {
   id: string
   topic_id: string
@@ -50,14 +45,12 @@ export interface Reply {
   reactions?: ReplyReaction[]
   children?: Reply[]
 }
-
 export interface TopicStar {
   id: string
   topic_id: string
   user_id: string
   created_at: string
 }
-
 export interface ReplyReaction {
   id: string
   reply_id: string
@@ -65,10 +58,21 @@ export interface ReplyReaction {
   emoji: string
   created_at: string
 }
-
 export interface ReactionGroup {
   emoji: string
   count: number
   reacted: boolean
   user_ids: string[]
+}
+export interface Notification {
+  id: string
+  user_id: string
+  actor_id: string
+  type: 'mention'
+  topic_id: string | null
+  reply_id: string | null
+  read: boolean
+  created_at: string
+  actor?: Profile
+  topic?: Pick<Topic, 'id' | 'title' | 'channel_id'>
 }

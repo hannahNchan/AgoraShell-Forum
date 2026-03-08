@@ -4,6 +4,7 @@ import channelsReducer from '../features/forums/store/forumsSlice'
 import topicsReducer from '../features/threads/store/threadsSlice'
 import postsReducer from '../features/posts/store/postsSlice'
 import confirmReducer from './confirmSlice'
+import notificationsReducer from '../features/notifications/store/notificationsSlice'
 
 export const store = configureStore({
   reducer: {
@@ -11,7 +12,8 @@ export const store = configureStore({
     channels: channelsReducer,
     topics: topicsReducer,
     posts: postsReducer,
-    confirm: confirmReducer
+    confirm: confirmReducer,
+    notifications: notificationsReducer,
   },
 })
 

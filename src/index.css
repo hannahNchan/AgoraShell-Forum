@@ -66,3 +66,38 @@
 .create-channel-modal__description {
   field-sizing: content;
 }
+
+/* Chip de mención dentro del editor y en el contenido renderizado */
+.mention {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  background: rgba(99, 102, 241, 0.1);
+  color: #4f46e5;
+  font-weight: 600;
+  font-size: 0.85em;
+  padding: 0 6px;
+  border-radius: 999px;
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  cursor: default;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.mention::before {
+  content: '@';
+  opacity: 0.6;
+  font-weight: 400;
+}
+
+/* Tema tippy para el dropdown de menciones */
+.tippy-box[data-theme~='mention'] {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+}
+
+.tippy-box[data-theme~='mention'] > .tippy-content {
+  padding: 0;
+}

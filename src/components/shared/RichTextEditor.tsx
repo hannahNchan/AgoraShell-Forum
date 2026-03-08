@@ -4,6 +4,7 @@ import Link from '@tiptap/extension-link'
 import Placeholder from '@tiptap/extension-placeholder'
 import ImageResize from 'tiptap-extension-resize-image'
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
+import MentionExtension from '@tiptap/extension-mention'
 import { createLowlight, common } from 'lowlight'
 import type { NodeViewProps } from '@tiptap/react'
 import {
@@ -11,6 +12,7 @@ import {
   Link as LinkIcon, Image as ImageIcon, Quote, Minus, FileCode,
 } from 'lucide-react'
 import { supabase } from '../../services/supabase'
+import { mentionSuggestion } from './mentionSuggestion'
 
 const lowlight = createLowlight(common)
 
@@ -117,6 +119,12 @@ export const RichTextEditor = ({
           return ReactNodeViewRenderer(CodeBlockView)
         },
       }).configure({ lowlight, defaultLanguage: 'plaintext' }),
+      MentionExtension.configure({
+        HTMLAttributes: {
+          class: 'mention',
+        },
+        suggestion: mentionSuggestion,
+      }),
     ],
     content,
     onUpdate: ({ editor }) => {

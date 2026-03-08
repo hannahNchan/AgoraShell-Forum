@@ -16,6 +16,7 @@ import ConfirmModal from '../components/shared/ConfirmModal'
 import { useConfirm } from '../hooks/useConfirm'
 import EmojiPicker, { type EmojiClickData } from 'emoji-picker-react'
 import GlobalSearch from '../components/GlobalSearch'
+import NotificationPanel from '../features/notifications/components/NotificationPanel'
 
 const CreateChannelModal = ({ onClose }: { onClose: () => void }) => {
   const dispatch = useDispatch<AppDispatch>()
@@ -157,6 +158,7 @@ export const MainLayout = () => {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [showCreateChannel, setShowCreateChannel] = useState(false)
+  const [notifOpen, setNotifOpen] = useState(false)
 
   const dispatch = useDispatch<AppDispatch>()
   const navigate = useNavigate()
@@ -167,6 +169,7 @@ export const MainLayout = () => {
   const { isAdmin } = useRole()
   const channels = useSelector((state: RootState) => state.channels.items)
   const channelsLoading = useSelector((state: RootState) => state.channels.loading)
+  const unreadCount = useSelector((state: RootState) => state.notifications.unreadCount)
   const { confirm } = useConfirm()
   const isHome = location.pathname === '/'
 
@@ -268,10 +271,24 @@ export const MainLayout = () => {
                       ; (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.65)'
                   }
                 }}
-                title={collapsed ? channel.name : undefined}
+                title={collapsed ? `>| ${channel.name}` : undefined}
               >
                 <span className="text-base shrink-0">{channel.icon}</span>
-                {!collapsed && <span className="truncate flex-1">{channel.name}</span>}
+                {!collapsed && (
+                  <span className="truncate flex-1 flex items-center gap-1">
+                    <span
+                      className="font-mono font-bold text-xs shrink-0"
+                      style={{
+                        background: 'linear-gradient(90deg, #55cdfc, #f7a8b8)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                      }}
+                    >
+                      {'>|'}
+                    </span>
+                    {channel.name}
+                  </span>
+                )}
                 {!collapsed && isModerator && (
                   <button
                     onClick={(e) => { e.preventDefault(); handleDeleteChannel(channel) }}
@@ -430,24 +447,36 @@ export const MainLayout = () => {
             <Menu size={22} />
           </button>
 
-          <div className="flex-1">
+          <div className="flex-1 hidden md:block">
             <span className="text-slate-800 font-bold text-lg">AgoraShell</span>
           </div>
 
-          {/* Desktop: centrado absoluto. Mobile: oculto aquí */}
           <div className="hidden lg:block absolute left-1/2 -translate-x-1/2 w-full max-w-md">
             <GlobalSearch />
           </div>
 
-          {/* Mobile: en flujo normal */}
           <div className="lg:hidden flex-1">
             <GlobalSearch />
           </div>
 
           <div className="flex items-center gap-3">
-            <button className="text-slate-400 hover:text-slate-600 hover:cursor-pointer transition-colors relative">
-              <Bell size={20} />
-            </button>
+            {isAuthenticated && (
+              <div className="relative">
+                <button
+                  onClick={() => setNotifOpen(!notifOpen)}
+                  className="relative text-slate-400 hover:text-slate-600 hover:cursor-pointer transition-colors p-1"
+                >
+                  <Bell size={20} />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 min-w-[16px] h-4 bg-indigo-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-0.5">
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </span>
+                  )}
+                </button>
+                <NotificationPanel open={notifOpen} onClose={() => setNotifOpen(false)} />
+              </div>
+            )}
+
             {isAuthenticated && profile ? (
               <div className="relative">
                 <button
