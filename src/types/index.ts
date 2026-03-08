@@ -68,7 +68,7 @@ export interface Notification {
   id: string
   user_id: string
   actor_id: string
-  type: 'mention'
+  type: 'mention' | 'reply'
   topic_id: string | null
   reply_id: string | null
   read: boolean

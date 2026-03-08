@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { Plus, Star, MessageSquare, Clock, X, ChevronDown, ChevronUp, Trash2 } from 'lucide-react'
@@ -7,7 +7,7 @@ import { es } from 'date-fns/locale'
 import { type AppDispatch, type RootState } from '../../../store'
 import { useRole } from '../../auth/hooks/useRole'
 import { selectProfile } from '../../auth/store/authSelectors'
-import { fetchTopicsByChannel, createTopic, toggleStar, setRepliesCount, deleteTopic } from '../store/threadsSlice'
+import { fetchTopicsByChannel, fetchMoreTopics, createTopic, toggleStar, setRepliesCount, deleteTopic } from '../store/threadsSlice'
 import { useAuth } from '../../auth/hooks/useAuth'
 import Spinner from '../../../components/shared/Spinner'
 import RichTextEditor from '../../../components/shared/RichTextEditor'
@@ -103,7 +103,6 @@ const TopicCard = ({ topic }: { topic: any }) => {
   const handleToggle = async (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-
     if (!expanded && !fetched) {
       setLoadingReplies(true)
       const { data } = await supabase
@@ -116,7 +115,6 @@ const TopicCard = ({ topic }: { topic: any }) => {
       setFetched(true)
       setLoadingReplies(false)
     }
-
     setExpanded(!expanded)
   }
 
@@ -162,13 +160,11 @@ const TopicCard = ({ topic }: { topic: any }) => {
               <Star size={14} fill={topic.is_starred ? 'currentColor' : 'none'} />
               <span>{topic.stars_count}</span>
             </button>
-
             <span className="flex items-center gap-1 text-xs text-slate-400">
               <MessageSquare size={14} />
               <span>{topic.replies_count} {topic.replies_count === 1 ? 'respuesta' : 'respuestas'}</span>
             </span>
           </div>
-
           {canDelete && isAuthenticated && (
             <button
               onClick={(e) => {
@@ -203,9 +199,7 @@ const TopicCard = ({ topic }: { topic: any }) => {
       {expanded && (
         <div className="border-t border-slate-100 ml-[52px] mr-4 mb-4">
           {loadingReplies ? (
-            <div className="flex justify-center py-4">
-              <Spinner size="sm" />
-            </div>
+            <div className="flex justify-center py-4"><Spinner size="sm" /></div>
           ) : replies.length === 0 ? (
             <p className="text-xs text-slate-400 py-3">Sin respuestas aún.</p>
           ) : (
@@ -276,15 +270,22 @@ export const ThreadsPage = () => {
   const { isAuthenticated } = useAuth()
   const { isBanned } = useRole()
   const [showCreate, setShowCreate] = useState(false)
+  const pageRef = useRef(1)
+  const loaderRef = useRef<HTMLDivElement>(null)
+  const loadingMoreRef = useRef(false)
+  const hasMoreRef = useRef(true)
 
-  const { items: topics, loading } = useSelector((state: RootState) => state.topics)
+  const { items: topics, loading, loadingMore, hasMore } = useSelector((state: RootState) => state.topics)
   const currentChannel = useSelector((state: RootState) =>
     state.channels.items.find((c) => c.id === channelId)
   )
 
+  useEffect(() => { loadingMoreRef.current = loadingMore }, [loadingMore])
+  useEffect(() => { hasMoreRef.current = hasMore }, [hasMore])
+
   useEffect(() => {
     if (!channelId) return
-
+    pageRef.current = 1
     dispatch(fetchTopicsByChannel(channelId))
 
     const realtimeChannel = supabase
@@ -305,6 +306,33 @@ export const ThreadsPage = () => {
       .subscribe()
 
     return () => { supabase.removeChannel(realtimeChannel) }
+  }, [channelId, dispatch])
+
+  useEffect(() => {
+    const el = loaderRef.current
+
+    if (!el) {
+      return
+    }
+
+    const scrollRoot = document.getElementById('main-scroll')
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0]
+        if (entry.isIntersecting && !loadingMoreRef.current && hasMoreRef.current && channelId) {
+          dispatch(fetchMoreTopics({ channelId, page: pageRef.current }))
+          pageRef.current += 1
+        }
+      },
+      { root: scrollRoot, threshold: 0.1 }
+    )
+
+    observer.observe(el)
+
+    return () => {
+      observer.disconnect()
+    }
   }, [channelId, dispatch])
 
   return (
@@ -354,6 +382,25 @@ export const ThreadsPage = () => {
           ))}
         </div>
       )}
+
+      <div ref={loaderRef} className="flex flex-col items-center py-3 gap-3">
+        {loadingMore && (
+          <>
+            <img
+              src="/images/big_logo.svg"
+              alt="Cargando"
+              className="w-64 animate-pulse"
+            />
+            <span className="text-base text-slate-400">Cargando más temas...</span>
+          </>
+        )}
+        {!hasMore && topics.length > 0 && (
+          <div className="flex flex-col items-center gap-2">
+            <img src="/images/big_logo.svg" alt="" className="w-10 h-10 opacity-20" />
+            <span className="text-xs text-slate-400">No hay más temas</span>
+          </div>
+        )}
+      </div>
 
       {showCreate && channelId && (
         <CreateTopicModal channelId={channelId} onClose={() => setShowCreate(false)} />

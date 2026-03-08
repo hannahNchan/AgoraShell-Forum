@@ -5,6 +5,7 @@ import topicsReducer from '../features/threads/store/threadsSlice'
 import postsReducer from '../features/posts/store/postsSlice'
 import confirmReducer from './confirmSlice'
 import notificationsReducer from '../features/notifications/store/notificationsSlice'
+import feedReducer from '../features/forums/store/feedSlice'
 
 export const store = configureStore({
   reducer: {
@@ -14,6 +15,7 @@ export const store = configureStore({
     posts: postsReducer,
     confirm: confirmReducer,
     notifications: notificationsReducer,
+    feed: feedReducer
   },
 })
 

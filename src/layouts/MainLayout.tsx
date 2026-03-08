@@ -3,7 +3,7 @@ import { Outlet, Link, useNavigate, useParams, useLocation } from 'react-router-
 import { useDispatch, useSelector } from 'react-redux'
 import {
   ChevronLeft, ChevronRight, Home, Bookmark, Flame,
-  Settings, LogOut, User, Plus, ChevronDown, Menu, X, Bell,
+  Settings, LogOut, User, Plus, ChevronDown, LayoutGrid, Menu, X, Bell,
 } from 'lucide-react'
 import { type AppDispatch, type RootState } from '../store'
 import { fetchChannels, createChannel, deleteChannel } from '../features/forums/store/forumsSlice'
@@ -208,6 +208,7 @@ export const MainLayout = () => {
           { to: '/', icon: <Home size={16} />, label: 'Inicio' },
           { to: '/saved', icon: <Bookmark size={16} />, label: 'Guardados' },
           { to: '/hot', icon: <Flame size={16} />, label: 'Hot Topics' },
+          { to: '/channels', icon: <LayoutGrid size={16} />, label: 'Ver todos los canales' },
         ].map(({ to, icon, label }) => (
           <Link
             key={to}
@@ -430,16 +431,14 @@ export const MainLayout = () => {
 
       <div
         className="flex-1 flex flex-col min-w-0 overflow-hidden transition-all duration-300 ease-in-out"
-        style={{ marginLeft: mobileOpen ? '80vw' : undefined }}
       >
         {mobileOpen && (
           <div
             className="fixed inset-0 z-30 lg:hidden"
-            style={{ marginLeft: '80vw' }}
             onClick={() => setMobileOpen(false)}
           />
         )}
-        <header className="bg-white border-b border-slate-200 px-4 py-3 flex items-center gap-4 sticky top-0 z-20 flex-shrink-0 relative">
+        <header className="bg-white border-b border-slate-200 px-2 md:px-4 py-3 flex items-center gap-4 sticky top-0 z-20 flex-shrink-0 relative">
           <button
             className="lg:hidden text-slate-500 hover:text-slate-700 hover:cursor-pointer transition-colors"
             onClick={() => setMobileOpen(!mobileOpen)}
@@ -532,7 +531,7 @@ export const MainLayout = () => {
 
         <Breadcrumb />
 
-        <main className="flex-1 overflow-y-auto">
+        <main id="main-scroll" className="flex-1 overflow-y-auto">
           <div className={`${isHome ? 'max-w-7xl' : 'max-w-4xl'} mx-auto px-4 py-6`}>
             <Outlet />
           </div>

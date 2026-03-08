@@ -2,10 +2,14 @@ import { createSlice, createAsyncThunk, type PayloadAction } from '@reduxjs/tool
 import { supabase } from '../../../services/supabase'
 import { type Topic } from '../../../types'
 
+const PAGE_SIZE = 20
+
 interface TopicsState {
   items: Topic[]
   currentTopic: Topic | null
   loading: boolean
+  loadingMore: boolean
+  hasMore: boolean
   error: string | null
 }
 
@@ -13,7 +17,20 @@ const initialState: TopicsState = {
   items: [],
   currentTopic: null,
   loading: false,
+  loadingMore: false,
+  hasMore: true,
   error: null,
+}
+
+const fetchStars = async (data: any[], userId: string) => {
+  const topicIds = data.map((t: any) => t.id)
+  const { data: stars } = await supabase
+    .from('topic_stars')
+    .select('topic_id')
+    .eq('user_id', userId)
+    .in('topic_id', topicIds)
+  const starredIds = new Set((stars || []).map((s: any) => s.topic_id))
+  return data.map((t: any) => ({ ...t, is_starred: starredIds.has(t.id) })) as Topic[]
 }
 
 export const fetchTopicsByChannel = createAsyncThunk(
@@ -26,20 +43,32 @@ export const fetchTopicsByChannel = createAsyncThunk(
         .select(`*, author:profiles(id, username, avatar_url, role)`)
         .eq('channel_id', channelId)
         .order('created_at', { ascending: false })
+        .range(0, PAGE_SIZE - 1)
       if (error) throw error
-
-      if (user && data) {
-        const topicIds = data.map((t: any) => t.id)
-        const { data: stars } = await supabase
-          .from('topic_stars')
-          .select('topic_id')
-          .eq('user_id', user.id)
-          .in('topic_id', topicIds)
-        const starredIds = new Set((stars || []).map((s: any) => s.topic_id))
-        return data.map((t: any) => ({ ...t, is_starred: starredIds.has(t.id) })) as Topic[]
-      }
-
+      if (user && data) return await fetchStars(data, user.id)
       return data as Topic[]
+    } catch (error: any) {
+      return rejectWithValue(error.message)
+    }
+  }
+)
+
+export const fetchMoreTopics = createAsyncThunk(
+  'topics/fetchMore',
+  async ({ channelId, page }: { channelId: string; page: number }, { rejectWithValue }) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      const from = page * PAGE_SIZE
+      const to = from + PAGE_SIZE - 1
+      const { data, error } = await supabase
+        .from('topics')
+        .select(`*, author:profiles(id, username, avatar_url, role)`)
+        .eq('channel_id', channelId)
+        .order('created_at', { ascending: false })
+        .range(from, to)
+      if (error) throw error
+      if (user && data && data.length > 0) return await fetchStars(data, user.id)
+      return (data ?? []) as Topic[]
     } catch (error: any) {
       return rejectWithValue(error.message)
     }
@@ -57,7 +86,6 @@ export const fetchTopicById = createAsyncThunk(
         .eq('id', topicId)
         .single()
       if (error) throw error
-
       let is_starred = false
       if (user) {
         const { data: star } = await supabase
@@ -68,7 +96,6 @@ export const fetchTopicById = createAsyncThunk(
           .single()
         is_starred = !!star
       }
-
       return { ...data, is_starred } as Topic
     } catch (error: any) {
       return rejectWithValue(error.message)
@@ -129,21 +156,21 @@ const topicsSlice = createSlice({
   name: 'topics',
   initialState,
   reducers: {
-    clearTopics: (state) => { state.items = []; state.currentTopic = null },
+    clearTopics: (state) => {
+      state.items = []
+      state.currentTopic = null
+      state.hasMore = true
+    },
     clearError: (state) => { state.error = null },
     incrementRepliesCount: (state, action: PayloadAction<string>) => {
       const topic = state.items.find((t) => t.id === action.payload)
       if (topic) topic.replies_count += 1
-      if (state.currentTopic?.id === action.payload) {
-        state.currentTopic.replies_count += 1
-      }
+      if (state.currentTopic?.id === action.payload) state.currentTopic.replies_count += 1
     },
     setRepliesCount: (state, action: PayloadAction<{ topicId: string; count: number }>) => {
       const topic = state.items.find((t) => t.id === action.payload.topicId)
       if (topic) topic.replies_count = action.payload.count
-      if (state.currentTopic?.id === action.payload.topicId) {
-        state.currentTopic.replies_count = action.payload.count
-      }
+      if (state.currentTopic?.id === action.payload.topicId) state.currentTopic.replies_count = action.payload.count
     },
     decrementRepliesCount: (state, action: PayloadAction<string>) => {
       const topic = state.items.find((t) => t.id === action.payload)
@@ -155,15 +182,25 @@ const topicsSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      .addCase(fetchTopicsByChannel.pending, (state) => { state.loading = true })
+      .addCase(fetchTopicsByChannel.pending, (state) => { state.loading = true; state.hasMore = true })
       .addCase(fetchTopicsByChannel.fulfilled, (state, action) => {
         state.loading = false
         state.items = action.payload
+        state.hasMore = action.payload.length === PAGE_SIZE
       })
       .addCase(fetchTopicsByChannel.rejected, (state, action) => {
         state.loading = false
         state.error = action.payload as string
       })
+
+      .addCase(fetchMoreTopics.pending, (state) => { state.loadingMore = true })
+      .addCase(fetchMoreTopics.fulfilled, (state, action) => {
+        state.loadingMore = false
+        const newItems = action.payload.filter((t) => !state.items.find((e) => e.id === t.id))
+        state.items = [...state.items, ...newItems]
+        state.hasMore = action.payload.length === PAGE_SIZE
+      })
+      .addCase(fetchMoreTopics.rejected, (state) => { state.loadingMore = false })
 
       .addCase(fetchTopicById.pending, (state) => { state.loading = true })
       .addCase(fetchTopicById.fulfilled, (state, action) => {
@@ -196,11 +233,8 @@ const topicsSlice = createSlice({
 
       .addCase(deleteTopic.fulfilled, (state, action) => {
         state.items = state.items.filter((t) => t.id !== action.payload)
-        if (state.currentTopic?.id === action.payload) {
-          state.currentTopic = null
-        }
+        if (state.currentTopic?.id === action.payload) state.currentTopic = null
       })
-
   },
 })
 

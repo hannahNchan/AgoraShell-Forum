@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
-import { Bell, AtSign, Check } from 'lucide-react'
+import { Bell, AtSign, Check, MessageCircle } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { type AppDispatch, type RootState } from '../../../store'
@@ -21,6 +21,7 @@ const NotificationItem = ({ notification, onRead }: { notification: Notification
 
   const getIcon = () => {
     if (notification.type === 'mention') return <AtSign size={14} className="text-indigo-500" />
+    if (notification.type === 'reply') return <MessageCircle size={14} className="text-emerald-500" />
     return <Bell size={14} className="text-slate-400" />
   }
 
@@ -30,6 +31,15 @@ const NotificationItem = ({ notification, onRead }: { notification: Notification
         <span>
           <span className="font-semibold text-slate-800">{notification.actor?.username}</span>
           <span className="text-slate-600"> te mencionó en </span>
+          <span className="font-medium text-indigo-600">{notification.topic?.title ?? 'un tema'}</span>
+        </span>
+      )
+    }
+    if (notification.type === 'reply') {
+      return (
+        <span>
+          <span className="font-semibold text-slate-800">{notification.actor?.username}</span>
+          <span className="text-slate-600"> respondió a tu mensaje en </span>
           <span className="font-medium text-indigo-600">{notification.topic?.title ?? 'un tema'}</span>
         </span>
       )

@@ -1,10 +1,8 @@
 import { useState } from 'react'
 import { useSelector, useDispatch } from 'react-redux'
 import { Link } from 'react-router-dom'
-import { MessageSquare, Flame, Trash2 } from 'lucide-react'
+import { MessageSquare, Trash2 } from 'lucide-react'
 import { type RootState, type AppDispatch } from '../../../store'
-import { useHotTopics } from '../hooks/useHotTopics'
-import HotTopicCard from '../components/HotTopicCard'
 import { useRole } from '../../auth/hooks/useRole'
 import { useConfirm } from '../../../hooks/useConfirm'
 import { deleteChannel } from '../store/forumsSlice'
@@ -13,7 +11,6 @@ import { supabase } from '../../../services/supabase'
 export const ForumsPage = () => {
   const dispatch = useDispatch<AppDispatch>()
   const channels = useSelector((state: RootState) => state.channels.items)
-  const { hotTopics } = useHotTopics(5)
   const { isAdmin } = useRole()
   const { confirm } = useConfirm()
   const [deletingId, setDeletingId] = useState<string | null>(null)
@@ -49,7 +46,7 @@ export const ForumsPage = () => {
         <p className="text-slate-500 text-sm mt-1">Elige un canal para ver los temas de discusión</p>
       </div>
       <div className="flex flex-col md:flex-row gap-4 items-start">
-        <div className="flex flex-col gap-3 w-full md:w-3/5 lg:w-4/6">
+        <div className="flex flex-col gap-4">
           {channels.map((channel) => (
             <div key={channel.id} className="bg-white rounded-xl border border-slate-200 hover:border-indigo-300 hover:shadow-sm transition-all group">
               <Link
@@ -99,24 +96,6 @@ export const ForumsPage = () => {
             </div>
           )}
         </div>
-        {hotTopics.length > 0 && (
-          <div className="space-y-3 w-full md:w-2/5 lg:w-2/6 bg-slate-300 p-4 rounded-xl">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Flame size={16} className="text-orange-500" />
-                <h3 className="font-semibold text-slate-700 text-sm">Hot Topics</h3>
-              </div>
-              <Link to="/hot" className="text-xs text-orange-500 hover:text-orange-600 hover:cursor-pointer font-medium transition-colors">
-                Ver todos →
-              </Link>
-            </div>
-            <div className="space-y-2">
-              {hotTopics.map((topic, i) => (
-                <HotTopicCard key={topic.id} topic={topic} rank={i + 1} />
-              ))}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   )
