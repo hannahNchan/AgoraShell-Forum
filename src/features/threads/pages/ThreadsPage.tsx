@@ -1,22 +1,27 @@
 import { useEffect, useState, useRef } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useSearchParams } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
-import { Plus, Star, MessageSquare, Clock, X, ChevronDown, ChevronUp, Trash2 } from 'lucide-react'
+import { Plus, Star, MessageSquare, Clock, X, ChevronDown, ChevronUp, Trash2, Pencil, Check, Tag as TagIcon } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { type AppDispatch, type RootState } from '../../../store'
 import { useRole } from '../../auth/hooks/useRole'
 import { selectProfile } from '../../auth/store/authSelectors'
-import { fetchTopicsByChannel, fetchMoreTopics, createTopic, toggleStar, setRepliesCount, deleteTopic } from '../store/threadsSlice'
+import { fetchTopicsByChannel, fetchMoreTopics, createTopic, toggleStar, setRepliesCount, deleteTopic, updateTopic } from '../store/threadsSlice'
+import { fetchSettings } from '../../tags/store/tagsSlice'
 import { useAuth } from '../../auth/hooks/useAuth'
 import Spinner from '../../../components/shared/Spinner'
 import RichTextEditor from '../../../components/shared/RichTextEditor'
+import TagInput from '../../tags/components/TagInput'
 import { supabase } from '../../../services/supabase'
+import { useConfirm } from '../../../hooks/useConfirm'
+import { type Tag } from '../../../types'
 
-const CreateTopicModal = ({ channelId, onClose }: { channelId: string; onClose: () => void }) => {
+const CreateTopicModal = ({ channelId, onClose, maxTags }: { channelId: string; onClose: () => void; maxTags: number }) => {
   const dispatch = useDispatch<AppDispatch>()
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
+  const [selectedTags, setSelectedTags] = useState<Tag[]>([])
   const [submitting, setSubmitting] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -24,7 +29,12 @@ const CreateTopicModal = ({ channelId, onClose }: { channelId: string; onClose: 
     if (!title.trim() || !content || content === '<p></p>') return
     setSubmitting(true)
     try {
-      await dispatch(createTopic({ channel_id: channelId, title: title.trim(), content })).unwrap()
+      await dispatch(createTopic({
+        channel_id: channelId,
+        title: title.trim(),
+        content,
+        tagIds: selectedTags.map((t) => t.id),
+      })).unwrap()
       onClose()
     } finally {
       setSubmitting(false)
@@ -60,18 +70,22 @@ const CreateTopicModal = ({ channelId, onClose }: { channelId: string; onClose: 
               minHeight="200px"
             />
           </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Tags</label>
+            <TagInput selected={selectedTags} onChange={setSelectedTags} maxTags={maxTags} />
+          </div>
           <div className="flex gap-3 pt-2">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 border border-slate-200 text-slate-600 rounded-lg py-2.5 text-sm font-medium hover:bg-slate-50 transition-colors"
+              className="flex-1 border border-slate-200 text-slate-600 rounded-lg py-2.5 text-sm font-medium hover:bg-slate-50 transition-colors hover:cursor-pointer"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={submitting || !title.trim()}
-              className="flex-1 bg-indigo-600 text-white rounded-lg py-2.5 text-sm font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              className="flex-1 bg-indigo-600 text-white rounded-lg py-2.5 text-sm font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 hover:cursor-pointer"
             >
               {submitting ? <Spinner size="sm" /> : 'Publicar tema'}
             </button>
@@ -82,16 +96,111 @@ const CreateTopicModal = ({ channelId, onClose }: { channelId: string; onClose: 
   )
 }
 
-const TopicCard = ({ topic }: { topic: any }) => {
+interface EditTopicModalProps {
+  topic: any
+  onClose: () => void
+  maxTags: number
+}
+
+const EditTopicModal = ({ topic, onClose, maxTags }: EditTopicModalProps) => {
+  const dispatch = useDispatch<AppDispatch>()
+  const [title, setTitle] = useState(topic.title)
+  const [content, setContent] = useState(topic.content)
+  const [selectedTags, setSelectedTags] = useState<Tag[]>(topic.tags || [])
+  const [submitting, setSubmitting] = useState(false)
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!title.trim() || !content || content === '<p></p>') return
+    setSubmitting(true)
+    try {
+      await dispatch(updateTopic({
+        topicId: topic.id,
+        title: title.trim(),
+        content,
+        tagIds: selectedTags.map((t) => t.id),
+      })).unwrap()
+      onClose()
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 backdrop-blur-sm pt-10 pb-4 px-4 overflow-y-auto">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl">
+        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-slate-800">Editar tema</h3>
+          <button onClick={onClose} className="hover:cursor-pointer text-slate-400 hover:text-slate-600 transition-colors">
+            <X size={20} />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Título *</label>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="¿Sobre qué quieres hablar?"
+              className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              autoFocus
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Contenido *</label>
+            <RichTextEditor
+              key={`edit-${topic.id}`}
+              onChange={setContent}
+              content={topic.content}
+              placeholder="Edita el contenido de tu tema..."
+              minHeight="200px"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Tags</label>
+            <TagInput selected={selectedTags} onChange={setSelectedTags} maxTags={maxTags} />
+          </div>
+          <div className="flex gap-3 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 border border-slate-200 text-slate-600 rounded-lg py-2.5 text-sm font-medium hover:bg-slate-50 transition-colors hover:cursor-pointer"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={submitting || !title.trim()}
+              className="flex-1 bg-indigo-600 text-white rounded-lg py-2.5 text-sm font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 hover:cursor-pointer"
+            >
+              {submitting ? <Spinner size="sm" /> : (
+                <>
+                  <Check size={15} />
+                  Guardar cambios
+                </>
+              )}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+const TopicCard = ({ topic, maxTags }: { topic: any; maxTags: number }) => {
   const dispatch = useDispatch<AppDispatch>()
   const { isAuthenticated } = useAuth()
   const profile = useSelector(selectProfile)
-  const { isModerator } = useRole()
+  const { isModerator, isBanned } = useRole()
   const canDelete = isModerator || profile?.id === topic.author_id
+  const canEdit = profile?.id === topic.author_id
   const [expanded, setExpanded] = useState(false)
   const [replies, setReplies] = useState<any[]>([])
   const [loadingReplies, setLoadingReplies] = useState(false)
   const [fetched, setFetched] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
+  const { confirm } = useConfirm()
 
   const handleStar = (e: React.MouseEvent) => {
     e.preventDefault()
@@ -118,164 +227,212 @@ const TopicCard = ({ topic }: { topic: any }) => {
     setExpanded(!expanded)
   }
 
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const ok = await confirm('Eliminar tema', '¿Eliminar este tema? Esta acción no se puede deshacer.')
+    if (!ok) return
+    dispatch(deleteTopic(topic.id))
+  }
+
+  const handleEditClick = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setShowEditModal(true)
+  }
+
   const stripHtml = (html: string) => {
     const tmp = document.createElement('div')
     tmp.innerHTML = html
     return tmp.textContent || tmp.innerText || ''
   }
 
+  const wasEdited = topic.updated_at && topic.updated_at !== topic.created_at
+
   return (
-    <div className="bg-white rounded-xl border border-slate-200 hover:border-indigo-200 hover:shadow-sm transition-all overflow-hidden">
-      <div className="flex items-start gap-4 p-5">
-        <div className="w-9 h-9 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-semibold text-sm flex-shrink-0 overflow-hidden">
-          {topic.author?.avatar_url ? (
-            <img src={topic.author.avatar_url} alt="" className="w-9 h-9 object-cover" />
-          ) : (
-            topic.author?.username?.charAt(0).toUpperCase()
-          )}
+    <>
+      <div className="bg-white rounded-xl border border-slate-200 hover:border-indigo-200 hover:shadow-sm transition-all overflow-hidden">
+        <div className="flex items-start gap-4 p-5">
+          <div className="w-9 h-9 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-semibold text-sm flex-shrink-0 overflow-hidden">
+            {topic.author?.avatar_url ? (
+              <img src={topic.author.avatar_url} alt="" className="w-9 h-9 object-cover" />
+            ) : (
+              topic.author?.username?.charAt(0).toUpperCase()
+            )}
+          </div>
+
+          <div className="flex-1 min-w-0">
+            <Link
+              to={`topics/${topic.id}`}
+              className="font-semibold text-slate-800 hover:text-indigo-600 transition-colors leading-tight block"
+            >
+              {topic.title}
+            </Link>
+            <div className="flex items-center gap-3 mt-1 text-xs text-slate-400">
+              <span className="font-medium text-slate-500">{topic.author?.username}</span>
+              <span className="flex items-center gap-1">
+                <Clock size={11} />
+                {formatDistanceToNow(new Date(topic.created_at), { addSuffix: true, locale: es })}
+              </span>
+              {wasEdited && <span className="italic text-slate-300">editado</span>}
+            </div>
+            {topic.tags && topic.tags.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {topic.tags.map((tag: Tag) => (
+                  <Link
+                    key={tag.id}
+                    to={`/tags/${tag.slug}`}
+                    onClick={(e) => e.stopPropagation()}
+                    className="hover:cursor-pointer inline-flex items-center gap-1 bg-indigo-50 text-indigo-600 border border-indigo-200 hover:bg-indigo-100 rounded-full px-2 py-0.5 text-xs font-medium transition-colors"
+                  >
+                    <TagIcon size={9} />
+                    {tag.name}
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="flex flex-col items-start md:flex-row md:items-center gap-2 md:gap-4 text-slate-400 flex-shrink-0">
+            <div className="flex flex-row gap-4">
+              <button
+                onClick={handleStar}
+                className={`hover:cursor-pointer flex items-center gap-1 text-xs transition-colors ${topic.is_starred ? 'text-amber-500' : 'hover:text-amber-500'}`}
+              >
+                <Star size={14} fill={topic.is_starred ? 'currentColor' : 'none'} />
+                <span>{topic.stars_count}</span>
+              </button>
+              <span className="flex items-center gap-1 text-xs text-slate-400">
+                <MessageSquare size={14} />
+                <span>{topic.replies_count} {topic.replies_count === 1 ? 'respuesta' : 'respuestas'}</span>
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              {canEdit && isAuthenticated && !isBanned && (
+                <button
+                  onClick={handleEditClick}
+                  className="hover:cursor-pointer px-2 py-1 rounded-sm bg-slate-100 hover:bg-indigo-100 flex items-center gap-1 text-xs text-slate-400 hover:text-indigo-600 transition-colors"
+                >
+                  <Pencil size={14} />
+                  Editar
+                </button>
+              )}
+              {canDelete && isAuthenticated && (
+                <button
+                  onClick={handleDelete}
+                  className="px-2 py-1 rounded-sm bg-red-100 hover:bg-red-200 hover:cursor-pointer flex items-center gap-1 text-xs text-red-400 hover:text-red-500 transition-colors"
+                >
+                  <Trash2 size={14} />
+                  Eliminar
+                </button>
+              )}
+            </div>
+          </div>
         </div>
 
-        <div className="flex-1 min-w-0">
-          <Link
-            to={`topics/${topic.id}`}
-            className="font-semibold text-slate-800 hover:text-indigo-600 transition-colors leading-tight block"
+        {topic.replies_count > 0 && (
+          <button
+            onClick={handleToggle}
+            className={`w-full flex items-center justify-center gap-2 py-2 text-xs font-medium hover:cursor-pointer border-t transition-colors ${expanded
+              ? 'border-indigo-100 bg-indigo-50 text-indigo-600 hover:bg-indigo-100'
+              : 'border-slate-100 bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-slate-600'
+              }`}
           >
-            {topic.title}
-          </Link>
-          <div className="flex items-center gap-3 mt-1.5 text-xs text-slate-400">
-            <span className="font-medium text-slate-500">{topic.author?.username}</span>
-            <span className="flex items-center gap-1">
-              <Clock size={11} />
-              {formatDistanceToNow(new Date(topic.created_at), { addSuffix: true, locale: es })}
-            </span>
-          </div>
-        </div>
+            {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            {expanded ? 'Ocultar respuestas' : `Previsualizar ${topic.replies_count === 1 ? 'respuesta' : 'respuestas'}`}
+          </button>
+        )}
 
-        <div className="flex flex-col items-start md:flex-row md:items-center gap-4 text-slate-400 flex-shrink-0">
-          <div className="flex flex-row gap-4">
-            <button
-              onClick={handleStar}
-              className={`flex items-center gap-1 text-xs transition-colors ${topic.is_starred ? 'text-amber-500' : 'hover:text-amber-500'}`}
-            >
-              <Star size={14} fill={topic.is_starred ? 'currentColor' : 'none'} />
-              <span>{topic.stars_count}</span>
-            </button>
-            <span className="flex items-center gap-1 text-xs text-slate-400">
-              <MessageSquare size={14} />
-              <span>{topic.replies_count} {topic.replies_count === 1 ? 'respuesta' : 'respuestas'}</span>
-            </span>
-          </div>
-          {canDelete && isAuthenticated && (
-            <button
-              onClick={(e) => {
-                e.preventDefault()
-                e.stopPropagation()
-                if (!window.confirm('¿Eliminar este tema? Esta acción no se puede deshacer.')) return
-                dispatch(deleteTopic(topic.id))
-              }}
-              className="px-2 py-1 rounded-sm bg-red-100 hover:bg-red-200 hover:cursor-pointer flex items-center gap-1 text-xs text-red-400 hover:text-red-500 transition-colors"
-              title="Eliminar tema"
-            >
-              <Trash2 size={18} />
-              Eliminar tema
-            </button>
-          )}
-        </div>
-      </div>
-
-      {topic.replies_count > 0 && (
-        <button
-          onClick={handleToggle}
-          className={`w-full flex items-center justify-center gap-2 py-2 text-xs font-medium hover:cursor-pointer border-t transition-colors ${expanded
-            ? 'border-indigo-100 bg-indigo-50 text-indigo-600 hover:bg-indigo-100'
-            : 'border-slate-100 bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-slate-600'
-            }`}
-        >
-          {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-          {expanded ? 'Ocultar respuestas' : `Previsualizar ${topic.replies_count === 1 ? 'respuesta' : 'respuestas'}`}
-        </button>
-      )}
-
-      {expanded && (
-        <div className="border-t border-slate-100 ml-[52px] mr-4 mb-4">
-          {loadingReplies ? (
-            <div className="flex justify-center py-4"><Spinner size="sm" /></div>
-          ) : replies.length === 0 ? (
-            <p className="text-xs text-slate-400 py-3">Sin respuestas aún.</p>
-          ) : (
-            <div className="relative pl-4">
-              <div className="absolute left-0 top-0 bottom-0 w-px bg-slate-200" />
-              <div className="flex items-center gap-1.5 pt-3 pb-2">
-                <div className="flex -space-x-2">
-                  {replies
-                    .filter((r: any, idx: number, arr: any[]) =>
-                      arr.findIndex((x: any) => x.author?.username === r.author?.username) === idx
-                    )
-                    .slice(0, 4)
-                    .map((r: any) => (
-                      <div
-                        key={r.author?.username}
-                        className="w-6 h-6 rounded-full bg-indigo-100 border-2 border-white flex items-center justify-center text-indigo-700 font-semibold text-[10px] overflow-hidden flex-shrink-0"
-                      >
+        {expanded && (
+          <div className="border-t border-slate-100 ml-[52px] mr-4 mb-4">
+            {loadingReplies ? (
+              <div className="flex justify-center py-4"><Spinner size="sm" /></div>
+            ) : replies.length === 0 ? (
+              <p className="text-xs text-slate-400 py-3">Sin respuestas aún.</p>
+            ) : (
+              <div className="relative pl-4">
+                <div className="absolute left-0 top-0 bottom-0 w-px bg-slate-200" />
+                <div className="flex items-center gap-1.5 pt-3 pb-2">
+                  <div className="flex -space-x-2">
+                    {replies
+                      .filter((r: any, idx: number, arr: any[]) =>
+                        arr.findIndex((x: any) => x.author?.username === r.author?.username) === idx
+                      )
+                      .slice(0, 4)
+                      .map((r: any) => (
+                        <div
+                          key={r.author?.username}
+                          className="w-6 h-6 rounded-full bg-indigo-100 border-2 border-white flex items-center justify-center text-indigo-700 font-semibold text-[10px] overflow-hidden flex-shrink-0"
+                        >
+                          {r.author?.avatar_url ? (
+                            <img src={r.author.avatar_url} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            r.author?.username?.charAt(0).toUpperCase()
+                          )}
+                        </div>
+                      ))}
+                  </div>
+                  <span className="text-xs text-slate-400 ml-1">
+                    {topic.replies_count} {topic.replies_count === 1 ? 'respuesta' : 'respuestas'}
+                  </span>
+                </div>
+                <div className="space-y-2 pb-2">
+                  {replies.map((r: any) => (
+                    <div key={r.id} className="flex items-start gap-2.5">
+                      <div className="w-6 h-6 rounded-full bg-indigo-100 flex-shrink-0 flex items-center justify-center text-indigo-700 font-semibold text-[10px] overflow-hidden mt-0.5">
                         {r.author?.avatar_url ? (
                           <img src={r.author.avatar_url} alt="" className="w-full h-full object-cover" />
                         ) : (
                           r.author?.username?.charAt(0).toUpperCase()
                         )}
                       </div>
-                    ))}
+                      <div className="flex-1 min-w-0">
+                        <span className="text-xs font-medium text-slate-600">{r.author?.username} </span>
+                        <span className="text-xs text-slate-400">
+                          {stripHtml(r.content).slice(0, 80)}{stripHtml(r.content).length > 80 ? '…' : ''}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <span className="text-xs text-slate-400 ml-1">
-                  {topic.replies_count} {topic.replies_count === 1 ? 'respuesta' : 'respuestas'}
-                </span>
+                {topic.replies_count > 5 && (
+                  <Link
+                    to={`topics/${topic.id}`}
+                    className="text-xs text-indigo-500 hover:underline pb-2 block"
+                  >
+                    Ver las {topic.replies_count - 5} respuestas restantes →
+                  </Link>
+                )}
               </div>
-              <div className="space-y-2 pb-2">
-                {replies.map((r: any) => (
-                  <div key={r.id} className="flex items-start gap-2.5">
-                    <div className="w-6 h-6 rounded-full bg-indigo-100 flex-shrink-0 flex items-center justify-center text-indigo-700 font-semibold text-[10px] overflow-hidden mt-0.5">
-                      {r.author?.avatar_url ? (
-                        <img src={r.author.avatar_url} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        r.author?.username?.charAt(0).toUpperCase()
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <span className="text-xs font-medium text-slate-600">{r.author?.username} </span>
-                      <span className="text-xs text-slate-400">
-                        {stripHtml(r.content).slice(0, 80)}{stripHtml(r.content).length > 80 ? '…' : ''}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              {topic.replies_count > 5 && (
-                <Link
-                  to={`topics/${topic.id}`}
-                  className="text-xs text-indigo-500 hover:underline pb-2 block"
-                >
-                  Ver las {topic.replies_count - 5} respuestas restantes →
-                </Link>
-              )}
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {showEditModal && (
+        <EditTopicModal topic={topic} onClose={() => setShowEditModal(false)} maxTags={maxTags} />
       )}
-    </div>
+    </>
   )
 }
 
 export const ThreadsPage = () => {
   const { channelId } = useParams<{ channelId: string }>()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const activeTagSlug = searchParams.get('tag') || ''
   const dispatch = useDispatch<AppDispatch>()
   const { isAuthenticated } = useAuth()
   const { isBanned } = useRole()
   const [showCreate, setShowCreate] = useState(false)
+  const [channelTags, setChannelTags] = useState<Tag[]>([])
+  const [activeTag, setActiveTag] = useState<Tag | null>(null)
   const pageRef = useRef(1)
   const loaderRef = useRef<HTMLDivElement>(null)
   const loadingMoreRef = useRef(false)
   const hasMoreRef = useRef(true)
 
   const { items: topics, loading, loadingMore, hasMore } = useSelector((state: RootState) => state.topics)
+  const maxTags = useSelector((state: RootState) => state.tags.settings?.max_tags_per_topic ?? 3)
   const currentChannel = useSelector((state: RootState) =>
     state.channels.items.find((c) => c.id === channelId)
   )
@@ -284,9 +441,33 @@ export const ThreadsPage = () => {
   useEffect(() => { hasMoreRef.current = hasMore }, [hasMore])
 
   useEffect(() => {
+    dispatch(fetchSettings())
+  }, [dispatch])
+
+  useEffect(() => {
     if (!channelId) return
+    const loadChannelTags = async () => {
+      const { data } = await supabase
+        .from('topic_tags')
+        .select('tag:tags(*)')
+        .in('topic_id',
+          (await supabase.from('topics').select('id').eq('channel_id', channelId)).data?.map((t: any) => t.id) || []
+        )
+      const unique = new Map<string, Tag>()
+        ; (data || []).forEach((row: any) => {
+          if (row.tag) unique.set(row.tag.id, row.tag)
+        })
+      setChannelTags(Array.from(unique.values()).sort((a, b) => a.name.localeCompare(b.name)))
+    }
+    loadChannelTags()
+  }, [channelId])
+
+  useEffect(() => {
+    if (!channelId) return
+    const tag = channelTags.find((t) => t.slug === activeTagSlug) || null
+    setActiveTag(tag)
     pageRef.current = 1
-    dispatch(fetchTopicsByChannel(channelId))
+    dispatch(fetchTopicsByChannel({ channelId, tagId: tag?.id }))
 
     const realtimeChannel = supabase
       .channel(`replies-count:${channelId}`)
@@ -306,34 +487,33 @@ export const ThreadsPage = () => {
       .subscribe()
 
     return () => { supabase.removeChannel(realtimeChannel) }
-  }, [channelId, dispatch])
+  }, [channelId, activeTagSlug, channelTags, dispatch])
 
   useEffect(() => {
     const el = loaderRef.current
-
-    if (!el) {
-      return
-    }
-
+    if (!el) return
     const scrollRoot = document.getElementById('main-scroll')
-
     const observer = new IntersectionObserver(
       (entries) => {
         const entry = entries[0]
         if (entry.isIntersecting && !loadingMoreRef.current && hasMoreRef.current && channelId) {
-          dispatch(fetchMoreTopics({ channelId, page: pageRef.current }))
+          dispatch(fetchMoreTopics({ channelId, page: pageRef.current, tagId: activeTag?.id }))
           pageRef.current += 1
         }
       },
       { root: scrollRoot, threshold: 0.1 }
     )
-
     observer.observe(el)
+    return () => { observer.disconnect() }
+  }, [channelId, activeTag, dispatch])
 
-    return () => {
-      observer.disconnect()
+  const handleTagFilter = (tag: Tag | null) => {
+    if (!tag || tag.slug === activeTagSlug) {
+      setSearchParams({})
+    } else {
+      setSearchParams({ tag: tag.slug })
     }
-  }, [channelId, dispatch])
+  }
 
   return (
     <div className="space-y-4">
@@ -358,6 +538,39 @@ export const ThreadsPage = () => {
         )}
       </div>
 
+      {channelTags.length > 0 && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs text-slate-400 font-medium flex items-center gap-1">
+            <TagIcon size={12} />
+            Filtrar:
+          </span>
+          {channelTags.map((tag) => (
+            <button
+              key={tag.id}
+              onClick={() => handleTagFilter(tag)}
+              className={`hover:cursor-pointer inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${activeTag?.id === tag.id
+                  ? 'bg-indigo-600 text-white border-indigo-600'
+                  : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-300 hover:text-indigo-600'
+                }`}
+            >
+              <TagIcon size={9} />
+              {tag.name}
+              {activeTag?.id === tag.id && (
+                <X size={11} className="ml-0.5" />
+              )}
+            </button>
+          ))}
+          {activeTag && (
+            <button
+              onClick={() => handleTagFilter(null)}
+              className="hover:cursor-pointer text-xs text-slate-400 hover:text-slate-600 transition-colors underline"
+            >
+              Limpiar filtro
+            </button>
+          )}
+        </div>
+      )}
+
       {loading ? (
         <div className="flex justify-center py-16">
           <Spinner size="lg" />
@@ -365,11 +578,13 @@ export const ThreadsPage = () => {
       ) : topics.length === 0 ? (
         <div className="text-center py-16 text-slate-400">
           <MessageSquare size={40} className="mx-auto mb-3 opacity-30" />
-          <p className="font-medium">Nadie ha publicado aún</p>
-          {isAuthenticated && !isBanned && (
+          <p className="font-medium">
+            {activeTag ? `No hay temas con el tag "${activeTag.name}"` : 'Nadie ha publicado aún'}
+          </p>
+          {isAuthenticated && !isBanned && !activeTag && (
             <button
               onClick={() => setShowCreate(true)}
-              className="mt-4 text-indigo-600 text-sm font-medium hover:underline"
+              className="mt-4 text-indigo-600 text-sm font-medium hover:underline hover:cursor-pointer"
             >
               Sé el primero en publicar
             </button>
@@ -378,7 +593,7 @@ export const ThreadsPage = () => {
       ) : (
         <div className="space-y-2">
           {topics.map((topic) => (
-            <TopicCard key={topic.id} topic={topic} />
+            <TopicCard key={topic.id} topic={topic} maxTags={maxTags} />
           ))}
         </div>
       )}
@@ -386,11 +601,7 @@ export const ThreadsPage = () => {
       <div ref={loaderRef} className="flex flex-col items-center py-3 gap-3">
         {loadingMore && (
           <>
-            <img
-              src="/images/big_logo.svg"
-              alt="Cargando"
-              className="w-64 animate-pulse"
-            />
+            <img src="/images/big_logo.svg" alt="Cargando" className="w-64 animate-pulse" />
             <span className="text-base text-slate-400">Cargando más temas...</span>
           </>
         )}
@@ -403,7 +614,7 @@ export const ThreadsPage = () => {
       </div>
 
       {showCreate && channelId && (
-        <CreateTopicModal channelId={channelId} onClose={() => setShowCreate(false)} />
+        <CreateTopicModal channelId={channelId} onClose={() => setShowCreate(false)} maxTags={maxTags} />
       )}
     </div>
   )

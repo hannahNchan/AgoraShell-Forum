@@ -19,6 +19,13 @@ export interface Channel {
   created_at: string
   topics_count?: number
 }
+export interface Tag {
+  id: string
+  name: string
+  slug: string
+  created_by: string | null
+  created_at: string
+}
 export interface Topic {
   id: string
   channel_id: string
@@ -32,6 +39,7 @@ export interface Topic {
   author?: Profile
   channel?: Channel
   is_starred?: boolean
+  tags?: Tag[]
 }
 export interface Reply {
   id: string
@@ -75,4 +83,8 @@ export interface Notification {
   created_at: string
   actor?: Profile
   topic?: Pick<Topic, 'id' | 'title' | 'channel_id'>
+}
+export interface AppSettings {
+  id: number
+  max_tags_per_topic: number
 }

@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams, Link } from 'react-router-dom'
-import { Hash, FileText, MessageSquare, Search } from 'lucide-react'
+import { Hash, FileText, MessageSquare, Search, Tag } from 'lucide-react'
 import { supabase } from '../../../services/supabase'
 
 interface ChannelResult { id: string; name: string; description: string | null; icon: string }
 interface TopicResult { id: string; title: string; channel_id: string; created_at: string }
 interface ReplyResult { id: string; content: string; topic_id: string; created_at: string }
+interface TagResult { id: string; name: string; slug: string }
 
 const SearchPage = () => {
   const [searchParams] = useSearchParams()
@@ -14,38 +15,61 @@ const SearchPage = () => {
   const [channels, setChannels] = useState<ChannelResult[]>([])
   const [topics, setTopics] = useState<TopicResult[]>([])
   const [replies, setReplies] = useState<ReplyResult[]>([])
+  const [tags, setTags] = useState<TagResult[]>([])
   const [loading, setLoading] = useState(false)
 
+  const isTagSearch = q.trim().startsWith('#')
+  const cleanQuery = isTagSearch ? q.trim().slice(1) : q.trim()
+
   useEffect(() => {
-    if (!q.trim()) return
+    if (!cleanQuery) return
     const run = async () => {
       setLoading(true)
-      const pattern = `%${q.trim()}%`
 
-      const [c, t, r] = await Promise.all([
-        supabase.from('channels').select('id, name, description, icon').ilike('name', pattern).limit(10),
-        supabase.from('topics').select('id, title, channel_id, created_at').ilike('title', pattern).limit(10),
-        supabase.from('replies').select('id, content, topic_id, created_at').ilike('content', pattern).limit(10),
-      ])
+      if (isTagSearch) {
+        const { data } = await supabase
+          .from('tags')
+          .select('id, name, slug')
+          .ilike('name', `%${cleanQuery}%`)
+          .limit(20)
+        setTags(data ?? [])
+        setChannels([])
+        setTopics([])
+        setReplies([])
+      } else {
+        const pattern = `%${cleanQuery}%`
+        const [c, t, r] = await Promise.all([
+          supabase.from('channels').select('id, name, description, icon').ilike('name', pattern).limit(10),
+          supabase.from('topics').select('id, title, channel_id, created_at').ilike('title', pattern).limit(10),
+          supabase.from('replies').select('id, content, topic_id, created_at').ilike('content', pattern).limit(10),
+        ])
+        setChannels(c.data ?? [])
+        setTopics(t.data ?? [])
+        setReplies(r.data ?? [])
+        setTags([])
+      }
 
-      setChannels(c.data ?? [])
-      setTopics(t.data ?? [])
-      setReplies(r.data ?? [])
       setLoading(false)
     }
     run()
   }, [q])
 
-  const total = channels.length + topics.length + replies.length
+  const total = isTagSearch
+    ? tags.length
+    : channels.length + topics.length + replies.length
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-          <Search size={22} />
+          {isTagSearch ? <Tag size={22} /> : <Search size={22} />}
           Resultados para "{q}"
         </h1>
-        {!loading && <p className="text-slate-500 text-sm mt-1">{total} resultado{total !== 1 ? 's' : ''} encontrado{total !== 1 ? 's' : ''}</p>}
+        {!loading && (
+          <p className="text-slate-500 text-sm mt-1">
+            {total} resultado{total !== 1 ? 's' : ''} encontrado{total !== 1 ? 's' : ''}
+          </p>
+        )}
       </div>
 
       {loading && <p className="text-slate-400 text-sm">Buscando...</p>}
@@ -56,6 +80,30 @@ const SearchPage = () => {
           <p className="font-medium">Sin resultados</p>
           <p className="text-sm mt-1">Intenta con otras palabras</p>
         </div>
+      )}
+
+      {tags.length > 0 && (
+        <section className="space-y-2">
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-500 uppercase tracking-wide">
+            <Tag size={14} />
+            Tags
+          </h2>
+          <div className="grid gap-2">
+            {tags.map((tag) => (
+              <Link
+                key={tag.id}
+                to={`/tags/${tag.slug}`}
+                className="bg-white rounded-xl border border-slate-200 p-4 hover:border-violet-300 hover:shadow-sm hover:cursor-pointer transition-all flex items-center gap-3"
+              >
+                <span className="text-violet-500 font-semibold text-lg">#</span>
+                <div>
+                  <p className="font-semibold text-slate-800">{tag.name}</p>
+                  <p className="text-xs text-slate-400">{tag.slug}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
       )}
 
       {channels.length > 0 && (

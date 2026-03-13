@@ -2,20 +2,22 @@ import { useCodeCollapse } from '../../../hooks/useCodeCollapse'
 import { useEffect, useState, useRef } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
-import { Star, Clock, Smile, Send, Trash2, MessageCircle, X } from 'lucide-react'
+import { Star, Clock, Smile, Send, Trash2, MessageCircle, X, Pencil, Check, Tag as TagIcon } from 'lucide-react'
 import { formatDistanceToNow, format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import EmojiPicker from 'emoji-picker-react'
 import { selectProfile } from '../../auth/store/authSelectors'
 import { type AppDispatch, type RootState } from '../../../store'
-import { incrementRepliesCount, fetchTopicById, toggleStar, decrementRepliesCount } from '../store/threadsSlice'
-import { fetchRepliesByTopic, createReply, toggleReaction, groupReactions, addReplyRealtime, deleteReply, deleteReplyRealtime } from '../../posts/store/postsSlice'
+import { incrementRepliesCount, fetchTopicById, toggleStar, decrementRepliesCount, updateTopic } from '../store/threadsSlice'
+import { fetchRepliesByTopic, createReply, toggleReaction, groupReactions, addReplyRealtime, deleteReply, deleteReplyRealtime, updateReply } from '../../posts/store/postsSlice'
+import { fetchSettings } from '../../tags/store/tagsSlice'
 import { useAuth } from '../../auth/hooks/useAuth'
 import { useRole } from '../../auth/hooks/useRole'
 import { supabase } from '../../../services/supabase'
 import Spinner from '../../../components/shared/Spinner'
 import RichTextEditor from '../../../components/shared/RichTextEditor'
-import { type Reply } from '../../../types'
+import TagInput from '../../tags/components/TagInput'
+import { type Reply, type Tag } from '../../../types'
 import { useConfirm } from '../../../hooks/useConfirm'
 import { useHighlightCode } from '../../../hooks/useHighlightCode'
 
@@ -43,16 +45,11 @@ interface ReplyBottomSheetProps {
 const ReplyBottomSheet = ({ open, onClose, onSubmit, replyingTo, submitting }: ReplyBottomSheetProps) => {
   const [content, setContent] = useState('')
 
-  useEffect(() => {
-    if (!open) setContent('')
-  }, [open])
+  useEffect(() => { if (!open) setContent('') }, [open])
 
   useEffect(() => {
-    if (open) {
-      document.body.style.overflow = 'hidden'
-    } else {
-      document.body.style.overflow = ''
-    }
+    if (open) { document.body.style.overflow = 'hidden' }
+    else { document.body.style.overflow = '' }
     return () => { document.body.style.overflow = '' }
   }, [open])
 
@@ -60,37 +57,22 @@ const ReplyBottomSheet = ({ open, onClose, onSubmit, replyingTo, submitting }: R
 
   return (
     <>
-      <div
-        className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"
-        onClick={onClose}
-      />
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-2xl shadow-2xl flex flex-col"
-        style={{ maxHeight: '85vh' }}
-      >
+      <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-2xl shadow-2xl flex flex-col" style={{ maxHeight: '85vh' }}>
         <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
           <div className="w-10 h-1 bg-slate-200 rounded-full mx-auto absolute left-1/2 -translate-x-1/2 top-2" />
           <span className="text-sm font-semibold text-slate-700">
             Respondiendo a <span className="text-indigo-600">@{replyingTo}</span>
           </span>
-          <button
-            onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 hover:cursor-pointer transition-colors p-1"
-          >
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 hover:cursor-pointer transition-colors p-1">
             <X size={18} />
           </button>
         </div>
         <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0">
-          <RichTextEditor
-            onChange={setContent}
-            placeholder={`Respondiendo a ${replyingTo}...`}
-            minHeight="140px"
-          />
+          <RichTextEditor onChange={setContent} placeholder={`Respondiendo a ${replyingTo}...`} minHeight="140px" />
         </div>
         <div className="px-4 py-3 border-t border-slate-100 flex justify-end gap-2">
-          <button
-            onClick={onClose}
-            className="text-sm text-slate-500 hover:text-slate-700 px-4 py-2 rounded-lg transition-colors hover:cursor-pointer"
-          >
+          <button onClick={onClose} className="text-sm text-slate-500 hover:text-slate-700 px-4 py-2 rounded-lg transition-colors hover:cursor-pointer">
             Cancelar
           </button>
           <button
@@ -119,11 +101,15 @@ const ReplyCard = ({ reply, topicId, depth = 0 }: ReplyCardProps) => {
   const profile = useSelector(selectProfile)
   const { isModerator, isBanned } = useRole()
   const canDelete = isModerator || profile?.id === reply.author_id
+  const canEdit = profile?.id === reply.author_id
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
   const [showReplyEditor, setShowReplyEditor] = useState(false)
   const [showBottomSheet, setShowBottomSheet] = useState(false)
   const [replyContent, setReplyContent] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [isEditing, setIsEditing] = useState(false)
+  const [editContent, setEditContent] = useState('')
+  const [savingEdit, setSavingEdit] = useState(false)
   const linesRef = useRef<any[]>([])
   const replyContentRef = useRef<HTMLDivElement>(null)
   useHighlightCode(replyContentRef)
@@ -131,19 +117,16 @@ const ReplyCard = ({ reply, topicId, depth = 0 }: ReplyCardProps) => {
   const { confirm } = useConfirm()
 
   const reactionGroups = groupReactions(reply.reactions || [], user?.id)
-
   const scrollHandlerRef = useRef<(() => void) | null>(null)
+  const repositionTimersRef = useRef<ReturnType<typeof setTimeout>[]>([])
 
   const handleReposition = () => {
     const timers = [50, 100, 200, 350].map((delay) =>
-      setTimeout(() => {
-        linesRef.current.forEach((l) => { try { l.position() } catch (_) { } })
-      }, delay)
+      setTimeout(() => { linesRef.current.forEach((l) => { try { l.position() } catch (_) { } }) }, delay)
     )
     repositionTimersRef.current = timers
   }
   window.addEventListener('reply-editor-toggle', handleReposition)
-  const repositionTimersRef = useRef<ReturnType<typeof setTimeout>[]>([])
 
   useEffect(() => {
     if (!reply.children?.length) return
@@ -159,31 +142,20 @@ const ReplyCard = ({ reply, topicId, depth = 0 }: ReplyCardProps) => {
           if (!childEl) return
           try {
             const line = new LL(parentEl, childEl, {
-              path: 'grid',
-              startSocket: 'bottom',
-              endSocket: 'left',
-              color: '#cbd5e1',
-              size: 1,
-              startPlug: 'behind',
-              endPlug: 'arrow2',
-              endSocketGravity: 8,
+              path: 'grid', startSocket: 'bottom', endSocket: 'left',
+              color: '#cbd5e1', size: 1, startPlug: 'behind', endPlug: 'arrow2', endSocketGravity: 8,
             })
             linesRef.current.push(line)
           } catch (_) { }
         })
-
-        const handleScroll = () => {
-          linesRef.current.forEach((l) => { try { l.position() } catch (_) { } })
-        }
+        const handleScroll = () => { linesRef.current.forEach((l) => { try { l.position() } catch (_) { } }) }
         scrollHandlerRef.current = handleScroll
         window.addEventListener('scroll', handleScroll, true)
       })
     })
     return () => {
       cancelAnimationFrame(raf)
-      if (scrollHandlerRef.current) {
-        window.removeEventListener('scroll', scrollHandlerRef.current, true)
-      }
+      if (scrollHandlerRef.current) window.removeEventListener('scroll', scrollHandlerRef.current, true)
       window.removeEventListener('reply-editor-toggle', handleReposition)
       repositionTimersRef.current.forEach(clearTimeout)
       linesRef.current.forEach((l) => { try { l.remove() } catch (_) { } })
@@ -192,12 +164,9 @@ const ReplyCard = ({ reply, topicId, depth = 0 }: ReplyCardProps) => {
   }, [reply.children?.length, reply.id])
 
   const containerRef = useRef<HTMLDivElement>(null)
-
   useEffect(() => {
     if (!containerRef.current) return
-    const observer = new ResizeObserver(() => {
-      linesRef.current.forEach((l) => { try { l.position() } catch (_) { } })
-    })
+    const observer = new ResizeObserver(() => { linesRef.current.forEach((l) => { try { l.position() } catch (_) { } }) })
     observer.observe(containerRef.current)
     return () => observer.disconnect()
   }, [reply.children?.length])
@@ -213,8 +182,7 @@ const ReplyCard = ({ reply, topicId, depth = 0 }: ReplyCardProps) => {
     if (isMobile) {
       setShowBottomSheet(true)
     } else {
-      const next = !showReplyEditor
-      setShowReplyEditor(next)
+      setShowReplyEditor(!showReplyEditor)
       window.dispatchEvent(new CustomEvent('reply-editor-toggle'))
     }
   }
@@ -238,10 +206,22 @@ const ReplyCard = ({ reply, topicId, depth = 0 }: ReplyCardProps) => {
     dispatch(deleteReply({ replyId: reply.id, topicId }))
   }
 
-  const isNested = depth > 0
+  const handleSaveEdit = async () => {
+    if (!editContent || editContent === '<p></p>') return
+    setSavingEdit(true)
+    try {
+      await dispatch(updateReply({ replyId: reply.id, content: editContent })).unwrap()
+      setIsEditing(false)
+      setEditContent('')
+    } finally {
+      setSavingEdit(false)
+    }
+  }
+
+  const wasEdited = reply.updated_at && reply.updated_at !== reply.created_at
 
   return (
-    <div ref={containerRef} className={isNested ? 'relative pl-0 md:pl-5' : ''}>
+    <div ref={containerRef} className={depth > 0 ? 'relative pl-0 md:pl-5' : ''}>
       <div className="flex items-start gap-1">
         <div id={`avatar-${reply.id}`} style={{ flexShrink: 0 }}>
           <Avatar profile={reply.author} />
@@ -259,85 +239,108 @@ const ReplyCard = ({ reply, topicId, depth = 0 }: ReplyCardProps) => {
                 <Clock size={11} />
                 {formatDistanceToNow(new Date(reply.created_at), { addSuffix: true, locale: es })}
               </span>
+              {wasEdited && <span className="text-xs text-slate-300 italic">editado</span>}
             </div>
 
-            <div
-              ref={replyContentRef}
-              className="prose prose-sm max-w-none text-slate-700"
-              dangerouslySetInnerHTML={{ __html: reply.content }}
-            />
-
-            <div className="flex items-center gap-2 mt-3 flex-wrap">
-              {reactionGroups.map((group) => (
-                <button
-                  key={group.emoji}
-                  onClick={() => handleReaction(group.emoji)}
-                  title={`${group.count} reacciones`}
-                  className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-sm border transition-colors ${group.reacted
-                    ? 'bg-indigo-50 border-indigo-300 text-indigo-700'
-                    : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
-                    }`}
-                >
-                  <span>{group.emoji}</span>
-                  <span className="text-xs font-medium">{group.count}</span>
-                </button>
-              ))}
-
-              {isAuthenticated && !isBanned && (
-                <button
-                  onClick={handleReplyClick}
-                  className="hover:cursor-pointer flex items-center gap-1 px-2 py-0.5 rounded-full border border-slate-200 text-slate-400 hover:bg-slate-50 hover:text-indigo-500 hover:border-indigo-300 transition-colors text-xs"
-                >
-                  <MessageCircle size={13} />
-                  <span>Responder</span>
-                </button>
-              )}
-
-              {canDelete && isAuthenticated && (
-                <button
-                  onClick={handleDeleteReply}
-                  className="hover:cursor-pointer ml-auto flex items-center gap-1 text-xs text-red-400 hover:text-red-500 transition-colors"
-                  title="Eliminar respuesta"
-                >
-                  <Trash2 size={20} />
-                </button>
-              )}
-
-              {isAuthenticated && (
-                <div className="relative">
+            {isEditing ? (
+              <div className="space-y-2">
+                <RichTextEditor
+                  key={`edit-reply-${reply.id}`}
+                  onChange={setEditContent}
+                  content={reply.content}
+                  placeholder="Edita tu respuesta..."
+                  minHeight="100px"
+                />
+                <div className="flex justify-end gap-2 pt-1">
                   <button
-                    onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                    className="hover:cursor-pointer flex items-center gap-1 px-2 py-0.5 rounded-full border border-slate-200 text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-colors text-sm"
+                    onClick={() => { setIsEditing(false); setEditContent('') }}
+                    className="hover:cursor-pointer text-sm text-slate-500 hover:text-slate-700 px-3 py-1.5 rounded-lg transition-colors"
                   >
-                    <Smile size={13} />
-                    <span className="text-xs">+</span>
+                    Cancelar
                   </button>
-                  {showEmojiPicker && (
-                    <>
-                      <div className="fixed inset-0 z-10" onClick={() => setShowEmojiPicker(false)} />
-                      <div className="absolute bottom-8 left-0 z-20 shadow-xl rounded-xl overflow-hidden">
-                        <EmojiPicker
-                          onEmojiClick={(e) => handleReaction(e.emoji)}
-                          width={300}
-                          height={350}
-                          searchDisabled
-                          skinTonesDisabled
-                        />
-                      </div>
-                    </>
-                  )}
+                  <button
+                    onClick={handleSaveEdit}
+                    disabled={savingEdit || !editContent || editContent === '<p></p>'}
+                    className="hover:cursor-pointer flex items-center gap-1.5 bg-indigo-600 text-white px-4 py-1.5 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                  >
+                    {savingEdit ? <Spinner size="sm" /> : <Check size={13} />}
+                    Guardar
+                  </button>
                 </div>
-              )}
-            </div>
+              </div>
+            ) : (
+              <div ref={replyContentRef} className="prose prose-sm max-w-none text-slate-700" dangerouslySetInnerHTML={{ __html: reply.content }} />
+            )}
+
+            {!isEditing && (
+              <div className="flex items-center gap-2 mt-3 flex-wrap">
+                {reactionGroups.map((group) => (
+                  <button
+                    key={group.emoji}
+                    onClick={() => handleReaction(group.emoji)}
+                    title={`${group.count} reacciones`}
+                    className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-sm border transition-colors ${group.reacted ? 'bg-indigo-50 border-indigo-300 text-indigo-700' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'}`}
+                  >
+                    <span>{group.emoji}</span>
+                    <span className="text-xs font-medium">{group.count}</span>
+                  </button>
+                ))}
+
+                {isAuthenticated && !isBanned && (
+                  <button
+                    onClick={handleReplyClick}
+                    className="hover:cursor-pointer flex items-center gap-1 px-2 py-0.5 rounded-full border border-slate-200 text-slate-400 hover:bg-slate-50 hover:text-indigo-500 hover:border-indigo-300 transition-colors text-xs"
+                  >
+                    <MessageCircle size={13} />
+                    <span>Responder</span>
+                  </button>
+                )}
+
+                {canEdit && isAuthenticated && !isBanned && (
+                  <button
+                    onClick={() => { setEditContent(reply.content); setIsEditing(true) }}
+                    className="hover:cursor-pointer flex items-center gap-1 px-2 py-0.5 rounded-full border border-slate-200 text-slate-400 hover:bg-slate-50 hover:text-indigo-500 hover:border-indigo-300 transition-colors text-xs"
+                  >
+                    <Pencil size={12} />
+                    <span>Editar</span>
+                  </button>
+                )}
+
+                {canDelete && isAuthenticated && (
+                  <button
+                    onClick={handleDeleteReply}
+                    className="hover:cursor-pointer ml-auto flex items-center gap-1 text-xs text-red-400 hover:text-red-500 transition-colors"
+                  >
+                    <Trash2 size={20} />
+                  </button>
+                )}
+
+                {isAuthenticated && (
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                      className="hover:cursor-pointer flex items-center gap-1 px-2 py-0.5 rounded-full border border-slate-200 text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-colors text-sm"
+                    >
+                      <Smile size={13} />
+                      <span className="text-xs">+</span>
+                    </button>
+                    {showEmojiPicker && (
+                      <>
+                        <div className="fixed inset-0 z-10" onClick={() => setShowEmojiPicker(false)} />
+                        <div className="absolute bottom-8 left-0 z-20 shadow-xl rounded-xl overflow-hidden">
+                          <EmojiPicker onEmojiClick={(e) => handleReaction(e.emoji)} width={300} height={350} searchDisabled skinTonesDisabled />
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {showReplyEditor && (
             <div className="mt-2 bg-slate-50 rounded-xl border border-slate-200 p-4 space-y-3">
-              <RichTextEditor
-                onChange={setReplyContent}
-                placeholder={`Respondiendo a ${reply.author?.username}...`}
-                minHeight="100px"
-              />
+              <RichTextEditor onChange={setReplyContent} placeholder={`Respondiendo a ${reply.author?.username}...`} minHeight="100px" />
               <div className="flex justify-end gap-2">
                 <button
                   onClick={() => { setShowReplyEditor(false); setReplyContent('') }}
@@ -383,8 +386,14 @@ const ThreadDetailPage = () => {
   const dispatch = useDispatch<AppDispatch>()
   const { isAuthenticated } = useAuth()
   const { isBanned } = useRole()
+  const profile = useSelector(selectProfile)
   const [replyContent, setReplyContent] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [isEditingTopic, setIsEditingTopic] = useState(false)
+  const [editTitle, setEditTitle] = useState('')
+  const [editContent, setEditContent] = useState('')
+  const [editTags, setEditTags] = useState<Tag[]>([])
+  const [savingTopicEdit, setSavingTopicEdit] = useState(false)
   const topicContentRef = useRef<HTMLDivElement>(null)
   useHighlightCode(topicContentRef)
   useCodeCollapse(topicContentRef)
@@ -392,6 +401,13 @@ const ThreadDetailPage = () => {
   const topicLoading = useSelector((state: RootState) => state.topics.loading)
   const replies = useSelector((state: RootState) => state.posts.items)
   const repliesLoading = useSelector((state: RootState) => state.posts.loading)
+  const maxTags = useSelector((state: RootState) => state.tags.settings?.max_tags_per_topic ?? 3)
+
+  const canEditTopic = topic && profile?.id === topic.author_id
+
+  useEffect(() => {
+    dispatch(fetchSettings())
+  }, [dispatch])
 
   useEffect(() => {
     if (!topicId) return
@@ -400,9 +416,7 @@ const ThreadDetailPage = () => {
 
     const channel = supabase
       .channel(`replies:${topicId}`)
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'replies', filter: `topic_id=eq.${topicId}` },
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'replies', filter: `topic_id=eq.${topicId}` },
         async (payload) => {
           const { data } = await supabase
             .from('replies')
@@ -415,9 +429,7 @@ const ThreadDetailPage = () => {
           }
         }
       )
-      .on(
-        'postgres_changes',
-        { event: 'DELETE', schema: 'public', table: 'replies', filter: `topic_id=eq.${topicId}` },
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'replies', filter: `topic_id=eq.${topicId}` },
         (payload) => {
           dispatch(deleteReplyRealtime(payload.old.id))
           dispatch(decrementRepliesCount(topicId!))
@@ -433,6 +445,30 @@ const ThreadDetailPage = () => {
     dispatch(toggleStar({ topicId: topic.id, isStarred: topic.is_starred ?? false }))
   }
 
+  const handleStartEditTopic = () => {
+    if (!topic) return
+    setEditTitle(topic.title)
+    setEditContent(topic.content)
+    setEditTags(topic.tags || [])
+    setIsEditingTopic(true)
+  }
+
+  const handleSaveTopicEdit = async () => {
+    if (!topic || !editTitle.trim() || !editContent || editContent === '<p></p>') return
+    setSavingTopicEdit(true)
+    try {
+      await dispatch(updateTopic({
+        topicId: topic.id,
+        title: editTitle.trim(),
+        content: editContent,
+        tagIds: editTags.map((t) => t.id),
+      })).unwrap()
+      setIsEditingTopic(false)
+    } finally {
+      setSavingTopicEdit(false)
+    }
+  }
+
   const handleSubmitReply = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!replyContent || replyContent === '<p></p>' || !topicId) return
@@ -445,6 +481,8 @@ const ThreadDetailPage = () => {
     }
   }
 
+  const topicWasEdited = topic && topic.updated_at && topic.updated_at !== topic.created_at
+
   if (topicLoading) return <div className="flex justify-center py-16"><Spinner size="lg" /></div>
   if (!topic) return <div className="text-center py-16 text-slate-400">Tema no encontrado</div>
 
@@ -454,34 +492,95 @@ const ThreadDetailPage = () => {
         <div className="flex items-start gap-4">
           <Avatar profile={topic.author} size="md" />
           <div className="flex-1 min-w-0">
-            <h1 className="text-xl font-bold text-slate-800 leading-tight">{topic.title}</h1>
+            {isEditingTopic ? (
+              <input
+                type="text"
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                className="w-full text-xl font-bold text-slate-800 border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            ) : (
+              <h1 className="text-xl font-bold text-slate-800 leading-tight">{topic.title}</h1>
+            )}
             <div className="flex items-center gap-3 mt-1 text-xs text-slate-400">
               <span className="font-medium text-slate-500">{topic.author?.username}</span>
               <span className="flex items-center gap-1">
                 <Clock size={11} />
                 {format(new Date(topic.created_at), "d 'de' MMMM, yyyy HH:mm", { locale: es })}
               </span>
+              {topicWasEdited && <span className="italic text-slate-300">editado</span>}
             </div>
+
+            {!isEditingTopic && topic.tags && topic.tags.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {topic.tags.map((tag: Tag) => (
+                  <Link
+                    key={tag.id}
+                    to={`/tags/${tag.slug}`}
+                    className="hover:cursor-pointer inline-flex items-center gap-1 bg-indigo-50 text-indigo-600 border border-indigo-200 hover:bg-indigo-100 rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors"
+                  >
+                    <TagIcon size={10} />
+                    {tag.name}
+                  </Link>
+                ))}
+              </div>
+            )}
           </div>
 
-          <button
-            onClick={handleStar}
-            disabled={!isAuthenticated}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-sm transition-colors ${topic.is_starred
-              ? 'bg-amber-50 border-amber-300 text-amber-600'
-              : 'border-slate-200 text-slate-400 hover:border-amber-300 hover:text-amber-500'
-              } disabled:cursor-not-allowed`}
-          >
-            <Star size={15} fill={topic.is_starred ? 'currentColor' : 'none'} />
-            <span className="font-medium">{topic.stars_count}</span>
-          </button>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {canEditTopic && isAuthenticated && !isBanned && !isEditingTopic && (
+              <button
+                onClick={handleStartEditTopic}
+                className="hover:cursor-pointer flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 text-slate-400 hover:border-indigo-300 hover:text-indigo-500 text-sm transition-colors"
+              >
+                <Pencil size={14} />
+                <span className="hidden sm:inline">Editar</span>
+              </button>
+            )}
+            <button
+              onClick={handleStar}
+              disabled={!isAuthenticated}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-sm transition-colors ${topic.is_starred ? 'bg-amber-50 border-amber-300 text-amber-600' : 'border-slate-200 text-slate-400 hover:border-amber-300 hover:text-amber-500'} disabled:cursor-not-allowed`}
+            >
+              <Star size={15} fill={topic.is_starred ? 'currentColor' : 'none'} />
+              <span className="font-medium">{topic.stars_count}</span>
+            </button>
+          </div>
         </div>
 
-        <div
-          ref={topicContentRef}
-          className="prose prose-sm max-w-none mt-5 text-slate-700"
-          dangerouslySetInnerHTML={{ __html: topic.content }}
-        />
+        {isEditingTopic ? (
+          <div className="mt-4 space-y-3">
+            <RichTextEditor
+              key="edit-topic"
+              onChange={setEditContent}
+              content={topic.content}
+              placeholder="Edita el contenido del tema..."
+              minHeight="200px"
+            />
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Tags</label>
+              <TagInput selected={editTags} onChange={setEditTags} maxTags={maxTags} />
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setIsEditingTopic(false)}
+                className="hover:cursor-pointer text-sm text-slate-500 hover:text-slate-700 px-4 py-2 rounded-lg transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSaveTopicEdit}
+                disabled={savingTopicEdit || !editTitle.trim() || !editContent || editContent === '<p></p>'}
+                className="hover:cursor-pointer flex items-center gap-2 bg-indigo-600 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50"
+              >
+                {savingTopicEdit ? <Spinner size="sm" /> : <Check size={14} />}
+                Guardar cambios
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div ref={topicContentRef} className="prose prose-sm max-w-none mt-5 text-slate-700" dangerouslySetInnerHTML={{ __html: topic.content }} />
+        )}
       </div>
 
       <div className="flex items-center gap-2 text-slate-500 pt-2 text-sm font-medium">
@@ -496,9 +595,7 @@ const ThreadDetailPage = () => {
             <ReplyCard key={reply.id} reply={reply} topicId={topicId!} depth={0} />
           ))}
           {replies.length === 0 && (
-            <div className="text-center py-8 text-slate-400 text-sm">
-              Nadie ha respondido todavía. ¡Sé el primero!
-            </div>
+            <div className="text-center py-8 text-slate-400 text-sm">Nadie ha respondido todavía. ¡Sé el primero!</div>
           )}
         </div>
       )}

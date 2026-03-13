@@ -73,6 +73,24 @@ export const createReply = createAsyncThunk(
   }
 )
 
+export const updateReply = createAsyncThunk(
+  'posts/update',
+  async ({ replyId, content }: { replyId: string; content: string }, { rejectWithValue }) => {
+    try {
+      const { data, error } = await supabase
+        .from('replies')
+        .update({ content, updated_at: new Date().toISOString() })
+        .eq('id', replyId)
+        .select(`*, author:profiles(id, username, avatar_url, role), reactions:reply_reactions(id, user_id, emoji)`)
+        .single()
+      if (error) throw error
+      return data as Reply
+    } catch (error: any) {
+      return rejectWithValue(error.message)
+    }
+  }
+)
+
 export const toggleReaction = createAsyncThunk(
   'posts/toggleReaction',
   async ({ replyId, emoji }: { replyId: string; emoji: string }, { rejectWithValue }) => {
@@ -125,6 +143,17 @@ const findReplyById = (replies: Reply[], id: string): Reply | null => {
   }
   return null
 }
+
+const updateReplyInTree = (replies: Reply[], updated: Reply): Reply[] =>
+  replies.map((r) => {
+    if (r.id === updated.id) {
+      return { ...r, content: updated.content, updated_at: updated.updated_at }
+    }
+    if (r.children?.length) {
+      return { ...r, children: updateReplyInTree(r.children, updated) }
+    }
+    return r
+  })
 
 const postsSlice = createSlice({
   name: 'posts',
@@ -181,6 +210,10 @@ const postsSlice = createSlice({
             parent.children.push({ ...reply, children: [] })
           }
         }
+      })
+
+      .addCase(updateReply.fulfilled, (state, action) => {
+        state.items = updateReplyInTree(state.items, action.payload)
       })
 
       .addCase(toggleReaction.fulfilled, (state, action) => {

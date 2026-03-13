@@ -1,8 +1,26 @@
 import { createSlice, createAsyncThunk, type PayloadAction } from '@reduxjs/toolkit'
 import { supabase } from '../../../services/supabase'
-import { type Topic } from '../../../types'
+import { type Topic, type Tag } from '../../../types'
 
 const PAGE_SIZE = 20
+
+const TOPIC_SELECT = `
+  *,
+  author:profiles(id, username, avatar_url, role),
+  tags:topic_tags(tag:tags(*))
+`
+
+const TOPIC_SELECT_WITH_CHANNEL = `
+  *,
+  author:profiles(id, username, avatar_url, role),
+  channel:channels(id, name, slug, icon),
+  tags:topic_tags(tag:tags(*))
+`
+
+const normalizeTags = (data: any): Topic => ({
+  ...data,
+  tags: (data.tags || []).map((tt: any) => tt.tag).filter(Boolean) as Tag[],
+})
 
 interface TopicsState {
   items: Topic[]
@@ -30,23 +48,35 @@ const fetchStars = async (data: any[], userId: string) => {
     .eq('user_id', userId)
     .in('topic_id', topicIds)
   const starredIds = new Set((stars || []).map((s: any) => s.topic_id))
-  return data.map((t: any) => ({ ...t, is_starred: starredIds.has(t.id) })) as Topic[]
+  return data.map((t: any) => ({ ...normalizeTags(t), is_starred: starredIds.has(t.id) })) as Topic[]
 }
 
 export const fetchTopicsByChannel = createAsyncThunk(
   'topics/fetchByChannel',
-  async (channelId: string, { rejectWithValue }) => {
+  async ({ channelId, tagId }: { channelId: string; tagId?: string }, { rejectWithValue }) => {
     try {
       const { data: { user } } = await supabase.auth.getUser()
-      const { data, error } = await supabase
+      let query = supabase
         .from('topics')
-        .select(`*, author:profiles(id, username, avatar_url, role)`)
+        .select(TOPIC_SELECT)
         .eq('channel_id', channelId)
         .order('created_at', { ascending: false })
         .range(0, PAGE_SIZE - 1)
+
+      if (tagId) {
+        const { data: taggedIds } = await supabase
+          .from('topic_tags')
+          .select('topic_id')
+          .eq('tag_id', tagId)
+        const ids = (taggedIds || []).map((r: any) => r.topic_id)
+        if (ids.length === 0) return []
+        query = query.in('id', ids)
+      }
+
+      const { data, error } = await query
       if (error) throw error
       if (user && data) return await fetchStars(data, user.id)
-      return data as Topic[]
+      return (data || []).map(normalizeTags) as Topic[]
     } catch (error: any) {
       return rejectWithValue(error.message)
     }
@@ -55,20 +85,36 @@ export const fetchTopicsByChannel = createAsyncThunk(
 
 export const fetchMoreTopics = createAsyncThunk(
   'topics/fetchMore',
-  async ({ channelId, page }: { channelId: string; page: number }, { rejectWithValue }) => {
+  async (
+    { channelId, page, tagId }: { channelId: string; page: number; tagId?: string },
+    { rejectWithValue }
+  ) => {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       const from = page * PAGE_SIZE
       const to = from + PAGE_SIZE - 1
-      const { data, error } = await supabase
+
+      let query = supabase
         .from('topics')
-        .select(`*, author:profiles(id, username, avatar_url, role)`)
+        .select(TOPIC_SELECT)
         .eq('channel_id', channelId)
         .order('created_at', { ascending: false })
         .range(from, to)
+
+      if (tagId) {
+        const { data: taggedIds } = await supabase
+          .from('topic_tags')
+          .select('topic_id')
+          .eq('tag_id', tagId)
+        const ids = (taggedIds || []).map((r: any) => r.topic_id)
+        if (ids.length === 0) return []
+        query = query.in('id', ids)
+      }
+
+      const { data, error } = await query
       if (error) throw error
       if (user && data && data.length > 0) return await fetchStars(data, user.id)
-      return (data ?? []) as Topic[]
+      return (data ?? []).map(normalizeTags) as Topic[]
     } catch (error: any) {
       return rejectWithValue(error.message)
     }
@@ -82,7 +128,7 @@ export const fetchTopicById = createAsyncThunk(
       const { data: { user } } = await supabase.auth.getUser()
       const { data, error } = await supabase
         .from('topics')
-        .select(`*, author:profiles(id, username, avatar_url, role), channel:channels(id, name, slug, icon)`)
+        .select(TOPIC_SELECT_WITH_CHANNEL)
         .eq('id', topicId)
         .single()
       if (error) throw error
@@ -96,7 +142,7 @@ export const fetchTopicById = createAsyncThunk(
           .single()
         is_starred = !!star
       }
-      return { ...data, is_starred } as Topic
+      return { ...normalizeTags(data), is_starred } as Topic
     } catch (error: any) {
       return rejectWithValue(error.message)
     }
@@ -105,16 +151,68 @@ export const fetchTopicById = createAsyncThunk(
 
 export const createTopic = createAsyncThunk(
   'topics/create',
-  async (payload: { channel_id: string; title: string; content: string }, { rejectWithValue }) => {
+  async (
+    payload: { channel_id: string; title: string; content: string; tagIds?: string[] },
+    { rejectWithValue }
+  ) => {
     try {
       const { data: { user } } = await supabase.auth.getUser()
+      const { tagIds, ...topicPayload } = payload
       const { data, error } = await supabase
         .from('topics')
-        .insert([{ ...payload, author_id: user?.id }])
-        .select(`*, author:profiles(id, username, avatar_url, role)`)
+        .insert([{ ...topicPayload, author_id: user?.id }])
+        .select('id')
         .single()
       if (error) throw error
-      return data as Topic
+
+      if (tagIds && tagIds.length > 0) {
+        await supabase.from('topic_tags').insert(
+          tagIds.map((tag_id) => ({ topic_id: data.id, tag_id }))
+        )
+      }
+
+      const { data: full, error: err2 } = await supabase
+        .from('topics')
+        .select(TOPIC_SELECT)
+        .eq('id', data.id)
+        .single()
+      if (err2) throw err2
+      return normalizeTags(full) as Topic
+    } catch (error: any) {
+      return rejectWithValue(error.message)
+    }
+  }
+)
+
+export const updateTopic = createAsyncThunk(
+  'topics/update',
+  async (
+    { topicId, title, content, tagIds }: { topicId: string; title: string; content: string; tagIds?: string[] },
+    { rejectWithValue }
+  ) => {
+    try {
+      const { error } = await supabase
+        .from('topics')
+        .update({ title, content, updated_at: new Date().toISOString() })
+        .eq('id', topicId)
+      if (error) throw error
+
+      if (tagIds !== undefined) {
+        await supabase.from('topic_tags').delete().eq('topic_id', topicId)
+        if (tagIds.length > 0) {
+          await supabase.from('topic_tags').insert(
+            tagIds.map((tag_id) => ({ topic_id: topicId, tag_id }))
+          )
+        }
+      }
+
+      const { data: full, error: err2 } = await supabase
+        .from('topics')
+        .select(TOPIC_SELECT_WITH_CHANNEL)
+        .eq('id', topicId)
+        .single()
+      if (err2) throw err2
+      return normalizeTags(full) as Topic
     } catch (error: any) {
       return rejectWithValue(error.message)
     }
@@ -214,6 +312,13 @@ const topicsSlice = createSlice({
 
       .addCase(createTopic.fulfilled, (state, action) => {
         state.items.unshift(action.payload)
+      })
+
+      .addCase(updateTopic.fulfilled, (state, action) => {
+        const updated = action.payload
+        const idx = state.items.findIndex((t) => t.id === updated.id)
+        if (idx !== -1) state.items[idx] = { ...state.items[idx], ...updated }
+        if (state.currentTopic?.id === updated.id) state.currentTopic = { ...state.currentTopic, ...updated }
       })
 
       .addCase(toggleStar.fulfilled, (state, action) => {

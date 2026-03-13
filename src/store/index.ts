@@ -6,6 +6,7 @@ import postsReducer from '../features/posts/store/postsSlice'
 import confirmReducer from './confirmSlice'
 import notificationsReducer from '../features/notifications/store/notificationsSlice'
 import feedReducer from '../features/forums/store/feedSlice'
+import tagsReducer from '../features/tags/store/tagsSlice'
 
 export const store = configureStore({
   reducer: {
@@ -15,9 +16,9 @@ export const store = configureStore({
     posts: postsReducer,
     confirm: confirmReducer,
     notifications: notificationsReducer,
-    feed: feedReducer
+    feed: feedReducer,
+    tags: tagsReducer
   },
 })
-
 export type RootState = ReturnType<typeof store.getState>
 export type AppDispatch = typeof store.dispatch

@@ -1,14 +1,14 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search, Hash, FileText, X } from 'lucide-react'
+import { Search, Hash, FileText, X, Tag } from 'lucide-react'
 import { supabase } from '../services/supabase'
 
 interface SearchResult {
   id: string
   title: string
-  type: 'channel' | 'topic' | 'reply'
+  type: 'channel' | 'topic' | 'tag'
   channelId?: string
-  topicId?: string
+  slug?: string
 }
 
 const GlobalSearch = () => {
@@ -42,19 +42,45 @@ const GlobalSearch = () => {
 
     debounceRef.current = setTimeout(async () => {
       setLoading(true)
-      const q = `%${query.trim()}%`
 
-      const [channelsRes, topicsRes] = await Promise.all([
-        supabase.from('channels').select('id, name').ilike('name', q).limit(3),
-        supabase.from('topics').select('id, title, channel_id').or(`title.ilike.${q},content.ilike.${q}`).limit(5),
-      ])
+      const isTagSearch = query.trim().startsWith('#')
+      const cleanQuery = isTagSearch ? query.trim().slice(1) : query.trim()
 
-      const combined: SearchResult[] = [
-        ...(channelsRes.data ?? []).map((c) => ({ id: c.id, title: c.name, type: 'channel' as const })),
-        ...(topicsRes.data ?? []).map((t) => ({ id: t.id, title: t.title, type: 'topic' as const, channelId: t.channel_id })),
-      ]
+      if (!cleanQuery) {
+        setResults([])
+        setOpen(true)
+        setLoading(false)
+        return
+      }
 
-      setResults(combined)
+      if (isTagSearch) {
+        const { data } = await supabase
+          .from('tags')
+          .select('id, name, slug')
+          .ilike('name', `%${cleanQuery}%`)
+          .limit(8)
+
+        setResults(
+          (data ?? []).map((t) => ({
+            id: t.id,
+            title: t.name,
+            type: 'tag' as const,
+            slug: t.slug,
+          }))
+        )
+      } else {
+        const q = `%${cleanQuery}%`
+        const [channelsRes, topicsRes] = await Promise.all([
+          supabase.from('channels').select('id, name').ilike('name', q).limit(3),
+          supabase.from('topics').select('id, title, channel_id').or(`title.ilike.${q},content.ilike.${q}`).limit(5),
+        ])
+
+        setResults([
+          ...(channelsRes.data ?? []).map((c) => ({ id: c.id, title: c.name, type: 'channel' as const })),
+          ...(topicsRes.data ?? []).map((t) => ({ id: t.id, title: t.title, type: 'topic' as const, channelId: t.channel_id })),
+        ])
+      }
+
       setOpen(true)
       setLoading(false)
     }, 300)
@@ -62,17 +88,21 @@ const GlobalSearch = () => {
 
   const handleSelect = (result: SearchResult) => {
     setOpen(false)
-    if (result.type === 'channel') {
-      navigate(`/channels/${result.id}`)
-    } else if (result.type === 'topic') {
-      navigate(`/channels/${result.channelId}/topics/${result.id}`)
-    }
     setQuery('')
+    if (result.type === 'channel') navigate(`/channels/${result.id}`)
+    else if (result.type === 'topic') navigate(`/channels/${result.channelId}/topics/${result.id}`)
+    else if (result.type === 'tag') navigate(`/tags/${result.slug}`)
   }
 
   const handleSearchPage = () => {
     if (!query.trim()) return
-    navigate(`/search?q=${encodeURIComponent(query.trim())}`)
+    const isTagSearch = query.trim().startsWith('#')
+    if (isTagSearch) {
+      const slug = query.trim().slice(1).toLowerCase().replace(/\s+/g, '-')
+      navigate(`/tags/${slug}`)
+    } else {
+      navigate(`/search?q=${encodeURIComponent(query.trim())}`)
+    }
     setOpen(false)
     setQuery('')
   }
@@ -82,11 +112,14 @@ const GlobalSearch = () => {
     if (e.key === 'Escape') setOpen(false)
   }
 
+  const isTagSearch = query.trim().startsWith('#')
   const channels = results.filter((r) => r.type === 'channel')
   const topics = results.filter((r) => r.type === 'topic')
+  const tags = results.filter((r) => r.type === 'tag')
 
   const typeIcon = (type: SearchResult['type']) => {
     if (type === 'channel') return <Hash size={13} className="text-indigo-400 shrink-0" />
+    if (type === 'tag') return <Tag size={13} className="text-violet-400 shrink-0" />
     return <FileText size={13} className="text-emerald-400 shrink-0" />
   }
 
@@ -125,7 +158,7 @@ const GlobalSearch = () => {
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
             onFocus={() => results.length > 0 && setOpen(true)}
-            placeholder="Buscar canales, topics..."
+            placeholder="Buscar canales, topics, #tags..."
             className="flex-1 bg-transparent text-sm text-slate-700 placeholder-slate-400 outline-none"
           />
           {query ? (
@@ -153,9 +186,25 @@ const GlobalSearch = () => {
                 onClick={handleSearchPage}
                 className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-indigo-600 hover:bg-indigo-50 hover:cursor-pointer transition-colors border-b border-slate-100"
               >
-                <Search size={14} />
+                {isTagSearch ? <Tag size={14} /> : <Search size={14} />}
                 <span>Ver todos los resultados de <strong>"{query}"</strong></span>
               </button>
+
+              {tags.length > 0 && (
+                <div>
+                  <p className="px-4 pt-2 pb-1 text-xs font-semibold text-slate-400 uppercase tracking-wide">Tags</p>
+                  {tags.map((r) => (
+                    <button
+                      key={r.id}
+                      onClick={() => handleSelect(r)}
+                      className="w-full flex items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:cursor-pointer transition-colors text-left"
+                    >
+                      {typeIcon(r.type)}
+                      <span className="truncate">#{r.title}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
 
               {channels.length > 0 && (
                 <div>
