@@ -40,6 +40,8 @@ export interface Topic {
   channel?: Channel
   is_starred?: boolean
   tags?: Tag[]
+  is_pinned?: boolean
+  is_closed?: boolean
 }
 export interface Reply {
   id: string

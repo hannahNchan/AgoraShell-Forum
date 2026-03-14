@@ -2,13 +2,13 @@ import { useCodeCollapse } from '../../../hooks/useCodeCollapse'
 import { useEffect, useState, useRef } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
-import { Star, Clock, Smile, Send, Trash2, MessageCircle, X, Pencil, Check, Tag as TagIcon } from 'lucide-react'
+import { Star, Clock, Smile, Send, Trash2, MessageCircle, X, Pencil, Check, Tag as TagIcon, Lock, LockOpen } from 'lucide-react'
 import { formatDistanceToNow, format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import EmojiPicker from 'emoji-picker-react'
 import { selectProfile } from '../../auth/store/authSelectors'
 import { type AppDispatch, type RootState } from '../../../store'
-import { incrementRepliesCount, fetchTopicById, toggleStar, decrementRepliesCount, updateTopic } from '../store/threadsSlice'
+import { incrementRepliesCount, fetchTopicById, toggleStar, decrementRepliesCount, updateTopic, closeTopic } from '../store/threadsSlice'
 import { fetchRepliesByTopic, createReply, toggleReaction, groupReactions, addReplyRealtime, deleteReply, deleteReplyRealtime, updateReply } from '../../posts/store/postsSlice'
 import { fetchSettings } from '../../tags/store/tagsSlice'
 import { useAuth } from '../../auth/hooks/useAuth'
@@ -92,10 +92,11 @@ const ReplyBottomSheet = ({ open, onClose, onSubmit, replyingTo, submitting }: R
 interface ReplyCardProps {
   reply: Reply
   topicId: string
+  topicClosed: boolean
   depth?: number
 }
 
-const ReplyCard = ({ reply, topicId, depth = 0 }: ReplyCardProps) => {
+const ReplyCard = ({ reply, topicId, topicClosed, depth = 0 }: ReplyCardProps) => {
   const dispatch = useDispatch<AppDispatch>()
   const { user, isAuthenticated } = useAuth()
   const profile = useSelector(selectProfile)
@@ -286,7 +287,7 @@ const ReplyCard = ({ reply, topicId, depth = 0 }: ReplyCardProps) => {
                   </button>
                 ))}
 
-                {isAuthenticated && !isBanned && (
+                {isAuthenticated && !isBanned && !topicClosed && (
                   <button
                     onClick={handleReplyClick}
                     className="hover:cursor-pointer flex items-center gap-1 px-2 py-0.5 rounded-full border border-slate-200 text-slate-400 hover:bg-slate-50 hover:text-indigo-500 hover:border-indigo-300 transition-colors text-xs"
@@ -371,7 +372,7 @@ const ReplyCard = ({ reply, topicId, depth = 0 }: ReplyCardProps) => {
           {reply.children && reply.children.length > 0 && (
             <div className="mt-4 space-y-2">
               {reply.children.map((child) => (
-                <ReplyCard key={child.id} reply={child} topicId={topicId} depth={depth + 1} />
+                <ReplyCard key={child.id} reply={child} topicId={topicId} topicClosed={topicClosed} depth={depth + 1} />
               ))}
             </div>
           )}
@@ -385,7 +386,7 @@ const ThreadDetailPage = () => {
   const { topicId } = useParams<{ topicId: string }>()
   const dispatch = useDispatch<AppDispatch>()
   const { isAuthenticated } = useAuth()
-  const { isBanned } = useRole()
+  const { isBanned, isModerator } = useRole()
   const profile = useSelector(selectProfile)
   const [replyContent, setReplyContent] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -404,6 +405,7 @@ const ThreadDetailPage = () => {
   const maxTags = useSelector((state: RootState) => state.tags.settings?.max_tags_per_topic ?? 3)
 
   const canEditTopic = topic && profile?.id === topic.author_id
+  const isClosed = topic?.is_closed ?? false
 
   useEffect(() => {
     dispatch(fetchSettings())
@@ -443,6 +445,11 @@ const ThreadDetailPage = () => {
   const handleStar = () => {
     if (!isAuthenticated || !topic) return
     dispatch(toggleStar({ topicId: topic.id, isStarred: topic.is_starred ?? false }))
+  }
+
+  const handleClose = () => {
+    if (!topic) return
+    dispatch(closeTopic({ topicId: topic.id, isClosed: isClosed }))
   }
 
   const handleStartEditTopic = () => {
@@ -488,7 +495,23 @@ const ThreadDetailPage = () => {
 
   return (
     <div className="space-y-4">
-      <div className="bg-white rounded-xl border border-slate-200 p-6">
+      <div className={`bg-white rounded-xl border p-6 ${isClosed ? 'border-slate-300' : 'border-slate-200'}`}>
+        {isClosed && (
+          <div className="flex items-center gap-2 mb-4 px-3 py-2 bg-slate-100 rounded-lg border border-slate-200">
+            <Lock size={13} className="text-slate-400 shrink-0" />
+            <span className="text-sm text-slate-500 font-medium">Este tema está cerrado — no se aceptan más respuestas</span>
+            {isModerator && (
+              <button
+                onClick={handleClose}
+                className="hover:cursor-pointer ml-auto flex items-center gap-1 text-xs text-slate-500 hover:text-indigo-600 transition-colors"
+              >
+                <LockOpen size={13} />
+                Reabrir
+              </button>
+            )}
+          </div>
+        )}
+
         <div className="flex items-start gap-4">
           <Avatar profile={topic.author} size="md" />
           <div className="flex-1 min-w-0">
@@ -528,6 +551,19 @@ const ThreadDetailPage = () => {
           </div>
 
           <div className="flex items-center gap-2 flex-shrink-0">
+            {isModerator && isAuthenticated && !isEditingTopic && (
+              <button
+                onClick={handleClose}
+                title={isClosed ? 'Reabrir tema' : 'Cerrar tema'}
+                className={`hover:cursor-pointer flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-sm transition-colors ${isClosed
+                  ? 'bg-slate-100 border-slate-300 text-slate-600 hover:bg-slate-200'
+                  : 'border-slate-200 text-slate-400 hover:border-slate-300 hover:text-slate-600'
+                  }`}
+              >
+                {isClosed ? <LockOpen size={14} /> : <Lock size={14} />}
+                <span className="hidden sm:inline">{isClosed ? 'Reabrir' : 'Cerrar'}</span>
+              </button>
+            )}
             {canEditTopic && isAuthenticated && !isBanned && !isEditingTopic && (
               <button
                 onClick={handleStartEditTopic}
@@ -592,7 +628,7 @@ const ThreadDetailPage = () => {
       ) : (
         <div className="space-y-3">
           {replies.map((reply) => (
-            <ReplyCard key={reply.id} reply={reply} topicId={topicId!} depth={0} />
+            <ReplyCard key={reply.id} reply={reply} topicId={topicId!} topicClosed={isClosed} depth={0} />
           ))}
           {replies.length === 0 && (
             <div className="text-center py-8 text-slate-400 text-sm">Nadie ha respondido todavía. ¡Sé el primero!</div>
@@ -600,7 +636,12 @@ const ThreadDetailPage = () => {
         </div>
       )}
 
-      {isAuthenticated ? (
+      {isClosed ? (
+        <div className="bg-slate-50 rounded-xl border border-slate-200 p-5 text-center flex items-center justify-center gap-2 text-sm text-slate-500">
+          <Lock size={15} className="text-slate-400" />
+          Este tema está cerrado y no acepta más respuestas.
+        </div>
+      ) : isAuthenticated ? (
         isBanned ? (
           <div className="bg-red-50 rounded-xl border border-red-200 p-5 text-center text-sm text-red-500">
             Tu cuenta ha sido suspendida y no puedes publicar contenido.

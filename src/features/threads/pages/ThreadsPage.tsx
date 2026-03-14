@@ -1,13 +1,13 @@
 import { useEffect, useState, useRef } from 'react'
 import { useParams, Link, useSearchParams } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
-import { Plus, Star, MessageSquare, Clock, X, ChevronDown, ChevronUp, Trash2, Pencil, Check, Tag as TagIcon } from 'lucide-react'
+import { Plus, Star, MessageSquare, Clock, X, ChevronDown, ChevronUp, Trash2, Pencil, Check, Tag as TagIcon, Pin, PinOff, Lock, LockOpen } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { type AppDispatch, type RootState } from '../../../store'
 import { useRole } from '../../auth/hooks/useRole'
 import { selectProfile } from '../../auth/store/authSelectors'
-import { fetchTopicsByChannel, fetchMoreTopics, createTopic, toggleStar, setRepliesCount, deleteTopic, updateTopic } from '../store/threadsSlice'
+import { fetchTopicsByChannel, fetchMoreTopics, createTopic, toggleStar, setRepliesCount, deleteTopic, updateTopic, pinTopic, closeTopic } from '../store/threadsSlice'
 import { fetchSettings } from '../../tags/store/tagsSlice'
 import { useAuth } from '../../auth/hooks/useAuth'
 import Spinner from '../../../components/shared/Spinner'
@@ -241,6 +241,18 @@ const TopicCard = ({ topic, maxTags }: { topic: any; maxTags: number }) => {
     setShowEditModal(true)
   }
 
+  const handleClose = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    dispatch(closeTopic({ topicId: topic.id, isClosed: topic.is_closed }))
+  }
+
+  const handlePin = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    dispatch(pinTopic({ topicId: topic.id, isPinned: topic.is_pinned }))
+  }
+
   const stripHtml = (html: string) => {
     const tmp = document.createElement('div')
     tmp.innerHTML = html
@@ -251,7 +263,25 @@ const TopicCard = ({ topic, maxTags }: { topic: any; maxTags: number }) => {
 
   return (
     <>
-      <div className="bg-white rounded-xl border border-slate-200 hover:border-indigo-200 hover:shadow-sm transition-all overflow-hidden">
+      <div className={`bg-white rounded-xl border hover:shadow-sm transition-all overflow-hidden ${topic.is_pinned
+        ? 'border-amber-300 ring-1 ring-amber-200'
+        : topic.is_closed
+          ? 'border-slate-300 bg-slate-50'
+          : 'border-slate-200 hover:border-indigo-200'
+        }`}>
+        {topic.is_pinned && (
+          <div className="flex items-center gap-1.5 px-5 py-1.5 bg-amber-50 border-b border-amber-200">
+            <Pin size={11} className="text-amber-500" />
+            <span className="text-xs font-medium text-amber-600">Tema fijado</span>
+          </div>
+        )}
+        {topic.is_closed && (
+          <div className="flex items-center gap-1.5 px-5 py-1.5 bg-slate-100 border-b border-slate-200">
+            <Lock size={11} className="text-slate-400" />
+            <span className="text-xs font-medium text-slate-500">Tema cerrado — no se aceptan más respuestas</span>
+          </div>
+        )}
+
         <div className="flex items-start gap-4 p-5">
           <div className="w-9 h-9 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-semibold text-sm flex-shrink-0 overflow-hidden">
             {topic.author?.avatar_url ? (
@@ -308,6 +338,32 @@ const TopicCard = ({ topic, maxTags }: { topic: any; maxTags: number }) => {
               </span>
             </div>
             <div className="flex items-center gap-2">
+              {isModerator && isAuthenticated && (
+                <button
+                  onClick={handleClose}
+                  title={topic.is_closed ? 'Reabrir tema' : 'Cerrar tema'}
+                  className={`hover:cursor-pointer px-2 py-1 rounded-sm flex items-center gap-1 text-xs transition-colors ${topic.is_closed
+                    ? 'bg-slate-200 text-slate-600 hover:bg-slate-300'
+                    : 'bg-slate-100 text-slate-400 hover:bg-slate-200 hover:text-slate-600'
+                    }`}
+                >
+                  {topic.is_closed ? <LockOpen size={14} /> : <Lock size={14} />}
+                  {topic.is_closed ? 'Reabrir' : 'Cerrar'}
+                </button>
+              )}
+              {isModerator && isAuthenticated && (
+                <button
+                  onClick={handlePin}
+                  title={topic.is_pinned ? 'Desfijar tema' : 'Fijar tema'}
+                  className={`hover:cursor-pointer px-2 py-1 rounded-sm flex items-center gap-1 text-xs transition-colors ${topic.is_pinned
+                    ? 'bg-amber-100 text-amber-600 hover:bg-amber-200'
+                    : 'bg-slate-100 text-slate-400 hover:bg-amber-100 hover:text-amber-600'
+                    }`}
+                >
+                  {topic.is_pinned ? <PinOff size={14} /> : <Pin size={14} />}
+                  {topic.is_pinned ? 'Desfijar' : 'Fijar'}
+                </button>
+              )}
               {canEdit && isAuthenticated && !isBanned && (
                 <button
                   onClick={handleEditClick}
@@ -515,6 +571,9 @@ export const ThreadsPage = () => {
     }
   }
 
+  const pinnedTopics = topics.filter((t) => t.is_pinned)
+  const normalTopics = topics.filter((t) => !t.is_pinned)
+
   return (
     <div className="space-y-4">
       <div className="flex items-start justify-between">
@@ -549,8 +608,8 @@ export const ThreadsPage = () => {
               key={tag.id}
               onClick={() => handleTagFilter(tag)}
               className={`hover:cursor-pointer inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${activeTag?.id === tag.id
-                  ? 'bg-indigo-600 text-white border-indigo-600'
-                  : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-300 hover:text-indigo-600'
+                ? 'bg-indigo-600 text-white border-indigo-600'
+                : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-300 hover:text-indigo-600'
                 }`}
             >
               <TagIcon size={9} />
@@ -592,7 +651,21 @@ export const ThreadsPage = () => {
         </div>
       ) : (
         <div className="space-y-2">
-          {topics.map((topic) => (
+          {pinnedTopics.length > 0 && (
+            <>
+              {pinnedTopics.map((topic) => (
+                <TopicCard key={topic.id} topic={topic} maxTags={maxTags} />
+              ))}
+              {normalTopics.length > 0 && (
+                <div className="flex items-center gap-3 py-1">
+                  <div className="flex-1 h-px bg-slate-200" />
+                  <span className="text-xs text-slate-400 font-medium whitespace-nowrap">Todos los temas</span>
+                  <div className="flex-1 h-px bg-slate-200" />
+                </div>
+              )}
+            </>
+          )}
+          {normalTopics.map((topic) => (
             <TopicCard key={topic.id} topic={topic} maxTags={maxTags} />
           ))}
         </div>

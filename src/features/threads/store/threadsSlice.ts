@@ -51,6 +51,11 @@ const fetchStars = async (data: any[], userId: string) => {
   return data.map((t: any) => ({ ...normalizeTags(t), is_starred: starredIds.has(t.id) })) as Topic[]
 }
 
+const sortPinnedFirst = (topics: Topic[]) => [
+  ...topics.filter((t) => t.is_pinned),
+  ...topics.filter((t) => !t.is_pinned),
+]
+
 export const fetchTopicsByChannel = createAsyncThunk(
   'topics/fetchByChannel',
   async ({ channelId, tagId }: { channelId: string; tagId?: string }, { rejectWithValue }) => {
@@ -60,6 +65,7 @@ export const fetchTopicsByChannel = createAsyncThunk(
         .from('topics')
         .select(TOPIC_SELECT)
         .eq('channel_id', channelId)
+        .order('is_pinned', { ascending: false })
         .order('created_at', { ascending: false })
         .range(0, PAGE_SIZE - 1)
 
@@ -98,6 +104,7 @@ export const fetchMoreTopics = createAsyncThunk(
         .from('topics')
         .select(TOPIC_SELECT)
         .eq('channel_id', channelId)
+        .order('is_pinned', { ascending: false })
         .order('created_at', { ascending: false })
         .range(from, to)
 
@@ -219,6 +226,38 @@ export const updateTopic = createAsyncThunk(
   }
 )
 
+export const pinTopic = createAsyncThunk(
+  'topics/pin',
+  async ({ topicId, isPinned }: { topicId: string; isPinned: boolean }, { rejectWithValue }) => {
+    try {
+      const { error } = await supabase
+        .from('topics')
+        .update({ is_pinned: !isPinned })
+        .eq('id', topicId)
+      if (error) throw error
+      return { topicId, is_pinned: !isPinned }
+    } catch (error: any) {
+      return rejectWithValue(error.message)
+    }
+  }
+)
+
+export const closeTopic = createAsyncThunk(
+  'topics/close',
+  async ({ topicId, isClosed }: { topicId: string; isClosed: boolean }, { rejectWithValue }) => {
+    try {
+      const { error } = await supabase
+        .from('topics')
+        .update({ is_closed: !isClosed })
+        .eq('id', topicId)
+      if (error) throw error
+      return { topicId, is_closed: !isClosed }
+    } catch (error: any) {
+      return rejectWithValue(error.message)
+    }
+  }
+)
+
 export const toggleStar = createAsyncThunk(
   'topics/toggleStar',
   async ({ topicId, isStarred }: { topicId: string; isStarred: boolean }, { rejectWithValue }) => {
@@ -295,7 +334,7 @@ const topicsSlice = createSlice({
       .addCase(fetchMoreTopics.fulfilled, (state, action) => {
         state.loadingMore = false
         const newItems = action.payload.filter((t) => !state.items.find((e) => e.id === t.id))
-        state.items = [...state.items, ...newItems]
+        state.items = sortPinnedFirst([...state.items, ...newItems])
         state.hasMore = action.payload.length === PAGE_SIZE
       })
       .addCase(fetchMoreTopics.rejected, (state) => { state.loadingMore = false })
@@ -311,7 +350,7 @@ const topicsSlice = createSlice({
       })
 
       .addCase(createTopic.fulfilled, (state, action) => {
-        state.items.unshift(action.payload)
+        state.items = sortPinnedFirst([action.payload, ...state.items])
       })
 
       .addCase(updateTopic.fulfilled, (state, action) => {
@@ -319,6 +358,21 @@ const topicsSlice = createSlice({
         const idx = state.items.findIndex((t) => t.id === updated.id)
         if (idx !== -1) state.items[idx] = { ...state.items[idx], ...updated }
         if (state.currentTopic?.id === updated.id) state.currentTopic = { ...state.currentTopic, ...updated }
+      })
+
+      .addCase(pinTopic.fulfilled, (state, action) => {
+        const { topicId, is_pinned } = action.payload
+        const topic = state.items.find((t) => t.id === topicId)
+        if (topic) topic.is_pinned = is_pinned
+        if (state.currentTopic?.id === topicId) state.currentTopic.is_pinned = is_pinned
+        state.items = sortPinnedFirst([...state.items])
+      })
+
+      .addCase(closeTopic.fulfilled, (state, action) => {
+        const { topicId, is_closed } = action.payload
+        const topic = state.items.find((t) => t.id === topicId)
+        if (topic) topic.is_closed = is_closed
+        if (state.currentTopic?.id === topicId) state.currentTopic.is_closed = is_closed
       })
 
       .addCase(toggleStar.fulfilled, (state, action) => {
