@@ -165,7 +165,7 @@ const TagInput = ({ selected, onChange, maxTags = 3 }: TagInputProps) => {
               onClick={() => handleSelect(tag)}
               className="hover:cursor-pointer w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors text-left"
             >
-              <TagIcon size={12} className="text-slate-400 flex-shrink-0" />
+              <TagIcon size={12} className="text-slate-400 shrink-0" />
               <span>{tag.name}</span>
             </button>
           ))}
@@ -181,7 +181,7 @@ const TagInput = ({ selected, onChange, maxTags = 3 }: TagInputProps) => {
                 disabled={creating}
                 className="hover:cursor-pointer w-full flex items-center gap-2 px-3 py-2 text-sm text-indigo-600 hover:bg-indigo-50 transition-colors text-left font-medium disabled:opacity-50"
               >
-                <Plus size={13} className="flex-shrink-0" />
+                <Plus size={13} className="shrink-0" />
                 {creating ? 'Creando...' : `Crear tag "${query.trim()}"`}
               </button>
             </>

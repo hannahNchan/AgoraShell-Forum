@@ -124,33 +124,10 @@ const GlobalSearch = () => {
   }
 
   return (
-    <div ref={containerRef} className="relative w-full max-w-sm">
-      <style>{`
-        @keyframes neon-spin {
-          0%   { background-position: 0% 50%; }
-          50%  { background-position: 100% 50%; }
-          100% { background-position: 0% 50%; }
-        }
-        .neon-border {
-          border-radius: 8px;
-          padding: 1.5px;
-          background: linear-gradient(270deg, #55cdfc, #f7a8b8, #3b82f6, #f7a8b8, #55cdfc);
-          background-size: 300% 300%;
-          animation: neon-spin 3s ease infinite;
-        }
-        .neon-inner {
-          border-radius: 6px;
-          background: white;
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          padding: 6px 12px;
-        }
-      `}</style>
-
+    <div ref={containerRef} className="relative w-full">
       <div className="neon-border">
-        <div className="neon-inner">
-          <img src="/agorashell.svg" alt="" className="h-5 w-auto shrink-0" />
+        <div className="neon-inner dark:bg-slate-400 bg-white">
+          <img src="/agorashell.svg" alt="" className="h-8 w-auto shrink-0 opacity-80" />
           <input
             ref={inputRef}
             type="text"
@@ -159,7 +136,7 @@ const GlobalSearch = () => {
             onKeyDown={handleKeyDown}
             onFocus={() => results.length > 0 && setOpen(true)}
             placeholder="Buscar canales, topics, #tags..."
-            className="flex-1 bg-transparent text-sm text-slate-700 placeholder-slate-400 outline-none"
+            className="flex-1 bg-transparent text-sm text-slate-700 dark:text-slate-700 dark:placeholder-slate-800 placeholder-slate-400 outline-none"
           />
           {query ? (
             <button

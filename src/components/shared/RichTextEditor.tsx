@@ -85,8 +85,8 @@ const ToolbarButton = ({
     onClick={onClick}
     title={title}
     className={`p-1.5 rounded transition-colors ${active
-      ? 'bg-indigo-100 text-indigo-700'
-      : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100'
+        ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300'
+        : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-600'
       }`}
   >
     {children}
@@ -120,9 +120,7 @@ export const RichTextEditor = ({
         },
       }).configure({ lowlight, defaultLanguage: 'plaintext' }),
       MentionExtension.configure({
-        HTMLAttributes: {
-          class: 'mention',
-        },
+        HTMLAttributes: { class: 'mention' },
         suggestion: mentionSuggestion,
       }),
     ],
@@ -199,69 +197,37 @@ export const RichTextEditor = ({
   }
 
   return (
-    <div className="border border-slate-200 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-transparent bg-white">
-      <div className="flex items-center gap-0.5 p-2 border-b border-slate-100 flex-wrap bg-slate-50">
-        <ToolbarButton
-          onClick={() => editor.chain().focus().toggleBold().run()}
-          active={editor.isActive('bold')}
-          title="Negrita"
-        >
+    <div className="border border-slate-200 dark:border-slate-600 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-transparent bg-white dark:bg-slate-700">
+      <div className="flex items-center gap-0.5 p-2 border-b border-slate-100 dark:border-slate-600 flex-wrap bg-slate-50 dark:bg-slate-700/80">
+        <ToolbarButton onClick={() => editor.chain().focus().toggleBold().run()} active={editor.isActive('bold')} title="Negrita">
           <Bold size={15} />
         </ToolbarButton>
-        <ToolbarButton
-          onClick={() => editor.chain().focus().toggleItalic().run()}
-          active={editor.isActive('italic')}
-          title="Cursiva"
-        >
+        <ToolbarButton onClick={() => editor.chain().focus().toggleItalic().run()} active={editor.isActive('italic')} title="Cursiva">
           <Italic size={15} />
         </ToolbarButton>
-        <ToolbarButton
-          onClick={() => editor.chain().focus().toggleStrike().run()}
-          active={editor.isActive('strike')}
-          title="Tachado"
-        >
+        <ToolbarButton onClick={() => editor.chain().focus().toggleStrike().run()} active={editor.isActive('strike')} title="Tachado">
           <Strikethrough size={15} />
         </ToolbarButton>
-        <ToolbarButton
-          onClick={() => editor.chain().focus().toggleCode().run()}
-          active={editor.isActive('code')}
-          title="Código inline"
-        >
+        <ToolbarButton onClick={() => editor.chain().focus().toggleCode().run()} active={editor.isActive('code')} title="Código inline">
           <Code size={15} />
         </ToolbarButton>
-        <ToolbarButton
-          onClick={() => editor.chain().focus().toggleCodeBlock().run()}
-          active={editor.isActive('codeBlock')}
-          title="Bloque de código"
-        >
+        <ToolbarButton onClick={() => editor.chain().focus().toggleCodeBlock().run()} active={editor.isActive('codeBlock')} title="Bloque de código">
           <FileCode size={15} />
         </ToolbarButton>
 
-        <div className="w-px h-5 bg-slate-200 mx-1" />
+        <div className="w-px h-5 bg-slate-200 dark:bg-slate-600 mx-1" />
 
-        <ToolbarButton
-          onClick={() => editor.chain().focus().toggleBulletList().run()}
-          active={editor.isActive('bulletList')}
-          title="Lista"
-        >
+        <ToolbarButton onClick={() => editor.chain().focus().toggleBulletList().run()} active={editor.isActive('bulletList')} title="Lista">
           <List size={15} />
         </ToolbarButton>
-        <ToolbarButton
-          onClick={() => editor.chain().focus().toggleOrderedList().run()}
-          active={editor.isActive('orderedList')}
-          title="Lista numerada"
-        >
+        <ToolbarButton onClick={() => editor.chain().focus().toggleOrderedList().run()} active={editor.isActive('orderedList')} title="Lista numerada">
           <ListOrdered size={15} />
         </ToolbarButton>
-        <ToolbarButton
-          onClick={() => editor.chain().focus().toggleBlockquote().run()}
-          active={editor.isActive('blockquote')}
-          title="Cita"
-        >
+        <ToolbarButton onClick={() => editor.chain().focus().toggleBlockquote().run()} active={editor.isActive('blockquote')} title="Cita">
           <Quote size={15} />
         </ToolbarButton>
 
-        <div className="w-px h-5 bg-slate-200 mx-1" />
+        <div className="w-px h-5 bg-slate-200 dark:bg-slate-600 mx-1" />
 
         <ToolbarButton onClick={addLink} active={editor.isActive('link')} title="Insertar enlace">
           <LinkIcon size={15} />
@@ -269,10 +235,7 @@ export const RichTextEditor = ({
         <ToolbarButton onClick={addImage} title="Subir imagen">
           <ImageIcon size={15} />
         </ToolbarButton>
-        <ToolbarButton
-          onClick={() => editor.chain().focus().setHorizontalRule().run()}
-          title="Separador"
-        >
+        <ToolbarButton onClick={() => editor.chain().focus().setHorizontalRule().run()} title="Separador">
           <Minus size={15} />
         </ToolbarButton>
       </div>

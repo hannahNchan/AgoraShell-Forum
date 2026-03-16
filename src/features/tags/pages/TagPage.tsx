@@ -33,7 +33,6 @@ const TagPage = () => {
   const fetchTopicsForTag = async (tagId: string, page: number) => {
     const from = page * PAGE_SIZE
     const to = from + PAGE_SIZE - 1
-
     const { data, error } = await supabase
       .from('topic_tags')
       .select(`
@@ -47,9 +46,7 @@ const TagPage = () => {
       .eq('tag_id', tagId)
       .order('created_at', { ascending: false, referencedTable: 'topics' })
       .range(from, to)
-
     if (error) return []
-
     return (data || [])
       .map((row: any) => ({
         ...row.topic,
@@ -60,38 +57,28 @@ const TagPage = () => {
 
   useEffect(() => {
     if (!slug) return
-
     const init = async () => {
       setLoading(true)
-      const { data: tagData } = await supabase
-        .from('tags')
-        .select('*')
-        .eq('slug', slug)
-        .single()
-
+      const { data: tagData } = await supabase.from('tags').select('*').eq('slug', slug).single()
       if (!tagData) { setLoading(false); return }
       setTag(tagData)
-
       const { count } = await supabase
         .from('topic_tags')
         .select('*', { count: 'exact', head: true })
         .eq('tag_id', tagData.id)
       setTotalCount(count || 0)
-
       const results = await fetchTopicsForTag(tagData.id, 0)
       setTopics(results)
       setHasMore(results.length === PAGE_SIZE)
       pageRef.current = 1
       setLoading(false)
     }
-
     init()
   }, [slug])
 
   useEffect(() => {
     const el = loaderRef.current
     if (!el || !tag) return
-
     const scrollRoot = document.getElementById('main-scroll')
     const observer = new IntersectionObserver(
       async (entries) => {
@@ -119,9 +106,7 @@ const TagPage = () => {
   if (loading) return <div className="flex justify-center py-16"><Spinner size="lg" /></div>
 
   if (!tag) return (
-    <div className="text-center py-16 text-slate-400">
-      Tag no encontrado
-    </div>
+    <div className="text-center py-16 text-slate-400">Tag no encontrado</div>
   )
 
   return (
@@ -129,18 +114,18 @@ const TagPage = () => {
       <div>
         <Link
           to="/"
-          className="inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-indigo-600 transition-colors hover:cursor-pointer mb-4"
+          className="inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors hover:cursor-pointer mb-4"
         >
           <ArrowLeft size={15} />
           Volver al inicio
         </Link>
 
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center text-indigo-600">
+          <div className="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
             <TagIcon size={20} />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-slate-800">#{tag.name}</h1>
+            <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">#{tag.name}</h1>
             <p className="text-sm text-slate-400">
               {totalCount} {totalCount === 1 ? 'tema' : 'temas'} con este tag
             </p>
@@ -158,10 +143,10 @@ const TagPage = () => {
           {topics.map((topic) => (
             <div
               key={topic.id}
-              className="bg-white rounded-xl border border-slate-200 hover:border-indigo-200 hover:shadow-sm transition-all p-4"
+              className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-indigo-200 dark:hover:border-indigo-700 hover:shadow-sm transition-all p-4"
             >
               <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-semibold text-xs flex-shrink-0 overflow-hidden">
+                <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center text-indigo-700 dark:text-indigo-300 font-semibold text-xs shrink-0 overflow-hidden">
                   {topic.author?.avatar_url ? (
                     <img src={topic.author.avatar_url} alt="" className="w-full h-full object-cover" />
                   ) : (
@@ -172,7 +157,7 @@ const TagPage = () => {
                   <div className="flex items-center gap-2 mb-0.5 flex-wrap">
                     <Link
                       to={`/channels/${topic.channel?.id}`}
-                      className="text-xs font-medium text-indigo-500 hover:text-indigo-700 hover:cursor-pointer transition-colors flex items-center gap-1"
+                      className="text-xs font-medium text-indigo-500 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 hover:cursor-pointer transition-colors flex items-center gap-1"
                     >
                       <span>{topic.channel?.icon}</span>
                       {topic.channel?.name}
@@ -181,22 +166,22 @@ const TagPage = () => {
 
                   <Link
                     to={`/channels/${topic.channel?.id}/topics/${topic.id}`}
-                    className="font-semibold text-slate-800 hover:text-indigo-600 transition-colors text-sm leading-snug hover:cursor-pointer block"
+                    className="font-semibold text-slate-800 dark:text-slate-100 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors text-sm leading-snug hover:cursor-pointer block"
                   >
                     {topic.title}
                   </Link>
 
                   <div className="flex items-center gap-3 mt-1.5 flex-wrap">
                     <span className="text-xs text-slate-400 font-medium">{topic.author?.username}</span>
-                    <span className="text-xs text-slate-300 flex items-center gap-1">
+                    <span className="text-xs text-slate-400 dark:text-slate-500 flex items-center gap-1">
                       <Clock size={11} />
                       {formatDistanceToNow(new Date(topic.created_at), { addSuffix: true, locale: es })}
                     </span>
-                    <span className="flex items-center gap-1 text-xs text-slate-300">
+                    <span className="flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500">
                       <Star size={11} />
                       {topic.stars_count}
                     </span>
-                    <span className="flex items-center gap-1 text-xs text-slate-300">
+                    <span className="flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500">
                       <MessageSquare size={11} />
                       {topic.replies_count}
                     </span>
@@ -210,7 +195,7 @@ const TagPage = () => {
                           to={`/tags/${t.slug}`}
                           className={`hover:cursor-pointer inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border transition-colors ${t.slug === slug
                               ? 'bg-indigo-600 text-white border-indigo-600'
-                              : 'bg-indigo-50 text-indigo-600 border-indigo-200 hover:bg-indigo-100'
+                              : 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-700 hover:bg-indigo-100 dark:hover:bg-indigo-900/50'
                             }`}
                         >
                           <TagIcon size={9} />

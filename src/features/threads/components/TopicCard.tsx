@@ -47,7 +47,6 @@ const TopicCard = ({ topic }: TopicCardProps) => {
   const handleToggle = async (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-
     if (!expanded && !fetched) {
       setLoadingReplies(true)
       const { data } = await supabase
@@ -60,7 +59,6 @@ const TopicCard = ({ topic }: TopicCardProps) => {
       setFetched(true)
       setLoadingReplies(false)
     }
-
     setExpanded(!expanded)
   }
 
@@ -73,9 +71,9 @@ const TopicCard = ({ topic }: TopicCardProps) => {
   }
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 hover:border-indigo-200 hover:shadow-sm transition-all overflow-hidden">
+    <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-indigo-200 dark:hover:border-indigo-700 hover:shadow-sm transition-all overflow-hidden">
       <div className="flex items-start gap-4 p-5">
-        <div className="w-9 h-9 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-semibold text-sm flex-shrink-0 overflow-hidden">
+        <div className="w-9 h-9 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center text-indigo-700 dark:text-indigo-300 font-semibold text-sm shrink-0 overflow-hidden">
           {topic.author?.avatar_url ? (
             <img src={topic.author.avatar_url} alt="" className="w-9 h-9 object-cover" />
           ) : (
@@ -86,7 +84,7 @@ const TopicCard = ({ topic }: TopicCardProps) => {
         {canDelete && isAuthenticated && (
           <button
             onClick={handleDeleteTopic}
-            className="flex items-center gap-1 text-xs text-slate-400 hover:text-red-500 transition-colors"
+            className="flex items-center gap-1 text-xs text-slate-400 hover:text-red-500 transition-colors hover:cursor-pointer"
             title="Eliminar topic"
           >
             <Trash2 size={14} />
@@ -96,12 +94,12 @@ const TopicCard = ({ topic }: TopicCardProps) => {
         <div className="flex-1 min-w-0">
           <Link
             to={`topics/${topic.id}`}
-            className="font-semibold text-slate-800 hover:text-indigo-600 transition-colors leading-tight block"
+            className="font-semibold text-slate-800 dark:text-slate-100 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors leading-tight block"
           >
             {topic.title}
           </Link>
           <div className="flex items-center gap-3 mt-1.5 text-xs text-slate-400">
-            <span className="font-medium text-slate-500">{topic.author?.username}</span>
+            <span className="font-medium text-slate-500 dark:text-slate-400">{topic.author?.username}</span>
             <span className="flex items-center gap-1">
               <Clock size={11} />
               {formatDistanceToNow(new Date(topic.created_at), { addSuffix: true, locale: es })}
@@ -109,15 +107,14 @@ const TopicCard = ({ topic }: TopicCardProps) => {
           </div>
         </div>
 
-        <div className="flex items-center gap-4 text-slate-400 flex-shrink-0">
+        <div className="flex items-center gap-4 text-slate-400 shrink-0">
           <button
             onClick={handleStar}
-            className={`flex items-center gap-1 text-xs transition-colors ${topic.is_starred ? 'text-amber-500' : 'hover:text-amber-500'}`}
+            className={`flex items-center gap-1 text-xs transition-colors hover:cursor-pointer ${topic.is_starred ? 'text-amber-500' : 'hover:text-amber-500'}`}
           >
             <Star size={14} fill={topic.is_starred ? 'currentColor' : 'none'} />
             <span>{topic.stars_count}</span>
           </button>
-
           <span className="flex items-center gap-1 text-xs text-slate-400">
             <MessageSquare size={14} />
             <span>{topic.replies_count} {topic.replies_count === 1 ? 'respuesta' : 'respuestas'}</span>
@@ -129,8 +126,8 @@ const TopicCard = ({ topic }: TopicCardProps) => {
         <button
           onClick={handleToggle}
           className={`w-full flex items-center justify-center gap-2 py-2 text-xs font-medium border-t transition-colors hover:cursor-pointer ${expanded
-            ? 'border-indigo-100 bg-indigo-50 text-indigo-600 hover:bg-indigo-100'
-            : 'border-slate-100 bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-slate-600'
+            ? 'border-indigo-100 dark:border-indigo-900 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/30'
+            : 'border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/30 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700/50 hover:text-slate-600 dark:hover:text-slate-300'
             }`}
         >
           {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
@@ -139,7 +136,7 @@ const TopicCard = ({ topic }: TopicCardProps) => {
       )}
 
       {expanded && (
-        <div className="border-t border-slate-100 ml-[52px] mr-4 mb-4">
+        <div className="border-t border-slate-100 dark:border-slate-700 ml-[52px] mr-4 mb-4">
           {loadingReplies ? (
             <div className="flex justify-center py-4">
               <Spinner size="sm" />
@@ -148,14 +145,14 @@ const TopicCard = ({ topic }: TopicCardProps) => {
             <p className="text-xs text-slate-400 py-3">Sin respuestas aún.</p>
           ) : (
             <div className="relative pl-4">
-              <div className="absolute left-0 top-0 bottom-0 w-px bg-slate-200" />
+              <div className="absolute left-0 top-0 bottom-0 w-px bg-slate-200 dark:bg-slate-600" />
 
               <div className="flex items-center gap-1.5 pt-3 pb-2">
                 <div className="flex -space-x-2">
                   {replies.slice(0, 4).map((r: any) => (
                     <div
                       key={r.id}
-                      className="w-6 h-6 rounded-full bg-indigo-100 border-2 border-white flex items-center justify-center text-indigo-700 font-semibold text-[10px] overflow-hidden flex-shrink-0"
+                      className="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900 border-2 border-white dark:border-slate-800 flex items-center justify-center text-indigo-700 dark:text-indigo-300 font-semibold text-[10px] overflow-hidden shrink-0"
                     >
                       {r.author?.avatar_url ? (
                         <img src={r.author.avatar_url} alt="" className="w-full h-full object-cover" />
@@ -173,7 +170,7 @@ const TopicCard = ({ topic }: TopicCardProps) => {
               <div className="space-y-2 pb-2">
                 {replies.map((r: any) => (
                   <div key={r.id} className="flex items-start gap-2.5">
-                    <div className="w-6 h-6 rounded-full bg-indigo-100 flex-shrink-0 flex items-center justify-center text-indigo-700 font-semibold text-[10px] overflow-hidden mt-0.5">
+                    <div className="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900 shrink-0 flex items-center justify-center text-indigo-700 dark:text-indigo-300 font-semibold text-[10px] overflow-hidden mt-0.5">
                       {r.author?.avatar_url ? (
                         <img src={r.author.avatar_url} alt="" className="w-full h-full object-cover" />
                       ) : (
@@ -181,8 +178,8 @@ const TopicCard = ({ topic }: TopicCardProps) => {
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <span className="text-xs font-medium text-slate-600">{r.author?.username} </span>
-                      <span className="text-xs text-slate-400">
+                      <span className="text-xs font-medium text-slate-600 dark:text-slate-300">{r.author?.username} </span>
+                      <span className="text-xs text-slate-400 dark:text-slate-500">
                         {stripHtml(r.content).slice(0, 80)}{stripHtml(r.content).length > 80 ? '…' : ''}
                       </span>
                     </div>
@@ -193,7 +190,7 @@ const TopicCard = ({ topic }: TopicCardProps) => {
               {topic.replies_count > 5 && (
                 <Link
                   to={`topics/${topic.id}`}
-                  className="text-xs text-indigo-500 hover:underline pb-2 block"
+                  className="text-xs text-indigo-500 dark:text-indigo-400 hover:underline pb-2 block"
                 >
                   Ver las {topic.replies_count - 5} respuestas restantes →
                 </Link>

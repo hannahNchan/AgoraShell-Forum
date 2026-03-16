@@ -56,9 +56,21 @@ const sortPinnedFirst = (topics: Topic[]) => [
   ...topics.filter((t) => !t.is_pinned),
 ]
 
+const resolveFilterIds = async (tagId?: string, tagIds?: string[]): Promise<string[] | null> => {
+  if (tagIds && tagIds.length > 0) return tagIds
+  if (tagId) {
+    const { data } = await supabase.from('topic_tags').select('topic_id').eq('tag_id', tagId)
+    return (data || []).map((r: any) => r.topic_id)
+  }
+  return null
+}
+
 export const fetchTopicsByChannel = createAsyncThunk(
   'topics/fetchByChannel',
-  async ({ channelId, tagId }: { channelId: string; tagId?: string }, { rejectWithValue }) => {
+  async (
+    { channelId, tagId, tagIds }: { channelId: string; tagId?: string; tagIds?: string[] },
+    { rejectWithValue }
+  ) => {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       let query = supabase
@@ -69,12 +81,8 @@ export const fetchTopicsByChannel = createAsyncThunk(
         .order('created_at', { ascending: false })
         .range(0, PAGE_SIZE - 1)
 
-      if (tagId) {
-        const { data: taggedIds } = await supabase
-          .from('topic_tags')
-          .select('topic_id')
-          .eq('tag_id', tagId)
-        const ids = (taggedIds || []).map((r: any) => r.topic_id)
+      const ids = await resolveFilterIds(tagId, tagIds)
+      if (ids !== null) {
         if (ids.length === 0) return []
         query = query.in('id', ids)
       }
@@ -92,7 +100,7 @@ export const fetchTopicsByChannel = createAsyncThunk(
 export const fetchMoreTopics = createAsyncThunk(
   'topics/fetchMore',
   async (
-    { channelId, page, tagId }: { channelId: string; page: number; tagId?: string },
+    { channelId, page, tagId, tagIds }: { channelId: string; page: number; tagId?: string; tagIds?: string[] },
     { rejectWithValue }
   ) => {
     try {
@@ -108,12 +116,8 @@ export const fetchMoreTopics = createAsyncThunk(
         .order('created_at', { ascending: false })
         .range(from, to)
 
-      if (tagId) {
-        const { data: taggedIds } = await supabase
-          .from('topic_tags')
-          .select('topic_id')
-          .eq('tag_id', tagId)
-        const ids = (taggedIds || []).map((r: any) => r.topic_id)
+      const ids = await resolveFilterIds(tagId, tagIds)
+      if (ids !== null) {
         if (ids.length === 0) return []
         query = query.in('id', ids)
       }

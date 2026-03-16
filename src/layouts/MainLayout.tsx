@@ -3,13 +3,14 @@ import { Outlet, Link, useNavigate, useParams, useLocation } from 'react-router-
 import { useDispatch, useSelector } from 'react-redux'
 import {
   ChevronLeft, ChevronRight, Home, Bookmark, Flame,
-  Settings, LogOut, User, Plus, ChevronDown, LayoutGrid, Menu, X, Bell,
+  Settings, LogOut, User, Plus, ChevronDown, LayoutGrid, Menu, X, Bell, Sun, Moon,
 } from 'lucide-react'
 import { type AppDispatch, type RootState } from '../store'
 import { fetchChannels, createChannel, deleteChannel } from '../features/forums/store/forumsSlice'
 import { logout } from '../features/auth/store/authSlice'
 import { useAuth } from '../features/auth/hooks/useAuth'
 import { useRole } from '../features/auth/hooks/useRole'
+import { useDarkMode } from '../hooks/useDarkMode'
 import Spinner from '../components/shared/Spinner'
 import { type Channel } from '../types'
 import ConfirmModal from '../components/shared/ConfirmModal'
@@ -50,27 +51,20 @@ const CreateChannelModal = ({ onClose }: { onClose: () => void }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-slate-800">Crear canal</h3>
-          <button
-            onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 hover:cursor-pointer transition-colors"
-          >
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-2xl mx-4 overflow-hidden">
+        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100">Crear canal</h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:cursor-pointer transition-colors">
             <X size={20} />
           </button>
         </div>
 
         <div className="flex flex-col md:flex-row">
           {showPicker && (
-            <div className="md:hidden fixed inset-0 z-50 bg-white flex flex-col">
-              <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
-                <span className="font-medium text-slate-800">Elige un icono</span>
-                <button
-                  type="button"
-                  onClick={() => setShowPicker(false)}
-                  className="text-slate-400 hover:text-slate-600 hover:cursor-pointer transition-colors"
-                >
+            <div className="md:hidden fixed inset-0 z-50 bg-white dark:bg-slate-800 flex flex-col">
+              <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
+                <span className="font-medium text-slate-800 dark:text-slate-100">Elige un icono</span>
+                <button type="button" onClick={() => setShowPicker(false)} className="text-slate-400 hover:text-slate-600 hover:cursor-pointer transition-colors">
                   <X size={20} />
                 </button>
               </div>
@@ -80,9 +74,9 @@ const CreateChannelModal = ({ onClose }: { onClose: () => void }) => {
             </div>
           )}
 
-          <div className="hidden md:flex flex-col items-center bg-slate-50 border-r border-slate-100 p-4 min-w-[340px]">
-            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-3">Icono del canal</p>
-            <div className="text-4xl mb-4 p-3 bg-white rounded-xl border-2 border-indigo-200 shadow-sm">
+          <div className="hidden md:flex flex-col items-center bg-slate-50 dark:bg-slate-900 border-r border-slate-100 dark:border-slate-700 p-4 min-w-[340px]">
+            <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-3">Icono del canal</p>
+            <div className="text-4xl mb-4 p-3 bg-white dark:bg-slate-800 rounded-xl border-2 border-indigo-200 dark:border-indigo-700 shadow-sm">
               {icon}
             </div>
             <EmojiPicker onEmojiClick={handleEmojiClick} width={320} height={380} />
@@ -90,7 +84,7 @@ const CreateChannelModal = ({ onClose }: { onClose: () => void }) => {
 
           <form onSubmit={handleSubmit} className="flex-1 p-6 space-y-4">
             <div className="md:hidden">
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
                 Icono <span className="text-slate-400 font-normal">— toca para elegir</span>
               </label>
               <button
@@ -104,37 +98,35 @@ const CreateChannelModal = ({ onClose }: { onClose: () => void }) => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Nombre *</label>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Nombre *</label>
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="ej. Diseño Web"
-                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 dark:placeholder-slate-400 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Descripción</label>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Descripción</label>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Descripción breve del canal"
                 rows={2}
                 style={{ fieldSizing: 'content' } as React.CSSProperties}
-                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                className="w-full border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 dark:placeholder-slate-400 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
               />
             </div>
 
-            {error && (
-              <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>
-            )}
+            {error && <p className="text-sm text-red-600 bg-red-50 dark:bg-red-900/30 rounded-lg px-3 py-2">{error}</p>}
 
             <div className="flex gap-3 pt-2">
               <button
                 type="button"
                 onClick={onClose}
-                className="flex-1 border border-slate-200 text-slate-600 rounded-lg py-2 text-sm font-medium hover:bg-slate-50 hover:cursor-pointer transition-colors"
+                className="flex-1 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-lg py-2 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700 hover:cursor-pointer transition-colors"
               >
                 Cancelar
               </button>
@@ -159,6 +151,7 @@ export const MainLayout = () => {
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [showCreateChannel, setShowCreateChannel] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
+  const { isDark, toggle: toggleDark } = useDarkMode()
 
   const dispatch = useDispatch<AppDispatch>()
   const navigate = useNavigate()
@@ -394,12 +387,21 @@ export const MainLayout = () => {
     if (parts.length === 0) return null
 
     return (
-      <div className="flex items-center gap-2 text-sm text-slate-500 px-6 py-2 bg-white border-b border-slate-100">
-        <Link to="/" className="hover:text-slate-700 transition-colors">Inicio</Link>
+      <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 px-6 py-2 bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-700">
+        <Link to="/" className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors">Inicio</Link>
         {activeChannel && (
           <>
-            <ChevronRight size={14} className="text-slate-300" />
-            <Link to={`/channels/${activeChannel.id}`} className="hover:text-slate-700 transition-colors flex items-center gap-1">
+            <span
+              className="font-mono font-bold text-xs shrink-0"
+              style={{
+                background: 'linear-gradient(90deg, #55cdfc, #f7a8b8)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+              }}
+            >
+              {'>|'}
+            </span>
+            <Link to={`/channels/${activeChannel.id}`} className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors flex items-center gap-1">
               <span>{activeChannel.icon}</span>
               <span>{activeChannel.name}</span>
             </Link>
@@ -407,8 +409,17 @@ export const MainLayout = () => {
         )}
         {parts.includes('topics') && (
           <>
-            <ChevronRight size={14} className="text-slate-300" />
-            <span className="text-slate-700 font-medium">Tema</span>
+            <span
+              className="font-mono font-bold text-xs shrink-0"
+              style={{
+                background: 'linear-gradient(90deg, #55cdfc, #f7a8b8)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+              }}
+            >
+              {'>|'}
+            </span>
+            <span className="text-slate-700 dark:text-slate-200 font-medium">Tema</span>
           </>
         )}
       </div>
@@ -416,10 +427,10 @@ export const MainLayout = () => {
   }
 
   return (
-    <div className="flex h-screen bg-slate-50 overflow-hidden" style={{ position: 'relative' }}>
+    <div className="flex h-screen bg-slate-50 dark:bg-slate-950 overflow-hidden" style={{ position: 'relative' }}>
       <aside
         className={`
-          fixed lg:relative z-40 lg:z-auto h-full flex flex-col transition-all duration-300 ease-in-out flex-shrink-0
+          fixed lg:relative z-40 lg:z-auto h-full flex flex-col transition-all duration-300 ease-in-out shrink-0
           ${collapsed ? 'lg:w-16' : 'lg:w-64'}
           w-[80vw] lg:w-64
           ${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
@@ -429,28 +440,24 @@ export const MainLayout = () => {
         <SidebarContent />
       </aside>
 
-      <div
-        className="flex-1 flex flex-col min-w-0 overflow-hidden transition-all duration-300 ease-in-out"
-      >
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden transition-all duration-300 ease-in-out">
         {mobileOpen && (
-          <div
-            className="fixed inset-0 z-30 lg:hidden"
-            onClick={() => setMobileOpen(false)}
-          />
+          <div className="fixed inset-0 z-30 lg:hidden" onClick={() => setMobileOpen(false)} />
         )}
-        <header className="bg-white border-b border-slate-200 px-2 md:px-4 py-3 flex items-center gap-4 sticky top-0 z-20 flex-shrink-0 relative">
+
+        <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 px-2 md:px-4 py-2 flex items-center gap-4 sticky top-0 z-20 shrink-0 relative">
           <button
-            className="lg:hidden text-slate-500 hover:text-slate-700 hover:cursor-pointer transition-colors"
+            className="lg:hidden text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:cursor-pointer transition-colors"
             onClick={() => setMobileOpen(!mobileOpen)}
           >
             <Menu size={22} />
           </button>
 
           <div className="flex-1 hidden md:block">
-            <span className="text-slate-800 font-bold text-lg">AgoraShell</span>
+            <span className="text-slate-800 dark:text-slate-100 font-bold text-lg">AgoraShell</span>
           </div>
 
-          <div className="hidden lg:block absolute left-1/2 -translate-x-1/2 w-full max-w-md">
+          <div className="hidden lg:block absolute left-1/2 -translate-x-1/2 w-full max-w-xl">
             <GlobalSearch />
           </div>
 
@@ -459,11 +466,19 @@ export const MainLayout = () => {
           </div>
 
           <div className="flex items-center gap-3">
+            <button
+              onClick={toggleDark}
+              title={isDark ? 'Modo claro' : 'Modo oscuro'}
+              className="text-slate-400 hover:text-slate-600 dark:text-slate-400 dark:hover:text-slate-200 hover:cursor-pointer transition-colors p-1 hidden md:block"
+            >
+              {isDark ? <Sun size={19} /> : <Moon size={19} />}
+            </button>
+
             {isAuthenticated && (
               <div className="relative">
                 <button
                   onClick={() => setNotifOpen(!notifOpen)}
-                  className="relative text-slate-400 hover:text-slate-600 hover:cursor-pointer transition-colors p-1"
+                  className="relative text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:cursor-pointer transition-colors p-1"
                 >
                   <Bell size={20} />
                   {unreadCount > 0 && (
@@ -480,9 +495,9 @@ export const MainLayout = () => {
               <div className="relative">
                 <button
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
-                  className="flex items-center gap-2 rounded-full hover:bg-slate-50 p-1 transition-colors hover:cursor-pointer"
+                  className="flex items-center gap-2 rounded-full hover:bg-slate-50 dark:hover:bg-slate-800 p-1 transition-colors hover:cursor-pointer"
                 >
-                  <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-700 font-semibold text-sm overflow-hidden">
+                  <div className="w-8 h-8 bg-indigo-100 dark:bg-indigo-900 rounded-full flex items-center justify-center text-indigo-700 dark:text-indigo-300 font-semibold text-sm overflow-hidden">
                     {profile.avatar_url ? (
                       <img src={profile.avatar_url} alt="" className="w-8 h-8 rounded-full object-cover" />
                     ) : (
@@ -494,22 +509,36 @@ export const MainLayout = () => {
                 {userMenuOpen && (
                   <>
                     <div className="fixed inset-0 z-10" onClick={() => setUserMenuOpen(false)} />
-                    <div className="absolute right-0 top-full mt-2 w-52 bg-white rounded-xl shadow-lg border border-slate-100 z-20 overflow-hidden">
-                      <div className="px-4 py-3 border-b border-slate-100">
-                        <p className="text-sm font-semibold text-slate-800">{profile.username}</p>
+                    <div className="absolute right-0 top-full mt-2 w-52 bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-100 dark:border-slate-700 z-20 overflow-hidden">
+                      <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-700">
+                        <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">{profile.username}</p>
                         <p className="text-xs text-slate-400 capitalize">{profile.role}</p>
                       </div>
+                      <button
+                        onClick={toggleDark}
+                        title={isDark ? 'Modo claro' : 'Modo oscuro'}
+                        className="items-center gap-3 px-4 py-2.5 text-slate-400 hover:text-slate-600 dark:text-slate-400 dark:hover:text-slate-200 hover:cursor-pointer transition-colors p-1 block md:hidden"
+                      >
+                        <div className="flex gap-2 items-center">
+                          <div className={`relative w-11 h-6 rounded-full transition-colors duration-300 ${isDark ? 'bg-indigo-600' : 'bg-slate-200'}`}>
+                            <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all duration-300 flex items-center justify-center ${isDark ? 'left-[22px]' : 'left-0.5'}`}>
+                              {isDark ? <Moon size={11} className="text-indigo-600" /> : <Sun size={11} className="text-amber-500" />}
+                            </div>
+                          </div>
+                          {isDark ? 'Modo claro' : 'Modo oscuro'}
+                        </div>
+                      </button>
                       <Link
                         to="/settings"
                         onClick={() => setUserMenuOpen(false)}
-                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50 hover:cursor-pointer transition-colors"
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 hover:cursor-pointer transition-colors"
                       >
                         <Settings size={15} />
                         Configuración
                       </Link>
                       <button
                         onClick={handleLogout}
-                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 hover:cursor-pointer transition-colors w-full"
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 hover:cursor-pointer transition-colors w-full"
                       >
                         <LogOut size={15} />
                         Cerrar sesión
@@ -519,10 +548,7 @@ export const MainLayout = () => {
                 )}
               </div>
             ) : (
-              <Link
-                to="/login"
-                className="flex items-center gap-2 text-sm text-slate-600 hover:text-slate-800 hover:cursor-pointer"
-              >
+              <Link to="/login" className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:cursor-pointer">
                 <User size={20} />
               </Link>
             )}

@@ -263,27 +263,27 @@ const TopicCard = ({ topic, maxTags }: { topic: any; maxTags: number }) => {
 
   return (
     <>
-      <div className={`bg-white rounded-xl border hover:shadow-sm transition-all overflow-hidden ${topic.is_pinned
-        ? 'border-amber-300 ring-1 ring-amber-200'
+      <div className={`rounded-xl border hover:shadow-sm transition-all overflow-hidden ${topic.is_pinned
+        ? 'bg-white dark:bg-slate-800 border-amber-300 dark:border-amber-700 ring-1 ring-amber-200 dark:ring-amber-900'
         : topic.is_closed
-          ? 'border-slate-300 bg-slate-50'
-          : 'border-slate-200 hover:border-indigo-200'
+          ? 'bg-slate-50 dark:bg-slate-800/60 border-slate-300 dark:border-slate-600'
+          : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-indigo-200 dark:hover:border-indigo-700'
         }`}>
         {topic.is_pinned && (
-          <div className="flex items-center gap-1.5 px-5 py-1.5 bg-amber-50 border-b border-amber-200">
+          <div className="flex items-center gap-1.5 px-5 py-1.5 bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-800">
             <Pin size={11} className="text-amber-500" />
-            <span className="text-xs font-medium text-amber-600">Tema fijado</span>
+            <span className="text-xs font-medium text-amber-600 dark:text-amber-400">Tema fijado</span>
           </div>
         )}
         {topic.is_closed && (
-          <div className="flex items-center gap-1.5 px-5 py-1.5 bg-slate-100 border-b border-slate-200">
+          <div className="flex items-center gap-1.5 px-5 py-1.5 bg-slate-100 dark:bg-slate-700/50 border-b border-slate-200 dark:border-slate-600">
             <Lock size={11} className="text-slate-400" />
-            <span className="text-xs font-medium text-slate-500">Tema cerrado — no se aceptan más respuestas</span>
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Tema cerrado — no se aceptan más respuestas</span>
           </div>
         )}
 
         <div className="flex items-start gap-4 p-5">
-          <div className="w-9 h-9 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-semibold text-sm flex-shrink-0 overflow-hidden">
+          <div className="w-9 h-9 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center text-indigo-700 dark:text-indigo-300 font-semibold text-sm shrink-0 overflow-hidden">
             {topic.author?.avatar_url ? (
               <img src={topic.author.avatar_url} alt="" className="w-9 h-9 object-cover" />
             ) : (
@@ -294,17 +294,17 @@ const TopicCard = ({ topic, maxTags }: { topic: any; maxTags: number }) => {
           <div className="flex-1 min-w-0">
             <Link
               to={`topics/${topic.id}`}
-              className="font-semibold text-slate-800 hover:text-indigo-600 transition-colors leading-tight block"
+              className="font-semibold text-slate-800 dark:text-slate-100 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors leading-tight block"
             >
               {topic.title}
             </Link>
             <div className="flex items-center gap-3 mt-1 text-xs text-slate-400">
-              <span className="font-medium text-slate-500">{topic.author?.username}</span>
+              <span className="font-medium text-slate-500 dark:text-slate-400">{topic.author?.username}</span>
               <span className="flex items-center gap-1">
                 <Clock size={11} />
                 {formatDistanceToNow(new Date(topic.created_at), { addSuffix: true, locale: es })}
               </span>
-              {wasEdited && <span className="italic text-slate-300">editado</span>}
+              {wasEdited && <span className="italic text-slate-300 dark:text-slate-600">editado</span>}
             </div>
             {topic.tags && topic.tags.length > 0 && (
               <div className="flex flex-wrap gap-1.5 mt-2">
@@ -313,7 +313,7 @@ const TopicCard = ({ topic, maxTags }: { topic: any; maxTags: number }) => {
                     key={tag.id}
                     to={`/tags/${tag.slug}`}
                     onClick={(e) => e.stopPropagation()}
-                    className="hover:cursor-pointer inline-flex items-center gap-1 bg-indigo-50 text-indigo-600 border border-indigo-200 hover:bg-indigo-100 rounded-full px-2 py-0.5 text-xs font-medium transition-colors"
+                    className="hover:cursor-pointer inline-flex items-center gap-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-700 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 rounded-full px-2 py-0.5 text-xs font-medium transition-colors"
                   >
                     <TagIcon size={9} />
                     {tag.name}
@@ -323,7 +323,7 @@ const TopicCard = ({ topic, maxTags }: { topic: any; maxTags: number }) => {
             )}
           </div>
 
-          <div className="flex flex-col items-start md:flex-row md:items-center gap-2 md:gap-4 text-slate-400 flex-shrink-0">
+          <div className="flex flex-col items-start md:flex-row md:items-center gap-2 md:gap-4 text-slate-400 shrink-0">
             <div className="flex flex-row gap-4">
               <button
                 onClick={handleStar}
@@ -332,7 +332,7 @@ const TopicCard = ({ topic, maxTags }: { topic: any; maxTags: number }) => {
                 <Star size={14} fill={topic.is_starred ? 'currentColor' : 'none'} />
                 <span>{topic.stars_count}</span>
               </button>
-              <span className="flex items-center gap-1 text-xs text-slate-400">
+              <span className="flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500">
                 <MessageSquare size={14} />
                 <span>{topic.replies_count} {topic.replies_count === 1 ? 'respuesta' : 'respuestas'}</span>
               </span>
@@ -343,8 +343,8 @@ const TopicCard = ({ topic, maxTags }: { topic: any; maxTags: number }) => {
                   onClick={handleClose}
                   title={topic.is_closed ? 'Reabrir tema' : 'Cerrar tema'}
                   className={`hover:cursor-pointer px-2 py-1 rounded-sm flex items-center gap-1 text-xs transition-colors ${topic.is_closed
-                    ? 'bg-slate-200 text-slate-600 hover:bg-slate-300'
-                    : 'bg-slate-100 text-slate-400 hover:bg-slate-200 hover:text-slate-600'
+                    ? 'bg-slate-200 dark:bg-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-500'
+                    : 'bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600 hover:text-slate-600 dark:hover:text-slate-200'
                     }`}
                 >
                   {topic.is_closed ? <LockOpen size={14} /> : <Lock size={14} />}
@@ -356,8 +356,8 @@ const TopicCard = ({ topic, maxTags }: { topic: any; maxTags: number }) => {
                   onClick={handlePin}
                   title={topic.is_pinned ? 'Desfijar tema' : 'Fijar tema'}
                   className={`hover:cursor-pointer px-2 py-1 rounded-sm flex items-center gap-1 text-xs transition-colors ${topic.is_pinned
-                    ? 'bg-amber-100 text-amber-600 hover:bg-amber-200'
-                    : 'bg-slate-100 text-slate-400 hover:bg-amber-100 hover:text-amber-600'
+                    ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 hover:bg-amber-200 dark:hover:bg-amber-900/60'
+                    : 'bg-slate-100 dark:bg-slate-700 text-slate-400 hover:bg-amber-100 dark:hover:bg-amber-900/30 hover:text-amber-600 dark:hover:text-amber-400'
                     }`}
                 >
                   {topic.is_pinned ? <PinOff size={14} /> : <Pin size={14} />}
@@ -367,7 +367,7 @@ const TopicCard = ({ topic, maxTags }: { topic: any; maxTags: number }) => {
               {canEdit && isAuthenticated && !isBanned && (
                 <button
                   onClick={handleEditClick}
-                  className="hover:cursor-pointer px-2 py-1 rounded-sm bg-slate-100 hover:bg-indigo-100 flex items-center gap-1 text-xs text-slate-400 hover:text-indigo-600 transition-colors"
+                  className="hover:cursor-pointer px-2 py-1 rounded-sm bg-slate-100 dark:bg-slate-700 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 flex items-center gap-1 text-xs text-slate-400 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
                 >
                   <Pencil size={14} />
                   Editar
@@ -376,7 +376,7 @@ const TopicCard = ({ topic, maxTags }: { topic: any; maxTags: number }) => {
               {canDelete && isAuthenticated && (
                 <button
                   onClick={handleDelete}
-                  className="px-2 py-1 rounded-sm bg-red-100 hover:bg-red-200 hover:cursor-pointer flex items-center gap-1 text-xs text-red-400 hover:text-red-500 transition-colors"
+                  className="px-2 py-1 rounded-sm bg-red-100 dark:bg-red-900/30 hover:bg-red-200 dark:hover:bg-red-900/50 hover:cursor-pointer flex items-center gap-1 text-xs text-red-400 hover:text-red-500 transition-colors"
                 >
                   <Trash2 size={14} />
                   Eliminar
@@ -390,8 +390,8 @@ const TopicCard = ({ topic, maxTags }: { topic: any; maxTags: number }) => {
           <button
             onClick={handleToggle}
             className={`w-full flex items-center justify-center gap-2 py-2 text-xs font-medium hover:cursor-pointer border-t transition-colors ${expanded
-              ? 'border-indigo-100 bg-indigo-50 text-indigo-600 hover:bg-indigo-100'
-              : 'border-slate-100 bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-slate-600'
+              ? 'border-indigo-100 dark:border-indigo-900 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/30'
+              : 'border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/30 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700/50 hover:text-slate-600 dark:hover:text-slate-300'
               }`}
           >
             {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
@@ -400,14 +400,14 @@ const TopicCard = ({ topic, maxTags }: { topic: any; maxTags: number }) => {
         )}
 
         {expanded && (
-          <div className="border-t border-slate-100 ml-[52px] mr-4 mb-4">
+          <div className="border-t border-slate-100 dark:border-slate-700 ml-[52px] mr-4 mb-4">
             {loadingReplies ? (
               <div className="flex justify-center py-4"><Spinner size="sm" /></div>
             ) : replies.length === 0 ? (
               <p className="text-xs text-slate-400 py-3">Sin respuestas aún.</p>
             ) : (
               <div className="relative pl-4">
-                <div className="absolute left-0 top-0 bottom-0 w-px bg-slate-200" />
+                <div className="absolute left-0 top-0 bottom-0 w-px bg-slate-200 dark:bg-slate-600" />
                 <div className="flex items-center gap-1.5 pt-3 pb-2">
                   <div className="flex -space-x-2">
                     {replies
@@ -418,7 +418,7 @@ const TopicCard = ({ topic, maxTags }: { topic: any; maxTags: number }) => {
                       .map((r: any) => (
                         <div
                           key={r.author?.username}
-                          className="w-6 h-6 rounded-full bg-indigo-100 border-2 border-white flex items-center justify-center text-indigo-700 font-semibold text-[10px] overflow-hidden flex-shrink-0"
+                          className="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900 border-2 border-white dark:border-slate-800 flex items-center justify-center text-indigo-700 dark:text-indigo-300 font-semibold text-[10px] overflow-hidden shrink-0"
                         >
                           {r.author?.avatar_url ? (
                             <img src={r.author.avatar_url} alt="" className="w-full h-full object-cover" />
@@ -435,7 +435,7 @@ const TopicCard = ({ topic, maxTags }: { topic: any; maxTags: number }) => {
                 <div className="space-y-2 pb-2">
                   {replies.map((r: any) => (
                     <div key={r.id} className="flex items-start gap-2.5">
-                      <div className="w-6 h-6 rounded-full bg-indigo-100 flex-shrink-0 flex items-center justify-center text-indigo-700 font-semibold text-[10px] overflow-hidden mt-0.5">
+                      <div className="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900 shrink-0 flex items-center justify-center text-indigo-700 dark:text-indigo-300 font-semibold text-[10px] overflow-hidden mt-0.5">
                         {r.author?.avatar_url ? (
                           <img src={r.author.avatar_url} alt="" className="w-full h-full object-cover" />
                         ) : (
@@ -443,8 +443,8 @@ const TopicCard = ({ topic, maxTags }: { topic: any; maxTags: number }) => {
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <span className="text-xs font-medium text-slate-600">{r.author?.username} </span>
-                        <span className="text-xs text-slate-400">
+                        <span className="text-xs font-medium text-slate-600 dark:text-slate-300">{r.author?.username} </span>
+                        <span className="text-xs text-slate-400 dark:text-slate-500">
                           {stripHtml(r.content).slice(0, 80)}{stripHtml(r.content).length > 80 ? '…' : ''}
                         </span>
                       </div>
@@ -454,7 +454,7 @@ const TopicCard = ({ topic, maxTags }: { topic: any; maxTags: number }) => {
                 {topic.replies_count > 5 && (
                   <Link
                     to={`topics/${topic.id}`}
-                    className="text-xs text-indigo-500 hover:underline pb-2 block"
+                    className="text-xs text-indigo-500 dark:text-indigo-400 hover:underline pb-2 block"
                   >
                     Ver las {topic.replies_count - 5} respuestas restantes →
                   </Link>
@@ -475,13 +475,12 @@ const TopicCard = ({ topic, maxTags }: { topic: any; maxTags: number }) => {
 export const ThreadsPage = () => {
   const { channelId } = useParams<{ channelId: string }>()
   const [searchParams, setSearchParams] = useSearchParams()
-  const activeTagSlug = searchParams.get('tag') || ''
   const dispatch = useDispatch<AppDispatch>()
   const { isAuthenticated } = useAuth()
   const { isBanned } = useRole()
   const [showCreate, setShowCreate] = useState(false)
   const [channelTags, setChannelTags] = useState<Tag[]>([])
-  const [activeTag, setActiveTag] = useState<Tag | null>(null)
+  const [activeTags, setActiveTags] = useState<Tag[]>([])
   const pageRef = useRef(1)
   const loaderRef = useRef<HTMLDivElement>(null)
   const loadingMoreRef = useRef(false)
@@ -520,30 +519,46 @@ export const ThreadsPage = () => {
 
   useEffect(() => {
     if (!channelId) return
-    const tag = channelTags.find((t) => t.slug === activeTagSlug) || null
-    setActiveTag(tag)
+
+    const slugs = searchParams.get('tags')?.split(',').filter(Boolean) || []
+    const resolved = slugs.map((s) => channelTags.find((t) => t.slug === s)).filter(Boolean) as Tag[]
+    setActiveTags(resolved)
     pageRef.current = 1
-    dispatch(fetchTopicsByChannel({ channelId, tagId: tag?.id }))
+
+    const runFetch = async () => {
+      if (resolved.length === 0) {
+        dispatch(fetchTopicsByChannel({ channelId }))
+        return
+      }
+      if (resolved.length === 1) {
+        dispatch(fetchTopicsByChannel({ channelId, tagId: resolved[0].id }))
+        return
+      }
+      const sets = await Promise.all(
+        resolved.map(async (tag) => {
+          const { data } = await supabase.from('topic_tags').select('topic_id').eq('tag_id', tag.id)
+          return new Set((data || []).map((r: any) => r.topic_id as string))
+        })
+      )
+      const intersection = [...sets[0]].filter((id) => sets.every((s) => s.has(id)))
+      dispatch(fetchTopicsByChannel({ channelId, tagIds: intersection }))
+    }
+
+    runFetch()
 
     const realtimeChannel = supabase
       .channel(`replies-count:${channelId}`)
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'replies' },
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'replies' },
         async (payload) => {
           const topicId = payload.new.topic_id
-          const { data } = await supabase
-            .from('topics')
-            .select('replies_count')
-            .eq('id', topicId)
-            .single()
+          const { data } = await supabase.from('topics').select('replies_count').eq('id', topicId).single()
           if (data) dispatch(setRepliesCount({ topicId, count: data.replies_count }))
         }
       )
       .subscribe()
 
     return () => { supabase.removeChannel(realtimeChannel) }
-  }, [channelId, activeTagSlug, channelTags, dispatch])
+  }, [channelId, searchParams, channelTags, dispatch])
 
   useEffect(() => {
     const el = loaderRef.current
@@ -553,7 +568,8 @@ export const ThreadsPage = () => {
       (entries) => {
         const entry = entries[0]
         if (entry.isIntersecting && !loadingMoreRef.current && hasMoreRef.current && channelId) {
-          dispatch(fetchMoreTopics({ channelId, page: pageRef.current, tagId: activeTag?.id }))
+          const tagId = activeTags.length === 1 ? activeTags[0].id : undefined
+          dispatch(fetchMoreTopics({ channelId, page: pageRef.current, tagId }))
           pageRef.current += 1
         }
       },
@@ -561,13 +577,15 @@ export const ThreadsPage = () => {
     )
     observer.observe(el)
     return () => { observer.disconnect() }
-  }, [channelId, activeTag, dispatch])
+  }, [channelId, activeTags, dispatch])
 
-  const handleTagFilter = (tag: Tag | null) => {
-    if (!tag || tag.slug === activeTagSlug) {
+  const handleTagFilter = (tag: Tag) => {
+    const isActive = activeTags.some((t) => t.id === tag.id)
+    const next = isActive ? activeTags.filter((t) => t.id !== tag.id) : [...activeTags, tag]
+    if (next.length === 0) {
       setSearchParams({})
     } else {
-      setSearchParams({ tag: tag.slug })
+      setSearchParams({ tags: next.map((t) => t.slug).join(',') })
     }
   }
 
@@ -580,16 +598,16 @@ export const ThreadsPage = () => {
         <div>
           <div className="flex items-center gap-2">
             <span className="text-2xl">{currentChannel?.icon}</span>
-            <h1 className="text-2xl font-bold text-slate-800">{currentChannel?.name || 'Canal'}</h1>
+            <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">{currentChannel?.name || 'Canal'}</h1>
           </div>
           {currentChannel?.description && (
-            <p className="text-slate-500 text-sm mt-1">{currentChannel.description}</p>
+            <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">{currentChannel.description}</p>
           )}
         </div>
         {isAuthenticated && !isBanned && (
           <button
             onClick={() => setShowCreate(true)}
-            className="flex hover:cursor-pointer items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors flex-shrink-0"
+            className="flex hover:cursor-pointer items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors shrink-0"
           >
             <Plus size={16} />
             Nuevo tema
@@ -603,28 +621,29 @@ export const ThreadsPage = () => {
             <TagIcon size={12} />
             Filtrar:
           </span>
-          {channelTags.map((tag) => (
+          {channelTags.map((tag) => {
+            const isActive = activeTags.some((t) => t.id === tag.id)
+            return (
+              <button
+                key={tag.id}
+                onClick={() => handleTagFilter(tag)}
+                className={`hover:cursor-pointer inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${isActive
+                    ? 'bg-indigo-600 text-white border-indigo-600'
+                    : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-600 hover:border-indigo-300 dark:hover:border-indigo-600 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30'
+                  }`}
+              >
+                <TagIcon size={9} />
+                {tag.name}
+                {isActive && <X size={11} className="ml-0.5" />}
+              </button>
+            )
+          })}
+          {activeTags.length > 0 && (
             <button
-              key={tag.id}
-              onClick={() => handleTagFilter(tag)}
-              className={`hover:cursor-pointer inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${activeTag?.id === tag.id
-                ? 'bg-indigo-600 text-white border-indigo-600'
-                : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-300 hover:text-indigo-600'
-                }`}
+              onClick={() => setSearchParams({})}
+              className="hover:cursor-pointer text-xs text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors underline"
             >
-              <TagIcon size={9} />
-              {tag.name}
-              {activeTag?.id === tag.id && (
-                <X size={11} className="ml-0.5" />
-              )}
-            </button>
-          ))}
-          {activeTag && (
-            <button
-              onClick={() => handleTagFilter(null)}
-              className="hover:cursor-pointer text-xs text-slate-400 hover:text-slate-600 transition-colors underline"
-            >
-              Limpiar filtro
+              Limpiar filtros
             </button>
           )}
         </div>
@@ -638,9 +657,11 @@ export const ThreadsPage = () => {
         <div className="text-center py-16 text-slate-400">
           <MessageSquare size={40} className="mx-auto mb-3 opacity-30" />
           <p className="font-medium">
-            {activeTag ? `No hay temas con el tag "${activeTag.name}"` : 'Nadie ha publicado aún'}
+            {activeTags.length > 0
+              ? `No hay temas con ${activeTags.length === 1 ? `el tag "${activeTags[0].name}"` : 'esos tags'}`
+              : 'Nadie ha publicado aún'}
           </p>
-          {isAuthenticated && !isBanned && !activeTag && (
+          {isAuthenticated && !isBanned && activeTags.length === 0 && (
             <button
               onClick={() => setShowCreate(true)}
               className="mt-4 text-indigo-600 text-sm font-medium hover:underline hover:cursor-pointer"
@@ -658,9 +679,9 @@ export const ThreadsPage = () => {
               ))}
               {normalTopics.length > 0 && (
                 <div className="flex items-center gap-3 py-1">
-                  <div className="flex-1 h-px bg-slate-200" />
+                  <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
                   <span className="text-xs text-slate-400 font-medium whitespace-nowrap">Todos los temas</span>
-                  <div className="flex-1 h-px bg-slate-200" />
+                  <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
                 </div>
               )}
             </>

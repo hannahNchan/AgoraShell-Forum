@@ -62,7 +62,7 @@ export const HomePage = () => {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-bold text-slate-800">Feed</h1>
+        <h1 className="text-2xl font-extrabold text-slate-800 dark:text-gray-300">Feed</h1>
         <p className="text-slate-500 text-sm mt-0.5">{activeFilter.description}</p>
       </div>
 
@@ -72,8 +72,8 @@ export const HomePage = () => {
             key={key}
             onClick={() => handleFilter(key)}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all hover:cursor-pointer ${filter === key
-              ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-200'
-              : 'bg-white border border-slate-200 text-slate-600 hover:border-indigo-300 hover:text-indigo-600'
+              ? 'bg-indigo-600 dark:bg-indigo-900 dark:hover:bg-indigo-700 text-white shadow-sm shadow-indigo-200'
+              : 'bg-white dark:bg-indigo-300 dark:hover:bg-indigo-500 dark:text-indigo-700 dark:hover:text-indigo-200 border border-slate-200 text-slate-600 hover:border-indigo-300 hover:text-indigo-600'
               }`}
           >
             {icon}
@@ -102,9 +102,9 @@ export const HomePage = () => {
           )}
 
           <div ref={loaderRef} className="flex flex-col items-center py-6 gap-3">
-            {loadingMore && (
+            {true && (
               <>
-                <img src="/images/big_logo.svg" alt="Cargando" className="w-16 h-16 opacity-60 animate-pulse" />
+                <img src="/images/big_logo.svg" alt="Cargando" className="w-48 animate-pulse" />
                 <span className="text-xs text-slate-400">Cargando más temas...</span>
               </>
             )}
@@ -118,13 +118,13 @@ export const HomePage = () => {
         </div>
 
         {hotTopics.length > 0 && (
-          <div className="space-y-3 w-full hidden md:block md:w-1/3 lg:w-1/3 bg-slate-300 p-4 rounded-xl self-start sticky top-4">
+          <div className="space-y-3 w-full hidden md:block md:w-1/3 lg:w-1/3 bg-slate-300 dark:bg-slate-700 p-4 rounded-xl self-start sticky top-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Flame size={16} className="text-orange-500" />
-                <h3 className="font-semibold text-slate-700 text-sm">Hot Topics</h3>
+                <h3 className="font-semibold text-slate-700 text-sm dark:text-slate-300">Hot Topics</h3>
               </div>
-              <Link to="/hot" className="text-xs text-orange-500 hover:text-orange-600 hover:cursor-pointer font-medium transition-colors">
+              <Link to="/hot" className="text-xs dark:text-orange-400 dark:hover:text-orange-500 text-orange-500 hover:text-orange-600 hover:cursor-pointer font-medium transition-colors">
                 Ver todos →
               </Link>
             </div>

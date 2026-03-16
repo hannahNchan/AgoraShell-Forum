@@ -24,7 +24,7 @@ import { useHighlightCode } from '../../../hooks/useHighlightCode'
 const Avatar = ({ profile, size = 'md' }: { profile: any; size?: 'sm' | 'md' }) => {
   const s = size === 'sm' ? 'w-5 h-5 text-xs' : 'w-7 h-7 text-sm'
   return (
-    <div className={`${s} rounded-full bg-indigo-100 flex-shrink-0 flex items-center justify-center text-indigo-700 font-semibold overflow-hidden`}>
+    <div className={`${s} rounded-full bg-indigo-100 dark:bg-indigo-900 shrink-0 flex items-center justify-center text-indigo-700 dark:text-indigo-300 font-semibold overflow-hidden`}>
       {profile?.avatar_url ? (
         <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
       ) : (
@@ -46,7 +46,6 @@ const ReplyBottomSheet = ({ open, onClose, onSubmit, replyingTo, submitting }: R
   const [content, setContent] = useState('')
 
   useEffect(() => { if (!open) setContent('') }, [open])
-
   useEffect(() => {
     if (open) { document.body.style.overflow = 'hidden' }
     else { document.body.style.overflow = '' }
@@ -58,21 +57,21 @@ const ReplyBottomSheet = ({ open, onClose, onSubmit, replyingTo, submitting }: R
   return (
     <>
       <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-2xl shadow-2xl flex flex-col" style={{ maxHeight: '85vh' }}>
-        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
-          <div className="w-10 h-1 bg-slate-200 rounded-full mx-auto absolute left-1/2 -translate-x-1/2 top-2" />
-          <span className="text-sm font-semibold text-slate-700">
-            Respondiendo a <span className="text-indigo-600">@{replyingTo}</span>
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-slate-800 rounded-t-2xl shadow-2xl flex flex-col" style={{ maxHeight: '85vh' }}>
+        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-slate-700">
+          <div className="w-10 h-1 bg-slate-200 dark:bg-slate-600 rounded-full mx-auto absolute left-1/2 -translate-x-1/2 top-2" />
+          <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+            Respondiendo a <span className="text-indigo-600 dark:text-indigo-400">@{replyingTo}</span>
           </span>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 hover:cursor-pointer transition-colors p-1">
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:cursor-pointer transition-colors p-1">
             <X size={18} />
           </button>
         </div>
         <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0">
           <RichTextEditor onChange={setContent} placeholder={`Respondiendo a ${replyingTo}...`} minHeight="140px" />
         </div>
-        <div className="px-4 py-3 border-t border-slate-100 flex justify-end gap-2">
-          <button onClick={onClose} className="text-sm text-slate-500 hover:text-slate-700 px-4 py-2 rounded-lg transition-colors hover:cursor-pointer">
+        <div className="px-4 py-3 border-t border-slate-100 dark:border-slate-700 flex justify-end gap-2">
+          <button onClick={onClose} className="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 px-4 py-2 rounded-lg transition-colors hover:cursor-pointer">
             Cancelar
           </button>
           <button
@@ -228,11 +227,11 @@ const ReplyCard = ({ reply, topicId, topicClosed, depth = 0 }: ReplyCardProps) =
           <Avatar profile={reply.author} />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="bg-white border rounded-xl border-slate-100 px-3 py-2">
+          <div className="bg-white dark:bg-slate-600 border border-slate-100 dark:border-slate-600 rounded-xl px-3 py-2">
             <div className="flex items-center gap-2 mb-2">
-              <span className="text-sm font-semibold text-slate-800">{reply.author?.username}</span>
+              <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">{reply.author?.username}</span>
               {reply.author?.role && reply.author.role !== 'user' && (
-                <span className="text-xs bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded-full font-medium capitalize">
+                <span className="text-xs bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 px-1.5 py-0.5 rounded-full font-medium capitalize">
                   {reply.author.role}
                 </span>
               )}
@@ -240,7 +239,7 @@ const ReplyCard = ({ reply, topicId, topicClosed, depth = 0 }: ReplyCardProps) =
                 <Clock size={11} />
                 {formatDistanceToNow(new Date(reply.created_at), { addSuffix: true, locale: es })}
               </span>
-              {wasEdited && <span className="text-xs text-slate-300 italic">editado</span>}
+              {wasEdited && <span className="text-xs text-slate-300 dark:text-slate-600 italic">editado</span>}
             </div>
 
             {isEditing ? (
@@ -255,7 +254,7 @@ const ReplyCard = ({ reply, topicId, topicClosed, depth = 0 }: ReplyCardProps) =
                 <div className="flex justify-end gap-2 pt-1">
                   <button
                     onClick={() => { setIsEditing(false); setEditContent('') }}
-                    className="hover:cursor-pointer text-sm text-slate-500 hover:text-slate-700 px-3 py-1.5 rounded-lg transition-colors"
+                    className="hover:cursor-pointer text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 px-3 py-1.5 rounded-lg transition-colors"
                   >
                     Cancelar
                   </button>
@@ -270,7 +269,7 @@ const ReplyCard = ({ reply, topicId, topicClosed, depth = 0 }: ReplyCardProps) =
                 </div>
               </div>
             ) : (
-              <div ref={replyContentRef} className="prose prose-sm max-w-none text-slate-700" dangerouslySetInnerHTML={{ __html: reply.content }} />
+              <div ref={replyContentRef} className="prose prose-sm max-w-none text-slate-700 dark:text-slate-300" dangerouslySetInnerHTML={{ __html: reply.content }} />
             )}
 
             {!isEditing && (
@@ -280,7 +279,10 @@ const ReplyCard = ({ reply, topicId, topicClosed, depth = 0 }: ReplyCardProps) =
                     key={group.emoji}
                     onClick={() => handleReaction(group.emoji)}
                     title={`${group.count} reacciones`}
-                    className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-sm border transition-colors ${group.reacted ? 'bg-indigo-50 border-indigo-300 text-indigo-700' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'}`}
+                    className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-sm border transition-colors ${group.reacted
+                      ? 'bg-indigo-50 dark:bg-indigo-900/40 border-indigo-300 dark:border-indigo-600 text-indigo-700 dark:text-indigo-300'
+                      : 'bg-slate-50 dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-600'
+                      }`}
                   >
                     <span>{group.emoji}</span>
                     <span className="text-xs font-medium">{group.count}</span>
@@ -290,7 +292,7 @@ const ReplyCard = ({ reply, topicId, topicClosed, depth = 0 }: ReplyCardProps) =
                 {isAuthenticated && !isBanned && !topicClosed && (
                   <button
                     onClick={handleReplyClick}
-                    className="hover:cursor-pointer flex items-center gap-1 px-2 py-0.5 rounded-full border border-slate-200 text-slate-400 hover:bg-slate-50 hover:text-indigo-500 hover:border-indigo-300 transition-colors text-xs"
+                    className="hover:cursor-pointer flex items-center gap-1 px-2 py-0.5 rounded-full border border-slate-200 dark:bg-slate-700 dark:border-slate-800 text-slate-400 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-indigo-500 hover:border-indigo-300 transition-colors text-xs"
                   >
                     <MessageCircle size={13} />
                     <span>Responder</span>
@@ -300,7 +302,7 @@ const ReplyCard = ({ reply, topicId, topicClosed, depth = 0 }: ReplyCardProps) =
                 {canEdit && isAuthenticated && !isBanned && (
                   <button
                     onClick={() => { setEditContent(reply.content); setIsEditing(true) }}
-                    className="hover:cursor-pointer flex items-center gap-1 px-2 py-0.5 rounded-full border border-slate-200 text-slate-400 hover:bg-slate-50 hover:text-indigo-500 hover:border-indigo-300 transition-colors text-xs"
+                    className="hover:cursor-pointer flex items-center gap-1 px-2 py-0.5 rounded-full border border-slate-200 dark:bg-slate-700 dark:border-slate-800 text-slate-400 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-indigo-500 hover:border-indigo-300 transition-colors text-xs"
                   >
                     <Pencil size={12} />
                     <span>Editar</span>
@@ -320,7 +322,7 @@ const ReplyCard = ({ reply, topicId, topicClosed, depth = 0 }: ReplyCardProps) =
                   <div className="relative">
                     <button
                       onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                      className="hover:cursor-pointer flex items-center gap-1 px-2 py-0.5 rounded-full border border-slate-200 text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-colors text-sm"
+                      className="hover:cursor-pointer flex items-center gap-1 px-2 py-0.5 rounded-full border border-slate-200 dark:border-slate-900 text-slate-400 dark:text-slate-900 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-slate-100 transition-colors text-sm"
                     >
                       <Smile size={13} />
                       <span className="text-xs">+</span>
@@ -340,12 +342,12 @@ const ReplyCard = ({ reply, topicId, topicClosed, depth = 0 }: ReplyCardProps) =
           </div>
 
           {showReplyEditor && (
-            <div className="mt-2 bg-slate-50 rounded-xl border border-slate-200 p-4 space-y-3">
+            <div className="mt-2 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 p-4 space-y-3">
               <RichTextEditor onChange={setReplyContent} placeholder={`Respondiendo a ${reply.author?.username}...`} minHeight="100px" />
               <div className="flex justify-end gap-2">
                 <button
                   onClick={() => { setShowReplyEditor(false); setReplyContent('') }}
-                  className="text-sm text-slate-500 hover:text-slate-700 px-3 py-1.5 rounded-lg transition-colors hover:cursor-pointer"
+                  className="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 px-3 py-1.5 rounded-lg transition-colors hover:cursor-pointer"
                 >
                   Cancelar
                 </button>
@@ -407,9 +409,7 @@ const ThreadDetailPage = () => {
   const canEditTopic = topic && profile?.id === topic.author_id
   const isClosed = topic?.is_closed ?? false
 
-  useEffect(() => {
-    dispatch(fetchSettings())
-  }, [dispatch])
+  useEffect(() => { dispatch(fetchSettings()) }, [dispatch])
 
   useEffect(() => {
     if (!topicId) return
@@ -495,15 +495,15 @@ const ThreadDetailPage = () => {
 
   return (
     <div className="space-y-4">
-      <div className={`bg-white rounded-xl border p-6 ${isClosed ? 'border-slate-300' : 'border-slate-200'}`}>
+      <div className={`bg-white dark:bg-slate-800 rounded-xl border p-6 ${isClosed ? 'border-slate-300 dark:border-slate-600' : 'border-slate-200 dark:border-slate-700'}`}>
         {isClosed && (
-          <div className="flex items-center gap-2 mb-4 px-3 py-2 bg-slate-100 rounded-lg border border-slate-200">
+          <div className="flex items-center gap-2 mb-4 px-3 py-2 bg-slate-100 dark:bg-slate-700/50 rounded-lg border border-slate-200 dark:border-slate-600">
             <Lock size={13} className="text-slate-400 shrink-0" />
-            <span className="text-sm text-slate-500 font-medium">Este tema está cerrado — no se aceptan más respuestas</span>
+            <span className="text-sm text-slate-500 dark:text-slate-400 font-medium">Este tema está cerrado — no se aceptan más respuestas</span>
             {isModerator && (
               <button
                 onClick={handleClose}
-                className="hover:cursor-pointer ml-auto flex items-center gap-1 text-xs text-slate-500 hover:text-indigo-600 transition-colors"
+                className="hover:cursor-pointer ml-auto flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
               >
                 <LockOpen size={13} />
                 Reabrir
@@ -520,18 +520,18 @@ const ThreadDetailPage = () => {
                 type="text"
                 value={editTitle}
                 onChange={(e) => setEditTitle(e.target.value)}
-                className="w-full text-xl font-bold text-slate-800 border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full text-xl font-bold text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             ) : (
-              <h1 className="text-xl font-bold text-slate-800 leading-tight">{topic.title}</h1>
+              <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100 leading-tight">{topic.title}</h1>
             )}
             <div className="flex items-center gap-3 mt-1 text-xs text-slate-400">
-              <span className="font-medium text-slate-500">{topic.author?.username}</span>
+              <span className="font-medium text-slate-500 dark:text-slate-400">{topic.author?.username}</span>
               <span className="flex items-center gap-1">
                 <Clock size={11} />
                 {format(new Date(topic.created_at), "d 'de' MMMM, yyyy HH:mm", { locale: es })}
               </span>
-              {topicWasEdited && <span className="italic text-slate-300">editado</span>}
+              {topicWasEdited && <span className="italic text-slate-300 dark:text-slate-600">editado</span>}
             </div>
 
             {!isEditingTopic && topic.tags && topic.tags.length > 0 && (
@@ -540,7 +540,7 @@ const ThreadDetailPage = () => {
                   <Link
                     key={tag.id}
                     to={`/tags/${tag.slug}`}
-                    className="hover:cursor-pointer inline-flex items-center gap-1 bg-indigo-50 text-indigo-600 border border-indigo-200 hover:bg-indigo-100 rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors"
+                    className="hover:cursor-pointer inline-flex items-center gap-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-700 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors"
                   >
                     <TagIcon size={10} />
                     {tag.name}
@@ -550,14 +550,14 @@ const ThreadDetailPage = () => {
             )}
           </div>
 
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex items-center gap-2 shrink-0">
             {isModerator && isAuthenticated && !isEditingTopic && (
               <button
                 onClick={handleClose}
                 title={isClosed ? 'Reabrir tema' : 'Cerrar tema'}
                 className={`hover:cursor-pointer flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-sm transition-colors ${isClosed
-                  ? 'bg-slate-100 border-slate-300 text-slate-600 hover:bg-slate-200'
-                  : 'border-slate-200 text-slate-400 hover:border-slate-300 hover:text-slate-600'
+                  ? 'bg-slate-100 dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+                  : 'border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:border-slate-300 hover:text-slate-600 dark:hover:text-slate-300'
                   }`}
               >
                 {isClosed ? <LockOpen size={14} /> : <Lock size={14} />}
@@ -567,7 +567,7 @@ const ThreadDetailPage = () => {
             {canEditTopic && isAuthenticated && !isBanned && !isEditingTopic && (
               <button
                 onClick={handleStartEditTopic}
-                className="hover:cursor-pointer flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 text-slate-400 hover:border-indigo-300 hover:text-indigo-500 text-sm transition-colors"
+                className="hover:cursor-pointer flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:border-indigo-300 hover:text-indigo-500 dark:hover:border-indigo-600 dark:hover:text-indigo-400 text-sm transition-colors"
               >
                 <Pencil size={14} />
                 <span className="hidden sm:inline">Editar</span>
@@ -576,7 +576,10 @@ const ThreadDetailPage = () => {
             <button
               onClick={handleStar}
               disabled={!isAuthenticated}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-sm transition-colors ${topic.is_starred ? 'bg-amber-50 border-amber-300 text-amber-600' : 'border-slate-200 text-slate-400 hover:border-amber-300 hover:text-amber-500'} disabled:cursor-not-allowed`}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-sm transition-colors ${topic.is_starred
+                ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-700 text-amber-600 dark:text-amber-400'
+                : 'border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:border-amber-300 hover:text-amber-500'
+                } disabled:cursor-not-allowed`}
             >
               <Star size={15} fill={topic.is_starred ? 'currentColor' : 'none'} />
               <span className="font-medium">{topic.stars_count}</span>
@@ -594,13 +597,13 @@ const ThreadDetailPage = () => {
               minHeight="200px"
             />
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Tags</label>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Tags</label>
               <TagInput selected={editTags} onChange={setEditTags} maxTags={maxTags} />
             </div>
             <div className="flex justify-end gap-2">
               <button
                 onClick={() => setIsEditingTopic(false)}
-                className="hover:cursor-pointer text-sm text-slate-500 hover:text-slate-700 px-4 py-2 rounded-lg transition-colors"
+                className="hover:cursor-pointer text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 px-4 py-2 rounded-lg transition-colors"
               >
                 Cancelar
               </button>
@@ -615,11 +618,11 @@ const ThreadDetailPage = () => {
             </div>
           </div>
         ) : (
-          <div ref={topicContentRef} className="prose prose-sm max-w-none mt-5 text-slate-700" dangerouslySetInnerHTML={{ __html: topic.content }} />
+          <div ref={topicContentRef} className="prose prose-sm max-w-none mt-5 text-slate-700 dark:text-slate-300" dangerouslySetInnerHTML={{ __html: topic.content }} />
         )}
       </div>
 
-      <div className="flex items-center gap-2 text-slate-500 pt-2 text-sm font-medium">
+      <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 pt-2 text-sm font-medium">
         {topic.replies_count} {topic.replies_count === 1 ? 'respuesta' : 'respuestas'}
       </div>
 
@@ -637,18 +640,18 @@ const ThreadDetailPage = () => {
       )}
 
       {isClosed ? (
-        <div className="bg-slate-50 rounded-xl border border-slate-200 p-5 text-center flex items-center justify-center gap-2 text-sm text-slate-500">
+        <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 p-5 text-center flex items-center justify-center gap-2 text-sm text-slate-500 dark:text-slate-400">
           <Lock size={15} className="text-slate-400" />
           Este tema está cerrado y no acepta más respuestas.
         </div>
       ) : isAuthenticated ? (
         isBanned ? (
-          <div className="bg-red-50 rounded-xl border border-red-200 p-5 text-center text-sm text-red-500">
+          <div className="bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-800 p-5 text-center text-sm text-red-500 dark:text-red-400">
             Tu cuenta ha sido suspendida y no puedes publicar contenido.
           </div>
         ) : (
-          <form onSubmit={handleSubmitReply} className="bg-white rounded-xl border border-slate-200 p-5 space-y-3">
-            <h3 className="text-sm font-semibold text-slate-700">Agregar respuesta</h3>
+          <form onSubmit={handleSubmitReply} className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5 space-y-3">
+            <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Agregar respuesta</h3>
             <RichTextEditor
               key={submitting ? 'submitting' : 'idle'}
               onChange={setReplyContent}
@@ -668,8 +671,8 @@ const ThreadDetailPage = () => {
           </form>
         )
       ) : (
-        <div className="bg-slate-50 rounded-xl border border-slate-200 p-5 text-center text-sm text-slate-500">
-          <Link to="/login" className="text-indigo-600 font-medium hover:underline">Inicia sesión</Link> para responder
+        <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 p-5 text-center text-sm text-slate-500 dark:text-slate-400">
+          <Link to="/login" className="text-indigo-600 dark:text-indigo-400 font-medium hover:underline">Inicia sesión</Link> para responder
         </div>
       )}
     </div>

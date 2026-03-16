@@ -29,34 +29,35 @@ const NotificationItem = ({ notification, onRead }: { notification: Notification
     if (notification.type === 'mention') {
       return (
         <span>
-          <span className="font-semibold text-slate-800">{notification.actor?.username}</span>
-          <span className="text-slate-600"> te mencionó en </span>
-          <span className="font-medium text-indigo-600">{notification.topic?.title ?? 'un tema'}</span>
+          <span className="font-semibold text-slate-800 dark:text-slate-100">{notification.actor?.username}</span>
+          <span className="text-slate-600 dark:text-slate-400"> te mencionó en </span>
+          <span className="font-medium text-indigo-600 dark:text-indigo-400">{notification.topic?.title ?? 'un tema'}</span>
         </span>
       )
     }
     if (notification.type === 'reply') {
       return (
         <span>
-          <span className="font-semibold text-slate-800">{notification.actor?.username}</span>
-          <span className="text-slate-600"> respondió a tu mensaje en </span>
-          <span className="font-medium text-indigo-600">{notification.topic?.title ?? 'un tema'}</span>
+          <span className="font-semibold text-slate-800 dark:text-slate-100">{notification.actor?.username}</span>
+          <span className="text-slate-600 dark:text-slate-400"> respondió a tu mensaje en </span>
+          <span className="font-medium text-indigo-600 dark:text-indigo-400">{notification.topic?.title ?? 'un tema'}</span>
         </span>
       )
     }
-    return <span className="text-slate-600">Nueva notificación</span>
+    return <span className="text-slate-600 dark:text-slate-400">Nueva notificación</span>
   }
 
   return (
     <button
       onClick={() => onRead(notification)}
-      className={`w-full flex items-start gap-3 px-4 py-3 text-left transition-colors hover:cursor-pointer hover:bg-slate-50 ${isUnread ? 'bg-indigo-50/60' : ''}`}
+      className={`w-full flex items-start gap-3 px-4 py-3 text-left transition-colors hover:cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/50 ${isUnread ? 'bg-indigo-50/60 dark:bg-indigo-900/20' : ''
+        }`}
     >
-      <div className="w-7 h-7 rounded-full bg-indigo-100 flex-shrink-0 flex items-center justify-center overflow-hidden mt-0.5">
+      <div className="w-7 h-7 rounded-full bg-indigo-100 dark:bg-indigo-900 shrink-0 flex items-center justify-center overflow-hidden mt-0.5">
         {notification.actor?.avatar_url ? (
           <img src={notification.actor.avatar_url} alt="" className="w-full h-full object-cover" />
         ) : (
-          <span className="text-xs font-semibold text-indigo-700">
+          <span className="text-xs font-semibold text-indigo-700 dark:text-indigo-300">
             {notification.actor?.username?.charAt(0).toUpperCase() ?? '?'}
           </span>
         )}
@@ -67,7 +68,7 @@ const NotificationItem = ({ notification, onRead }: { notification: Notification
           <span className="text-xs text-slate-400">
             {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true, locale: es })}
           </span>
-          {isUnread && <span className="ml-auto w-2 h-2 rounded-full bg-indigo-500 flex-shrink-0" />}
+          {isUnread && <span className="ml-auto w-2 h-2 rounded-full bg-indigo-500 shrink-0" />}
         </div>
         <p className="text-sm leading-snug">{getText()}</p>
       </div>
@@ -124,14 +125,14 @@ export const NotificationPanel = ({ open, onClose }: NotificationPanelProps) => 
       <div className="fixed inset-0 z-30" onClick={onClose} />
       <div
         ref={panelRef}
-        className="absolute right-0 top-full mt-2 w-80 bg-white rounded-xl shadow-xl border border-slate-100 z-40 overflow-hidden"
+        className="absolute right-0 top-full mt-2 w-80 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-100 dark:border-slate-700 z-40 overflow-hidden"
       >
-        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
-          <span className="text-sm font-semibold text-slate-800">Notificaciones</span>
+        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-slate-700">
+          <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">Notificaciones</span>
           {unreadCount > 0 && (
             <button
               onClick={handleMarkAll}
-              className="flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-700 hover:cursor-pointer transition-colors"
+              className="flex items-center gap-1 text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 hover:cursor-pointer transition-colors"
             >
               <Check size={13} />
               Marcar todas como leídas
@@ -139,7 +140,7 @@ export const NotificationPanel = ({ open, onClose }: NotificationPanelProps) => 
           )}
         </div>
 
-        <div className="max-h-96 overflow-y-auto divide-y divide-slate-50">
+        <div className="max-h-96 overflow-y-auto divide-y divide-slate-50 dark:divide-slate-700">
           {loading ? (
             <div className="flex justify-center py-8">
               <Spinner />

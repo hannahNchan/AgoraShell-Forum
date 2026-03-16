@@ -62,7 +62,7 @@ const FeedTopicCard = ({ topic }: FeedTopicCardProps) => {
     <div className="bg-white rounded-xl border border-slate-200 hover:border-indigo-200 hover:shadow-sm transition-all overflow-hidden">
       <div className="p-5">
         <div className="flex items-start gap-3">
-          <div className="w-9 h-9 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-semibold text-sm flex-shrink-0 overflow-hidden">
+          <div className="w-9 h-9 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-semibold text-sm shrink-0 overflow-hidden">
             {topic.author?.avatar_url ? (
               <img src={topic.author.avatar_url} alt="" className="w-9 h-9 object-cover" />
             ) : (
@@ -133,7 +133,7 @@ const FeedTopicCard = ({ topic }: FeedTopicCardProps) => {
             <div className="space-y-3">
               {replies.map((r: any) => (
                 <div key={r.id} className="flex items-start gap-2.5">
-                  <div className="w-6 h-6 rounded-full bg-indigo-100 flex-shrink-0 flex items-center justify-center text-indigo-700 font-semibold text-[10px] overflow-hidden mt-0.5">
+                  <div className="w-6 h-6 rounded-full bg-indigo-100 shrink-0 flex items-center justify-center text-indigo-700 font-semibold text-[10px] overflow-hidden mt-0.5">
                     {r.author?.avatar_url ? (
                       <img src={r.author.avatar_url} alt="" className="w-full h-full object-cover" />
                     ) : (

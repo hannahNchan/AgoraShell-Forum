@@ -50,7 +50,7 @@ export const MentionList = forwardRef<any, MentionListProps>(({ items, command }
             : 'text-slate-700 hover:bg-slate-50'
             }`}
         >
-          <div className="w-6 h-6 rounded-full bg-indigo-100 flex-shrink-0 flex items-center justify-center text-indigo-700 font-semibold text-xs overflow-hidden">
+          <div className="w-6 h-6 rounded-full bg-indigo-100 shrink-0 flex items-center justify-center text-indigo-700 font-semibold text-xs overflow-hidden">
             {item.avatar_url ? (
               <img src={item.avatar_url} alt="" className="w-full h-full object-cover" />
             ) : (
