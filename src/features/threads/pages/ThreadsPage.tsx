@@ -291,97 +291,101 @@ const TopicCard = ({ topic, maxTags }: { topic: any; maxTags: number }) => {
             )}
           </div>
 
-          <div className="flex-1 min-w-0">
-            <Link
-              to={`topics/${topic.id}`}
-              className="font-semibold text-slate-800 dark:text-slate-100 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors leading-tight block"
-            >
-              {topic.title}
-            </Link>
-            <div className="flex items-center gap-3 mt-1 text-xs text-slate-400">
-              <span className="font-medium text-slate-500 dark:text-slate-400">{topic.author?.username}</span>
-              <span className="flex items-center gap-1">
-                <Clock size={11} />
-                {formatDistanceToNow(new Date(topic.created_at), { addSuffix: true, locale: es })}
-              </span>
-              {wasEdited && <span className="italic text-slate-300 dark:text-slate-600">editado</span>}
-            </div>
-            {topic.tags && topic.tags.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mt-2">
-                {topic.tags.map((tag: Tag) => (
-                  <Link
-                    key={tag.id}
-                    to={`/tags/${tag.slug}`}
-                    onClick={(e) => e.stopPropagation()}
-                    className="hover:cursor-pointer inline-flex items-center gap-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-700 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 rounded-full px-2 py-0.5 text-xs font-medium transition-colors"
-                  >
-                    <TagIcon size={9} />
-                    {tag.name}
-                  </Link>
-                ))}
-              </div>
-            )}
-          </div>
+          <div className="flex flex-col md:flex-row md:items-start md:w-full">
 
-          <div className="flex flex-col items-start md:flex-row md:items-center gap-2 md:gap-4 text-slate-400 shrink-0">
-            <div className="flex flex-row gap-4">
-              <button
-                onClick={handleStar}
-                className={`hover:cursor-pointer flex items-center gap-1 text-xs transition-colors ${topic.is_starred ? 'text-amber-500' : 'hover:text-amber-500'}`}
+
+            <div className="flex-1 min-w-0 flex flex-col">
+              <div className="flex justify-end md:items-center gap-3 -mt-2 mb-2 md:mt-1 text-xs text-slate-400 order-first md:order-2">
+                <span className="font-medium text-slate-500 dark:text-slate-400">{topic.author?.username}</span>
+                <span className="flex items-center gap-1">
+                  <Clock size={11} />
+                  {formatDistanceToNow(new Date(topic.created_at), { addSuffix: true, locale: es })}
+                </span>
+                {wasEdited && <span className="italic text-slate-300 dark:text-slate-600">editado</span>}
+              </div>
+              <Link
+                to={`topics/${topic.id}`}
+                className="font-semibold text-slate-800 dark:text-slate-100 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors leading-tight block order-2 md:order-first"
               >
-                <Star size={14} fill={topic.is_starred ? 'currentColor' : 'none'} />
-                <span>{topic.stars_count}</span>
-              </button>
-              <span className="flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500">
-                <MessageSquare size={14} />
-                <span>{topic.replies_count} {topic.replies_count === 1 ? 'respuesta' : 'respuestas'}</span>
-              </span>
+                {topic.title}
+              </Link>
+              {topic.tags && topic.tags.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-2 order-3">
+                  {topic.tags.map((tag: Tag) => (
+                    <Link
+                      key={tag.id}
+                      to={`/tags/${tag.slug}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="hover:cursor-pointer inline-flex items-center gap-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-700 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 rounded-full px-2 py-0.5 text-xs font-medium transition-colors"
+                    >
+                      <TagIcon size={9} />
+                      {tag.name}
+                    </Link>
+                  ))}
+                </div>
+              )}
             </div>
-            <div className="flex items-center gap-2">
-              {isModerator && isAuthenticated && (
+
+            <div className="flex flex-col items-start md:items-center gap-2 md:gap-4 text-slate-400 shrink-0 md:self-stretch md:justify-between">
+              <div className="flex flex-row gap-4 self-end">
                 <button
-                  onClick={handleClose}
-                  title={topic.is_closed ? 'Reabrir tema' : 'Cerrar tema'}
-                  className={`hover:cursor-pointer px-2 py-1 rounded-sm flex items-center gap-1 text-xs transition-colors ${topic.is_closed
-                    ? 'bg-slate-200 dark:bg-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-500'
-                    : 'bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600 hover:text-slate-600 dark:hover:text-slate-200'
-                    }`}
+                  onClick={handleStar}
+                  className={`hover:cursor-pointer flex items-center gap-1 text-xs transition-colors ${topic.is_starred ? 'text-amber-500' : 'hover:text-amber-500'}`}
                 >
-                  {topic.is_closed ? <LockOpen size={14} /> : <Lock size={14} />}
-                  {topic.is_closed ? 'Reabrir' : 'Cerrar'}
+                  <Star size={14} fill={topic.is_starred ? 'currentColor' : 'none'} />
+                  <span>{topic.stars_count}</span>
                 </button>
-              )}
-              {isModerator && isAuthenticated && (
-                <button
-                  onClick={handlePin}
-                  title={topic.is_pinned ? 'Desfijar tema' : 'Fijar tema'}
-                  className={`hover:cursor-pointer px-2 py-1 rounded-sm flex items-center gap-1 text-xs transition-colors ${topic.is_pinned
-                    ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 hover:bg-amber-200 dark:hover:bg-amber-900/60'
-                    : 'bg-slate-100 dark:bg-slate-700 text-slate-400 hover:bg-amber-100 dark:hover:bg-amber-900/30 hover:text-amber-600 dark:hover:text-amber-400'
-                    }`}
-                >
-                  {topic.is_pinned ? <PinOff size={14} /> : <Pin size={14} />}
-                  {topic.is_pinned ? 'Desfijar' : 'Fijar'}
-                </button>
-              )}
-              {canEdit && isAuthenticated && !isBanned && (
-                <button
-                  onClick={handleEditClick}
-                  className="hover:cursor-pointer px-2 py-1 rounded-sm bg-slate-100 dark:bg-slate-700 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 flex items-center gap-1 text-xs text-slate-400 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
-                >
-                  <Pencil size={14} />
-                  Editar
-                </button>
-              )}
-              {canDelete && isAuthenticated && (
-                <button
-                  onClick={handleDelete}
-                  className="px-2 py-1 rounded-sm bg-red-100 dark:bg-red-900/30 hover:bg-red-200 dark:hover:bg-red-900/50 hover:cursor-pointer flex items-center gap-1 text-xs text-red-400 hover:text-red-500 transition-colors"
-                >
-                  <Trash2 size={14} />
-                  Eliminar
-                </button>
-              )}
+                <span className="flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500">
+                  <MessageSquare size={14} />
+                  <span>{topic.replies_count} {topic.replies_count === 1 ? 'respuesta' : 'respuestas'}</span>
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                {isModerator && isAuthenticated && (
+                  <button
+                    onClick={handleClose}
+                    title={topic.is_closed ? 'Reabrir tema' : 'Cerrar tema'}
+                    className={`hover:cursor-pointer px-2 py-1 rounded-sm flex items-center gap-1 text-xs transition-colors ${topic.is_closed
+                      ? 'bg-slate-200 dark:bg-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-500'
+                      : 'bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600 hover:text-slate-600 dark:hover:text-slate-200'
+                      }`}
+                  >
+                    {topic.is_closed ? <LockOpen size={14} /> : <Lock size={14} />}
+                    {topic.is_closed ? 'Reabrir' : 'Cerrar'}
+                  </button>
+                )}
+                {isModerator && isAuthenticated && (
+                  <button
+                    onClick={handlePin}
+                    title={topic.is_pinned ? 'Desfijar tema' : 'Fijar tema'}
+                    className={`hover:cursor-pointer px-2 py-1 rounded-sm flex items-center gap-1 text-xs transition-colors ${topic.is_pinned
+                      ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 hover:bg-amber-200 dark:hover:bg-amber-900/60'
+                      : 'bg-slate-100 dark:bg-slate-700 text-slate-400 hover:bg-amber-100 dark:hover:bg-amber-900/30 hover:text-amber-600 dark:hover:text-amber-400'
+                      }`}
+                  >
+                    {topic.is_pinned ? <PinOff size={14} /> : <Pin size={14} />}
+                    {topic.is_pinned ? 'Desfijar' : 'Fijar'}
+                  </button>
+                )}
+                {canEdit && isAuthenticated && !isBanned && (
+                  <button
+                    onClick={handleEditClick}
+                    className="hover:cursor-pointer px-2 py-1 rounded-sm bg-slate-100 dark:bg-slate-700 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 flex items-center gap-1 text-xs text-slate-400 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                  >
+                    <Pencil size={14} />
+                    Editar
+                  </button>
+                )}
+                {canDelete && isAuthenticated && (
+                  <button
+                    onClick={handleDelete}
+                    className="px-2 py-1 rounded-sm bg-red-100 dark:bg-red-900/30 hover:bg-red-200 dark:hover:bg-red-900/50 hover:cursor-pointer flex items-center gap-1 text-xs text-red-400 hover:text-red-500 transition-colors"
+                  >
+                    <Trash2 size={14} />
+                    Eliminar
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -628,8 +632,8 @@ export const ThreadsPage = () => {
                 key={tag.id}
                 onClick={() => handleTagFilter(tag)}
                 className={`hover:cursor-pointer inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${isActive
-                    ? 'bg-indigo-600 text-white border-indigo-600'
-                    : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-600 hover:border-indigo-300 dark:hover:border-indigo-600 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30'
+                  ? 'bg-indigo-600 text-white border-indigo-600'
+                  : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-600 hover:border-indigo-300 dark:hover:border-indigo-600 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30'
                   }`}
               >
                 <TagIcon size={9} />

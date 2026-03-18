@@ -170,6 +170,10 @@ export const MainLayout = () => {
     dispatch(fetchChannels())
   }, [dispatch])
 
+  useEffect(() => {
+    setMobileOpen(false)
+  }, [location.pathname])
+
   const handleLogout = async () => {
     await dispatch(logout())
     navigate('/login')
