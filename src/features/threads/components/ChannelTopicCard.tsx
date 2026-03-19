@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Link } from 'react-router-dom'
-import { Star, MessageSquare, Clock, X, ChevronDown, ChevronUp, Trash2, Pencil, Tag as TagIcon, Pin, PinOff, Lock, LockOpen } from 'lucide-react'
+import { Star, MessageSquare, Clock, ChevronDown, ChevronUp, Trash2, Pencil, Tag as TagIcon, Pin, PinOff, Lock, LockOpen } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { type AppDispatch } from '../../../store'
@@ -87,10 +87,10 @@ const ChannelTopicCard = ({ topic, maxTags }: ChannelTopicCardProps) => {
   return (
     <>
       <div className={`rounded-xl border hover:shadow-sm transition-all overflow-hidden ${topic.is_pinned
-          ? 'bg-white dark:bg-slate-800 border-amber-300 dark:border-amber-700 ring-1 ring-amber-200 dark:ring-amber-900'
-          : topic.is_closed
-            ? 'bg-slate-50 dark:bg-slate-800/60 border-slate-300 dark:border-slate-600'
-            : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-indigo-200 dark:hover:border-indigo-700'
+        ? 'bg-white dark:bg-slate-800 border-amber-300 dark:border-amber-700 ring-1 ring-amber-200 dark:ring-amber-900'
+        : topic.is_closed
+          ? 'bg-slate-50 dark:bg-slate-800/60 border-slate-300 dark:border-slate-600'
+          : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-indigo-200 dark:hover:border-indigo-700'
         }`}>
         {topic.is_pinned && (
           <div className="flex items-center gap-1.5 px-5 py-1.5 bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-800">
@@ -167,8 +167,8 @@ const ChannelTopicCard = ({ topic, maxTags }: ChannelTopicCardProps) => {
                     onClick={handleClose}
                     title={topic.is_closed ? 'Reabrir tema' : 'Cerrar tema'}
                     className={`hover:cursor-pointer px-2 py-1 rounded-sm flex items-center gap-1 text-xs transition-colors ${topic.is_closed
-                        ? 'bg-slate-200 dark:bg-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-500'
-                        : 'bg-slate-100 dark:bg-slate-700 text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600 hover:text-slate-600 dark:hover:text-slate-200'
+                      ? 'bg-slate-200 dark:bg-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-500'
+                      : 'bg-slate-100 dark:bg-slate-700 text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600 hover:text-slate-600 dark:hover:text-slate-200'
                       }`}
                   >
                     {topic.is_closed ? <LockOpen size={14} /> : <Lock size={14} />}
@@ -180,8 +180,8 @@ const ChannelTopicCard = ({ topic, maxTags }: ChannelTopicCardProps) => {
                     onClick={handlePin}
                     title={topic.is_pinned ? 'Desfijar tema' : 'Fijar tema'}
                     className={`hover:cursor-pointer px-2 py-1 rounded-sm flex items-center gap-1 text-xs transition-colors ${topic.is_pinned
-                        ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 hover:bg-amber-200 dark:hover:bg-amber-900/60'
-                        : 'bg-slate-100 dark:bg-slate-700 text-slate-400 hover:bg-amber-100 dark:hover:bg-amber-900/30 hover:text-amber-600 dark:hover:text-amber-400'
+                      ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 hover:bg-amber-200 dark:hover:bg-amber-900/60'
+                      : 'bg-slate-100 dark:bg-slate-700 text-slate-400 hover:bg-amber-100 dark:hover:bg-amber-900/30 hover:text-amber-600 dark:hover:text-amber-400'
                       }`}
                   >
                     {topic.is_pinned ? <PinOff size={14} /> : <Pin size={14} />}
@@ -215,8 +215,8 @@ const ChannelTopicCard = ({ topic, maxTags }: ChannelTopicCardProps) => {
           <button
             onClick={handleToggle}
             className={`w-full flex items-center justify-center gap-2 py-2 text-xs font-medium hover:cursor-pointer border-t transition-colors ${expanded
-                ? 'border-indigo-100 dark:border-indigo-900 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/30'
-                : 'border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/30 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700/50 hover:text-slate-600 dark:hover:text-slate-300'
+              ? 'border-indigo-100 dark:border-indigo-900 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/30'
+              : 'border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/30 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700/50 hover:text-slate-600 dark:hover:text-slate-300'
               }`}
           >
             {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}

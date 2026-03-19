@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Link } from 'react-router-dom'
 import { Flame, TrendingUp, Clock, Star, Zap, MessageSquare } from 'lucide-react'
@@ -25,6 +25,8 @@ export const HomePage = () => {
   const pageRef = useRef(1)
   const loadingMoreRef = useRef(false)
   const hasMoreRef = useRef(true)
+  const lastScrollY = useRef(0)
+  const [filtersVisible, setFiltersVisible] = useState(true)
 
   useEffect(() => { loadingMoreRef.current = loadingMore }, [loadingMore])
   useEffect(() => { hasMoreRef.current = hasMore }, [hasMore])
@@ -33,6 +35,25 @@ export const HomePage = () => {
     pageRef.current = 1
     dispatch(fetchFeed(filter))
   }, [filter, dispatch])
+
+  useEffect(() => {
+    const scrollRoot = document.getElementById('main-scroll')
+    if (!scrollRoot) return
+
+    const handleScroll = () => {
+      const currentY = scrollRoot.scrollTop
+      const diff = currentY - lastScrollY.current
+      if (diff > 8) {
+        setFiltersVisible(false)
+      } else if (diff < -8) {
+        setFiltersVisible(true)
+      }
+      lastScrollY.current = currentY
+    }
+
+    scrollRoot.addEventListener('scroll', handleScroll, { passive: true })
+    return () => scrollRoot.removeEventListener('scroll', handleScroll)
+  }, [])
 
   useEffect(() => {
     const el = loaderRef.current
@@ -66,7 +87,28 @@ export const HomePage = () => {
         <p className="text-slate-500 text-sm mt-0.5">{activeFilter.description}</p>
       </div>
 
-      <div className="flex items-center gap-1.5 flex-wrap">
+      <div
+        className={`md:hidden sticky top-0 z-10 bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm py-2 -mx-4 px-4 border-b border-slate-100 dark:border-slate-700 transition-all duration-300 ${filtersVisible ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0 pointer-events-none'
+          }`}
+      >
+        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide pb-0.5">
+          {FILTERS.map(({ key, label, icon }) => (
+            <button
+              key={key}
+              onClick={() => handleFilter(key)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all hover:cursor-pointer shrink-0 ${filter === key
+                  ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-200'
+                  : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-indigo-300 hover:text-indigo-600'
+                }`}
+            >
+              {icon}
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="hidden md:flex items-center gap-1.5 flex-wrap">
         {FILTERS.map(({ key, label, icon }) => (
           <button
             key={key}
@@ -102,7 +144,7 @@ export const HomePage = () => {
           )}
 
           <div ref={loaderRef} className="flex flex-col items-center py-6 gap-3">
-            {true && (
+            {loadingMore && (
               <>
                 <img src="/images/big_logo.svg" alt="Cargando" className="w-48 animate-pulse" />
                 <span className="text-xs text-slate-400">Cargando más temas...</span>

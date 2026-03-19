@@ -104,46 +104,55 @@ const TopicHeader = ({
               ))}
             </div>
           )}
-        </div>
 
-        <div className="flex items-center gap-2 shrink-0">
-          {isModerator && isAuthenticated && !isEditing && (
-            <button
-              onClick={onClose}
-              title={isClosed ? 'Reabrir tema' : 'Cerrar tema'}
-              className={`hover:cursor-pointer flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-sm transition-colors ${isClosed
-                  ? 'bg-slate-100 dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
-                  : 'border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:border-slate-300 hover:text-slate-600 dark:hover:text-slate-300'
-                }`}
-            >
-              {isClosed ? <LockOpen size={14} /> : <Lock size={14} />}
-              <span className="hidden sm:inline">{isClosed ? 'Reabrir' : 'Cerrar'}</span>
-            </button>
+
+
+
+
+          <div className="hidden md:block">{isEditing ? (
+            <div className="mt-4 space-y-3">
+              <RichTextEditor
+                key="edit-topic"
+                onChange={setEditContent}
+                content={topic.content}
+                placeholder="Edita el contenido del tema..."
+                minHeight="200px"
+              />
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Tags</label>
+                <TagInput selected={editTags} onChange={setEditTags} maxTags={maxTags} />
+              </div>
+              <div className="flex justify-end gap-2">
+                <button
+                  onClick={() => setIsEditing(false)}
+                  className="hover:cursor-pointer text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 px-4 py-2 rounded-lg transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleSave}
+                  disabled={saving || !editTitle.trim() || !editContent || editContent === '<p></p>'}
+                  className="hover:cursor-pointer flex items-center gap-2 bg-indigo-600 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                >
+                  {saving ? <Spinner size="sm" /> : <Check size={14} />}
+                  Guardar cambios
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div ref={topicContentRef} className="prose prose-sm max-w-none mt-5 text-slate-700 dark:text-slate-300" dangerouslySetInnerHTML={{ __html: topic.content }} />
           )}
-          {canEdit && isAuthenticated && !isBanned && !isEditing && (
-            <button
-              onClick={() => setIsEditing(true)}
-              className="hover:cursor-pointer flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:border-indigo-300 hover:text-indigo-500 dark:hover:border-indigo-600 dark:hover:text-indigo-400 text-sm transition-colors"
-            >
-              <Pencil size={14} />
-              <span className="hidden sm:inline">Editar</span>
-            </button>
-          )}
-          <button
-            onClick={onStar}
-            disabled={!isAuthenticated}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-sm transition-colors ${topic.is_starred
-                ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-700 text-amber-600 dark:text-amber-400'
-                : 'border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:border-amber-300 hover:text-amber-500'
-              } disabled:cursor-not-allowed`}
-          >
-            <Star size={15} fill={topic.is_starred ? 'currentColor' : 'none'} />
-            <span className="font-medium">{topic.stars_count}</span>
-          </button>
+          </div>
+
+
+
+
+
+
         </div>
       </div>
 
-      {isEditing ? (
+      <div className="block md:hidden mb-2">{isEditing ? (
         <div className="mt-4 space-y-3">
           <RichTextEditor
             key="edit-topic"
@@ -176,6 +185,42 @@ const TopicHeader = ({
       ) : (
         <div ref={topicContentRef} className="prose prose-sm max-w-none mt-5 text-slate-700 dark:text-slate-300" dangerouslySetInnerHTML={{ __html: topic.content }} />
       )}
+      </div>
+      <div className="flex items-center gap-2 shrink-0 md:mt-4">
+        {isModerator && isAuthenticated && !isEditing && (
+          <button
+            onClick={onClose}
+            title={isClosed ? 'Reabrir tema' : 'Cerrar tema'}
+            className={`hover:cursor-pointer flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-sm transition-colors ${isClosed
+              ? 'bg-slate-100 dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+              : 'border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:border-slate-300 hover:text-slate-600 dark:hover:text-slate-300'
+              }`}
+          >
+            {isClosed ? <LockOpen size={14} /> : <Lock size={14} />}
+            <span className="hidden sm:inline">{isClosed ? 'Reabrir' : 'Cerrar'}</span>
+          </button>
+        )}
+        {canEdit && isAuthenticated && !isBanned && !isEditing && (
+          <button
+            onClick={() => setIsEditing(true)}
+            className="hover:cursor-pointer flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:border-indigo-300 hover:text-indigo-500 dark:hover:border-indigo-600 dark:hover:text-indigo-400 text-sm transition-colors"
+          >
+            <Pencil size={14} />
+            <span className="hidden sm:inline">Editar</span>
+          </button>
+        )}
+        <button
+          onClick={onStar}
+          disabled={!isAuthenticated}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-sm transition-colors ${topic.is_starred
+            ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-700 text-amber-600 dark:text-amber-400'
+            : 'border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:border-amber-300 hover:text-amber-500'
+            } disabled:cursor-not-allowed`}
+        >
+          <Star size={15} fill={topic.is_starred ? 'currentColor' : 'none'} />
+          <span className="font-medium">{topic.stars_count}</span>
+        </button>
+      </div>
     </div>
   )
 }

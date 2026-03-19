@@ -16,6 +16,17 @@ interface FeedTopicCardProps {
   topic: Topic
 }
 
+const extractThumbnail = (html: string): string | null => {
+  const match = html.match(/<img[^>]+src=["']([^"']+)["']/)
+  return match ? match[1] : null
+}
+
+const stripHtml = (html: string) => {
+  const tmp = document.createElement('div')
+  tmp.innerHTML = html
+  return tmp.textContent || tmp.innerText || ''
+}
+
 const FeedTopicCard = ({ topic }: FeedTopicCardProps) => {
   const dispatch = useDispatch<AppDispatch>()
   const { isAuthenticated } = useAuth()
@@ -23,6 +34,9 @@ const FeedTopicCard = ({ topic }: FeedTopicCardProps) => {
   const [replies, setReplies] = useState<any[]>([])
   const [loadingReplies, setLoadingReplies] = useState(false)
   const [fetched, setFetched] = useState(false)
+
+  const thumbnail = extractThumbnail(topic.content)
+  const preview = stripHtml(topic.content).slice(0, 120)
 
   const handleStar = (e: React.MouseEvent) => {
     e.preventDefault()
@@ -50,16 +64,21 @@ const FeedTopicCard = ({ topic }: FeedTopicCardProps) => {
     setExpanded(!expanded)
   }
 
-  const stripHtml = (html: string) => {
-    const tmp = document.createElement('div')
-    tmp.innerHTML = html
-    return tmp.textContent || tmp.innerText || ''
-  }
-
-  const preview = stripHtml(topic.content).slice(0, 120)
-
   return (
     <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-indigo-200 dark:hover:border-slate-400 hover:shadow-sm transition-all overflow-hidden">
+      {thumbnail && (
+        <Link to={`/channels/${topic.channel_id}/topics/${topic.id}`}>
+          <div className="w-full h-48 overflow-hidden bg-slate-100 dark:bg-slate-700">
+            <img
+              src={thumbnail}
+              alt=""
+              className="w-full h-full object-cover"
+              onError={(e) => { (e.target as HTMLImageElement).closest('div')!.style.display = 'none' }}
+            />
+          </div>
+        </Link>
+      )}
+
       <div className="p-5">
         <div className="flex items-start gap-3">
           <div className="w-9 h-9 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center text-indigo-700 dark:text-indigo-300 font-semibold text-sm shrink-0 overflow-hidden">
