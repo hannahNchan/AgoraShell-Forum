@@ -1,26 +1,24 @@
 import { useState } from 'react'
-import { X } from 'lucide-react'
 import { useDispatch } from 'react-redux'
+import { X, Check } from 'lucide-react'
 import { type AppDispatch } from '../../../store'
-import { createTopic } from '../store/threadsSlice'
-import Spinner from '../../../components/shared/Spinner'
+import { updateTopic } from '../store/threadsSlice'
 import RichTextEditor from '../../../components/shared/RichTextEditor'
 import TagInput from '../../tags/components/TagInput'
-import { useRole } from '../../auth/hooks/useRole'
+import Spinner from '../../../components/shared/Spinner'
 import { type Tag } from '../../../types'
 
-interface CreateTopicModalProps {
-  channelId: string
+interface EditTopicModalProps {
+  topic: any
   onClose: () => void
   maxTags: number
 }
 
-const CreateTopicModal = ({ channelId, onClose, maxTags }: CreateTopicModalProps) => {
+const EditTopicModal = ({ topic, onClose, maxTags }: EditTopicModalProps) => {
   const dispatch = useDispatch<AppDispatch>()
-  const { isBanned } = useRole()
-  const [title, setTitle] = useState('')
-  const [content, setContent] = useState('')
-  const [selectedTags, setSelectedTags] = useState<Tag[]>([])
+  const [title, setTitle] = useState(topic.title)
+  const [content, setContent] = useState(topic.content)
+  const [selectedTags, setSelectedTags] = useState<Tag[]>(topic.tags || [])
   const [submitting, setSubmitting] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -28,8 +26,8 @@ const CreateTopicModal = ({ channelId, onClose, maxTags }: CreateTopicModalProps
     if (!title.trim() || !content || content === '<p></p>') return
     setSubmitting(true)
     try {
-      await dispatch(createTopic({
-        channel_id: channelId,
+      await dispatch(updateTopic({
+        topicId: topic.id,
         title: title.trim(),
         content,
         tagIds: selectedTags.map((t) => t.id),
@@ -40,20 +38,11 @@ const CreateTopicModal = ({ channelId, onClose, maxTags }: CreateTopicModalProps
     }
   }
 
-  if (isBanned) return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
-      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md p-6 text-center space-y-4">
-        <p className="text-slate-700 dark:text-slate-300 font-medium">Tu cuenta ha sido suspendida y no puedes publicar contenido.</p>
-        <button onClick={onClose} className="text-sm text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors hover:cursor-pointer">Cerrar</button>
-      </div>
-    </div>
-  )
-
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 backdrop-blur-sm pt-10 pb-4 px-4 overflow-y-auto">
       <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-2xl">
         <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100">Nuevo tema</h3>
+          <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100">Editar tema</h3>
           <button onClick={onClose} className="hover:cursor-pointer text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
             <X size={20} />
           </button>
@@ -72,7 +61,13 @@ const CreateTopicModal = ({ channelId, onClose, maxTags }: CreateTopicModalProps
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Contenido *</label>
-            <RichTextEditor onChange={setContent} placeholder="Escribe el contenido de tu tema..." minHeight="200px" />
+            <RichTextEditor
+              key={`edit-${topic.id}`}
+              onChange={setContent}
+              content={topic.content}
+              placeholder="Edita el contenido de tu tema..."
+              minHeight="200px"
+            />
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Tags</label>
@@ -91,7 +86,7 @@ const CreateTopicModal = ({ channelId, onClose, maxTags }: CreateTopicModalProps
               disabled={submitting || !title.trim()}
               className="flex-1 bg-indigo-600 text-white rounded-lg py-2.5 text-sm font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 hover:cursor-pointer"
             >
-              {submitting ? <Spinner size="sm" /> : 'Publicar tema'}
+              {submitting ? <Spinner size="sm" /> : <><Check size={15} />Guardar cambios</>}
             </button>
           </div>
         </form>
@@ -100,4 +95,4 @@ const CreateTopicModal = ({ channelId, onClose, maxTags }: CreateTopicModalProps
   )
 }
 
-export default CreateTopicModal
+export default EditTopicModal

@@ -194,8 +194,8 @@ const TagPage = () => {
                           key={t.id}
                           to={`/tags/${t.slug}`}
                           className={`hover:cursor-pointer inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border transition-colors ${t.slug === slug
-                              ? 'bg-indigo-600 text-white border-indigo-600'
-                              : 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-700 hover:bg-indigo-100 dark:hover:bg-indigo-900/50'
+                            ? 'bg-indigo-600 text-white border-indigo-600'
+                            : 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-700 hover:bg-indigo-100 dark:hover:bg-indigo-900/50'
                             }`}
                         >
                           <TagIcon size={9} />
@@ -220,7 +220,7 @@ const TagPage = () => {
         )}
         {!hasMore && topics.length > 0 && (
           <div className="flex flex-col items-center gap-2">
-            <img src="/images/big_logo.svg" alt="" className="w-10 h-10 opacity-20" />
+            <img src="/images/big_logo.svg" alt="" className="w-32 opacity-30" />
             <span className="text-xs text-slate-400">No hay más temas</span>
           </div>
         )}
