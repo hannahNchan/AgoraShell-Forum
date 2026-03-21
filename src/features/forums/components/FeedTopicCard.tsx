@@ -6,7 +6,6 @@ import { formatDistanceToNow } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { type AppDispatch } from '../../../store'
 import { toggleStar } from '../../threads/store/threadsSlice'
-import { toggleFeedStar } from '../store/feedSlice'
 import { useAuth } from '../../auth/hooks/useAuth'
 import { supabase } from '../../../services/supabase'
 import Spinner from '../../../components/shared/Spinner'
@@ -42,7 +41,6 @@ const FeedTopicCard = ({ topic }: FeedTopicCardProps) => {
     e.preventDefault()
     e.stopPropagation()
     if (!isAuthenticated) return
-    dispatch(toggleFeedStar({ topicId: topic.id, isStarred: !!topic.is_starred }))
     dispatch(toggleStar({ topicId: topic.id, isStarred: !!topic.is_starred }))
   }
 

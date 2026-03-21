@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk, type PayloadAction } from '@reduxjs/toolkit'
 import { supabase } from '../../../services/supabase'
 import { type Topic } from '../../../types'
+import { toggleStar } from '../../threads/store/threadsSlice'
 
 const PAGE_SIZE = 20
 
@@ -115,14 +116,6 @@ const feedSlice = createSlice({
       state.items = []
       state.hasMore = true
     },
-    toggleFeedStar: (state, action: PayloadAction<{ topicId: string; isStarred: boolean }>) => {
-      const { topicId, isStarred } = action.payload
-      const topic = state.items.find((t) => t.id === topicId)
-      if (topic) {
-        topic.is_starred = isStarred
-        topic.stars_count = isStarred ? topic.stars_count + 1 : topic.stars_count - 1
-      }
-    },
   },
   extraReducers: (builder) => {
     builder
@@ -144,8 +137,16 @@ const feedSlice = createSlice({
         state.hasMore = action.payload.length === PAGE_SIZE
       })
       .addCase(fetchMoreFeed.rejected, (state) => { state.loadingMore = false })
+      .addCase(toggleStar.fulfilled, (state, action) => {
+        const { topicId, isStarred, stars_count } = action.payload
+        const topic = state.items.find((t) => t.id === topicId)
+        if (topic) {
+          topic.is_starred = isStarred
+          topic.stars_count = stars_count
+        }
+      })
   },
 })
 
-export const { setFilter, toggleFeedStar } = feedSlice.actions
+export const { setFilter } = feedSlice.actions
 export default feedSlice.reducer

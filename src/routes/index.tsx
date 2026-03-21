@@ -11,6 +11,8 @@ import ComingSoon from '../components/ComingSoon'
 import SearchPage from '../features/search/pages/SearchPage'
 import HomePage from '../features/forums/pages/HomePage'
 import TagPage from '../features/tags/pages/TagPage'
+import VerifyEmailPage from '../features/auth/pages/VerifyEmailPage'
+import AuthCallbackPage from '../features/auth/pages/AuthCallbackPage'
 
 const MAINTENANCE_MODE = false
 
@@ -37,6 +39,8 @@ const appRoutes = [
   },
   { path: '/login', element: <LoginPage /> },
   { path: '/register', element: <RegisterPage /> },
+  { path: '/verify-email', element: <VerifyEmailPage /> },
+  { path: '/auth/callback', element: <AuthCallbackPage /> },
   { path: '*', element: <Navigate to="/" replace /> },
 ]
 

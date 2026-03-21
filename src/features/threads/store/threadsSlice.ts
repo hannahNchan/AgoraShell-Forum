@@ -150,7 +150,7 @@ export const fetchTopicById = createAsyncThunk(
           .select('id')
           .eq('topic_id', topicId)
           .eq('user_id', user.id)
-          .single()
+          .maybeSingle()
         is_starred = !!star
       }
       return { ...normalizeTags(data), is_starred } as Topic
@@ -273,7 +273,8 @@ export const toggleStar = createAsyncThunk(
       } else {
         await supabase.from('topic_stars').insert([{ topic_id: topicId, user_id: user.id }])
       }
-      return { topicId, isStarred: !isStarred }
+      const { data } = await supabase.from('topics').select('stars_count').eq('id', topicId).single()
+      return { topicId, isStarred: !isStarred, stars_count: data?.stars_count ?? 0 }
     } catch (error: any) {
       return rejectWithValue(error.message)
     }
@@ -380,17 +381,15 @@ const topicsSlice = createSlice({
       })
 
       .addCase(toggleStar.fulfilled, (state, action) => {
-        const { topicId, isStarred } = action.payload
+        const { topicId, isStarred, stars_count } = action.payload
         const topic = state.items.find((t) => t.id === topicId)
         if (topic) {
           topic.is_starred = isStarred
-          topic.stars_count = isStarred ? topic.stars_count + 1 : topic.stars_count - 1
+          topic.stars_count = stars_count
         }
         if (state.currentTopic?.id === topicId) {
           state.currentTopic.is_starred = isStarred
-          state.currentTopic.stars_count = isStarred
-            ? state.currentTopic.stars_count + 1
-            : state.currentTopic.stars_count - 1
+          state.currentTopic.stars_count = stars_count
         }
       })
 

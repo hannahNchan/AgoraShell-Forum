@@ -19,23 +19,23 @@ const initialState: AuthState = {
   error: null,
 }
 
+const fetchProfile = async (userId: string): Promise<Profile | null> => {
+  const { data } = await supabase
+    .from('profiles')
+    .select('*, roles(name)')
+    .eq('id', userId)
+    .single()
+  if (!data) return null
+  return { ...data, role: data.roles?.name as UserRole }
+}
+
 export const loadAuthUser = createAsyncThunk('auth/loadAuthUser', async (_, { rejectWithValue }) => {
   try {
     const { data: { session }, error } = await supabase.auth.getSession()
     if (error) throw error
     if (!session) return { session: null, user: null, profile: null }
-
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('*, roles(name)')
-      .eq('id', session.user.id)
-      .single()
-
-    const profileWithRole = profile
-      ? { ...profile, role: profile.roles?.name as UserRole }
-      : null
-
-    return { session, user: session.user, profile: profileWithRole }
+    const profile = await fetchProfile(session.user.id)
+    return { session, user: session.user, profile }
   } catch (error: any) {
     return rejectWithValue(error.message)
   }
@@ -46,19 +46,14 @@ export const loginWithEmail = createAsyncThunk(
   async ({ email, password }: { email: string; password: string }, { rejectWithValue }) => {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-      if (error) throw error
-
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('*, roles(name)')
-        .eq('id', data.user.id)
-        .single()
-
-      const profileWithRole = profile
-        ? { ...profile, role: profile.roles?.name as UserRole }
-        : null
-
-      return { session: data.session, user: data.user, profile: profileWithRole }
+      if (error) {
+        if (error.message.toLowerCase().includes('email not confirmed')) {
+          return rejectWithValue('EMAIL_NOT_CONFIRMED')
+        }
+        throw error
+      }
+      const profile = await fetchProfile(data.user.id)
+      return { session: data.session, user: data.user, profile }
     } catch (error: any) {
       return rejectWithValue(error.message)
     }
@@ -72,13 +67,53 @@ export const registerWithEmail = createAsyncThunk(
     { rejectWithValue }
   ) => {
     try {
-      const { data, error } = await supabase.auth.signUp({
+      const { error } = await supabase.auth.signUp({
         email,
         password,
-        options: { data: { username } },
+        options: {
+          data: { username },
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
       })
       if (error) throw error
-      return { session: data.session, user: data.user }
+      return { email, needsVerification: true }
+    } catch (error: any) {
+      return rejectWithValue(error.message)
+    }
+  }
+)
+
+export const verifyOtp = createAsyncThunk(
+  'auth/verifyOtp',
+  async ({ email, token }: { email: string; token: string }, { rejectWithValue }) => {
+    try {
+      const { data, error } = await supabase.auth.verifyOtp({
+        email,
+        token,
+        type: 'email',
+      })
+      if (error) throw error
+      if (!data.session) throw new Error('No session after verification')
+      const profile = await fetchProfile(data.user!.id)
+      return { session: data.session, user: data.user!, profile }
+    } catch (error: any) {
+      return rejectWithValue(error.message)
+    }
+  }
+)
+
+export const resendVerificationEmail = createAsyncThunk(
+  'auth/resendVerificationEmail',
+  async (email: string, { rejectWithValue }) => {
+    try {
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
+      })
+      if (error) throw error
     } catch (error: any) {
       return rejectWithValue(error.message)
     }
@@ -122,7 +157,7 @@ export const updateAvatar = createAsyncThunk(
 
       const { error: updateError } = await supabase
         .from('profiles')
-        .update({ avatar_url: publicUrl })  // ← guarda sin ?t=
+        .update({ avatar_url: publicUrl })
         .eq('id', userId)
 
       if (updateError) throw updateError
@@ -172,6 +207,18 @@ const authSlice = createSlice({
       .addCase(registerWithEmail.pending, (state) => { state.loading = true; state.error = null })
       .addCase(registerWithEmail.fulfilled, (state) => { state.loading = false })
       .addCase(registerWithEmail.rejected, (state, action) => {
+        state.loading = false
+        state.error = action.payload as string
+      })
+
+      .addCase(verifyOtp.pending, (state) => { state.loading = true; state.error = null })
+      .addCase(verifyOtp.fulfilled, (state, action) => {
+        state.loading = false
+        state.session = action.payload.session
+        state.user = action.payload.user
+        state.profile = action.payload.profile
+      })
+      .addCase(verifyOtp.rejected, (state, action) => {
         state.loading = false
         state.error = action.payload as string
       })
