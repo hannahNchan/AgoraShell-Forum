@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useRef, useEffect } from 'react'
 import { Clock, Smile, Send, Trash2, MessageCircle, Pencil, Check } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -39,8 +39,75 @@ interface ReplyCardProps {
 
 const ReplyCard = ({ reply, topicId, topicClosed, depth = 0 }: ReplyCardProps) => {
   const replyContentRef = useRef<HTMLDivElement>(null)
+  const linesRef = useRef<any[]>([])
+  const scrollHandlerRef = useRef<(() => void) | null>(null)
+  const repositionTimersRef = useRef<ReturnType<typeof setTimeout>[]>([])
+  const containerRef = useRef<HTMLDivElement>(null)
   useHighlightCode(replyContentRef)
   useCodeCollapse(replyContentRef)
+
+  const handleReposition = () => {
+    const timers = [50, 100, 200, 350].map((delay) =>
+      setTimeout(() => {
+        linesRef.current.forEach((l) => { try { l.position() } catch (_) { } })
+      }, delay)
+    )
+    repositionTimersRef.current = timers
+  }
+
+  useEffect(() => {
+    window.addEventListener('reply-editor-toggle', handleReposition)
+    if (!reply.children?.length) return
+    const raf = requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        linesRef.current.forEach((l) => { try { l.remove() } catch (_) { } })
+        linesRef.current = []
+        const LL = (window as any).LeaderLine
+        const parentEl = document.getElementById(`avatar-${reply.id}`)
+        if (!parentEl || !LL) return
+        reply.children!.forEach((child) => {
+          const childEl = document.getElementById(`avatar-${child.id}`)
+          if (!childEl) return
+          try {
+            const line = new LL(parentEl, childEl, {
+              path: 'grid',
+              startSocket: 'bottom',
+              endSocket: 'left',
+              color: '#cbd5e1',
+              size: 2,
+              startPlug: 'behind',
+              endPlug: 'arrow2',
+            })
+            linesRef.current.push(line)
+          } catch (_) { }
+        })
+        const handleScroll = () => {
+          linesRef.current.forEach((l) => { try { l.position() } catch (_) { } })
+        }
+        scrollHandlerRef.current = handleScroll
+        window.addEventListener('scroll', handleScroll, true)
+      })
+    })
+    return () => {
+      cancelAnimationFrame(raf)
+      if (scrollHandlerRef.current) {
+        window.removeEventListener('scroll', scrollHandlerRef.current, true)
+      }
+      window.removeEventListener('reply-editor-toggle', handleReposition)
+      repositionTimersRef.current.forEach(clearTimeout)
+      linesRef.current.forEach((l) => { try { l.remove() } catch (_) { } })
+      linesRef.current = []
+    }
+  }, [reply.children?.length, reply.id])
+
+  useEffect(() => {
+    if (!containerRef.current) return
+    const observer = new ResizeObserver(() => {
+      linesRef.current.forEach((l) => { try { l.position() } catch (_) { } })
+    })
+    observer.observe(containerRef.current)
+    return () => observer.disconnect()
+  }, [reply.children?.length])
 
   const {
     user,
@@ -73,7 +140,7 @@ const ReplyCard = ({ reply, topicId, topicClosed, depth = 0 }: ReplyCardProps) =
   const wasEdited = reply.updated_at && reply.updated_at !== reply.created_at
 
   return (
-    <div className={depth > 0 ? 'relative pl-0 md:pl-5' : ''}>
+    <div ref={containerRef} className={depth > 0 ? 'relative pl-0 md:pl-5' : ''}>
       <div className="flex items-start gap-1">
         <Avatar profile={reply.author} id={`avatar-${reply.id}`} />
         <div className="flex-1 min-w-0">
