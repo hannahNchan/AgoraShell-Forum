@@ -42,36 +42,36 @@ export const ForumsPage = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-800">Canales</h1>
-        <p className="text-slate-500 text-sm mt-1">Elige un canal para ver los temas de discusión</p>
+        <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Canales</h1>
+        <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Elige un canal para ver los temas de discusión</p>
       </div>
       <div className="flex flex-col md:flex-row gap-4 items-start">
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4 w-full">
           {channels.map((channel) => (
-            <div key={channel.id} className="bg-white rounded-xl border border-slate-200 hover:border-indigo-300 hover:shadow-sm transition-all group">
+            <div key={channel.id} className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-600 hover:shadow-sm transition-all group">
               <Link
                 to={`/channels/${channel.id}`}
                 className="flex items-center gap-4 p-5 pb-2 hover:cursor-pointer"
               >
                 <div className="text-3xl">{channel.icon}</div>
                 <div className="flex-1 min-w-0">
-                  <h2 className="font-semibold text-slate-800 group-hover:text-indigo-600 transition-colors">
+                  <h2 className="font-semibold text-slate-800 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                     {channel.name}
                   </h2>
                   {channel.description && (
-                    <p className="text-sm text-slate-500 mt-0.5 truncate">{channel.description}</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5 truncate">{channel.description}</p>
                   )}
                   {errorId === channel.id && (
                     <p className="text-xs text-red-500 mt-1">No se puede eliminar: el canal tiene topics.</p>
                   )}
                 </div>
-                <div className="text-slate-300 group-hover:text-indigo-400 transition-colors">
+                <div className="text-slate-300 dark:text-slate-600 group-hover:text-indigo-400 dark:group-hover:text-indigo-500 transition-colors">
                   <MessageSquare size={20} />
                 </div>
               </Link>
               {isAdmin && (
                 <div className="flex items-center gap-4 px-5 pb-3">
-                  <span className="text-xs text-slate-400">
+                  <span className="text-xs text-slate-400 dark:text-slate-500">
                     Creado por @<span className="font-medium">
                       {channel.created_by_profile?.username ?? 'bot >'}
                     </span>
@@ -79,7 +79,7 @@ export const ForumsPage = () => {
                   <button
                     onClick={(e) => handleDelete(e, channel.id)}
                     disabled={deletingId === channel.id}
-                    className="flex items-center gap-1 text-xs text-red-500 bg-red-50 hover:text-red-800 hover:bg-red-200 hover:cursor-pointer px-2 py-1 rounded-md transition-colors disabled:opacity-50"
+                    className="flex items-center gap-1 text-xs text-red-500 bg-red-50 dark:bg-red-900/20 hover:text-red-800 dark:hover:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/40 hover:cursor-pointer px-2 py-1 rounded-md transition-colors disabled:opacity-50"
                   >
                     <Trash2 size={18} />
                     <span>Borrar canal</span>

@@ -1,3 +1,4 @@
+import { useState, useRef, useEffect } from 'react'
 import { useEditor, EditorContent, NodeViewWrapper, NodeViewContent, ReactNodeViewRenderer } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Link from '@tiptap/extension-link'
@@ -9,7 +10,7 @@ import { createLowlight, common } from 'lowlight'
 import type { NodeViewProps } from '@tiptap/react'
 import {
   Bold, Italic, Strikethrough, Code, List, ListOrdered,
-  Link as LinkIcon, Image as ImageIcon, Quote, Minus, FileCode,
+  Link as LinkIcon, Image as ImageIcon, Quote, Minus, FileCode, Check, X,
 } from 'lucide-react'
 import { supabase } from '../../services/supabase'
 import { mentionSuggestion } from './mentionSuggestion'
@@ -35,7 +36,7 @@ const CodeBlockView = ({ node, updateAttributes }: NodeViewProps) => {
             value={lang}
             onChange={(e) => updateAttributes({ language: e.target.value })}
             contentEditable={false}
-            className="bg-transparent text-slate-400 text-xs border border-slate-600 rounded px-2 py-0.5 focus:outline-none focus:border-indigo-500 cursor-pointer"
+            className="bg-transparent text-slate-400 text-xs border border-slate-600 rounded px-2 py-0.5 focus:outline-none focus:border-indigo-500 hover:cursor-pointer hover:border-indigo-400 hover:text-slate-200 transition-colors"
           >
             {LANGUAGES.map((l) => (
               <option key={l} value={l} className="bg-slate-900">{l}</option>
@@ -84,8 +85,8 @@ const ToolbarButton = ({
     type="button"
     onClick={onClick}
     title={title}
-    className={`p-1.5 rounded transition-colors ${active
-        ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300'
+    className={`p-1.5 rounded transition-colors hover:cursor-pointer ${active
+        ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-200 dark:hover:bg-indigo-900/70'
         : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-600'
       }`}
   >
@@ -94,6 +95,7 @@ const ToolbarButton = ({
 )
 
 const uploadImage = async (file: File): Promise<string | null> => {
+  if (file.size > 5 * 1024 * 1024) return null
   const ext = file.name.split('.').pop()
   const fileName = `forum/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
   const { data, error } = await supabase.storage.from('images').upload(fileName, file)
@@ -102,17 +104,76 @@ const uploadImage = async (file: File): Promise<string | null> => {
   return urlData.publicUrl
 }
 
+interface LinkPopoverProps {
+  onConfirm: (url: string) => void
+  onClose: () => void
+  initialUrl?: string
+}
+
+const LinkPopover = ({ onConfirm, onClose, initialUrl = '' }: LinkPopoverProps) => {
+  const [url, setUrl] = useState(initialUrl)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    inputRef.current?.focus()
+    inputRef.current?.select()
+  }, [])
+
+  const handleConfirm = () => {
+    const trimmed = url.trim()
+    if (!trimmed) return
+    const href = trimmed.startsWith('http') ? trimmed : `https://${trimmed}`
+    onConfirm(href)
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') { e.preventDefault(); handleConfirm() }
+    if (e.key === 'Escape') onClose()
+  }
+
+  return (
+    <div className="absolute top-full left-0 mt-1 z-50 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg p-2 flex items-center gap-1.5 min-w-[280px]">
+      <input
+        ref={inputRef}
+        type="text"
+        value={url}
+        onChange={(e) => setUrl(e.target.value)}
+        onKeyDown={handleKeyDown}
+        placeholder="https://ejemplo.com"
+        className="flex-1 text-sm px-2 py-1.5 rounded border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 hover:border-slate-300 dark:hover:border-slate-500 transition-colors"
+      />
+      <button
+        type="button"
+        onClick={handleConfirm}
+        className="p-1.5 rounded bg-indigo-600 text-white hover:bg-indigo-700 hover:cursor-pointer transition-colors"
+      >
+        <Check size={14} />
+      </button>
+      <button
+        type="button"
+        onClick={onClose}
+        className="p-1.5 rounded text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 hover:cursor-pointer transition-colors"
+      >
+        <X size={14} />
+      </button>
+    </div>
+  )
+}
+
 export const RichTextEditor = ({
   content = '',
   onChange,
   placeholder = 'Escribe algo...',
   minHeight = '160px',
 }: RichTextEditorProps) => {
+  const [showLinkPopover, setShowLinkPopover] = useState(false)
+  const linkButtonRef = useRef<HTMLDivElement>(null)
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({ codeBlock: false }),
       ImageResize,
-      Link.configure({ openOnClick: false, HTMLAttributes: { class: 'text-indigo-600 underline' } }),
+      Link.configure({ openOnClick: false, HTMLAttributes: { class: 'text-indigo-600 underline hover:text-indigo-800 dark:hover:text-indigo-300 cursor-pointer' } }),
       Placeholder.configure({ placeholder }),
       CodeBlockLowlight.extend({
         addNodeView() {
@@ -185,15 +246,21 @@ export const RichTextEditor = ({
     input.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0]
       if (!file) return
+      if (file.size > 5 * 1024 * 1024) return
       const url = await uploadImage(file)
       if (url) editor.chain().focus().insertContent(`<img src="${url}" />`).run()
     }
     input.click()
   }
 
-  const addLink = () => {
-    const url = window.prompt('URL del enlace:')
-    if (url) editor.chain().focus().setLink({ href: url }).run()
+  const handleLinkConfirm = (url: string) => {
+    editor.chain().focus().setLink({ href: url }).run()
+    setShowLinkPopover(false)
+  }
+
+  const getCurrentLinkUrl = () => {
+    const { href } = editor.getAttributes('link')
+    return href ?? ''
   }
 
   return (
@@ -229,9 +296,28 @@ export const RichTextEditor = ({
 
         <div className="w-px h-5 bg-slate-200 dark:bg-slate-600 mx-1" />
 
-        <ToolbarButton onClick={addLink} active={editor.isActive('link')} title="Insertar enlace">
-          <LinkIcon size={15} />
-        </ToolbarButton>
+        <div ref={linkButtonRef} className="relative">
+          <ToolbarButton
+            onClick={() => setShowLinkPopover((v) => !v)}
+            active={editor.isActive('link') || showLinkPopover}
+            title="Insertar enlace"
+          >
+            <LinkIcon size={15} />
+          </ToolbarButton>
+          {showLinkPopover && (
+            <>
+              <div className="fixed inset-0 z-40" onClick={() => setShowLinkPopover(false)} />
+              <div className="relative z-50">
+                <LinkPopover
+                  onConfirm={handleLinkConfirm}
+                  onClose={() => setShowLinkPopover(false)}
+                  initialUrl={getCurrentLinkUrl()}
+                />
+              </div>
+            </>
+          )}
+        </div>
+
         <ToolbarButton onClick={addImage} title="Subir imagen">
           <ImageIcon size={15} />
         </ToolbarButton>
