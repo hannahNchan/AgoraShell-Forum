@@ -18,7 +18,7 @@ export const fetchChannels = createAsyncThunk('channels/fetchAll', async (_, { r
   try {
     const { data, error } = await supabase
       .from('channels')
-      .select('*')
+      .select('*, created_by_profile:profiles!channels_created_by_fkey(username)')
       .order('created_at', { ascending: true })
     if (error) throw error
     return data as Channel[]
@@ -52,7 +52,11 @@ export const deleteChannel = createAsyncThunk(
   'channels/delete',
   async (id: string, { rejectWithValue }) => {
     try {
+      const { data: { user } } = await supabase.auth.getUser()
+      console.log('user id:', user?.id)
+      console.log('deleting channel:', id)
       const { error } = await supabase.from('channels').delete().eq('id', id)
+      console.log('delete error:', error)
       if (error) throw error
       return id
     } catch (error: any) {

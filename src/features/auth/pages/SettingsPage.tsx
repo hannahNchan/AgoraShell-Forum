@@ -92,15 +92,15 @@ const SettingsPage = () => {
   return (
     <div className="max-w-xl space-y-6">
       <div>
-        <h1 className="text-xl font-bold text-slate-800">Configuración</h1>
-        <p className="text-sm text-slate-500 mt-1">Gestiona tu perfil y preferencias</p>
+        <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">Configuración</h1>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Gestiona tu perfil y preferencias</p>
       </div>
 
-      <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-5">
-        <h2 className="text-sm font-semibold text-slate-700">Foto de perfil</h2>
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6 space-y-5">
+        <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Foto de perfil</h2>
 
         <div className="flex items-center gap-4">
-          <div className="w-16 h-16 rounded-full bg-indigo-100 flex-shrink-0 flex items-center justify-center text-indigo-700 font-bold text-xl overflow-hidden">
+          <div className="w-16 h-16 rounded-full bg-indigo-100 dark:bg-indigo-900 shrink-0 flex items-center justify-center text-indigo-700 dark:text-indigo-300 font-bold text-xl overflow-hidden">
             {profile?.avatar_url ? (
               <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
             ) : (
@@ -108,14 +108,14 @@ const SettingsPage = () => {
             )}
           </div>
           <div>
-            <p className="text-sm font-semibold text-slate-800">{profile?.username}</p>
+            <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">{profile?.username}</p>
             <p className="text-xs text-slate-400 capitalize">{profile?.role}</p>
           </div>
           {profile?.avatar_url && (
             <button
               onClick={handleRemove}
               disabled={saving}
-              className="ml-auto flex items-center gap-1.5 text-xs text-red-500 hover:text-red-600 border border-red-200 hover:border-red-300 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+              className="ml-auto flex items-center gap-1.5 text-xs text-red-500 hover:text-red-600 border border-red-200 dark:border-red-800 hover:border-red-300 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50 hover:cursor-pointer"
             >
               <Trash2 size={12} />
               Quitar foto
@@ -129,10 +129,13 @@ const SettingsPage = () => {
             onDragLeave={() => setDragging(false)}
             onDrop={handleDrop}
             onClick={() => inputRef.current?.click()}
-            className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${dragging ? 'border-indigo-400 bg-indigo-50' : 'border-slate-200 hover:border-indigo-300 hover:bg-slate-50'}`}
+            className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${dragging
+                ? 'border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20'
+                : 'border-slate-200 dark:border-slate-600 hover:border-indigo-300 hover:bg-slate-50 dark:hover:bg-slate-700/30'
+              }`}
           >
-            <Upload size={24} className="mx-auto mb-3 text-slate-300" />
-            <p className="text-sm font-medium text-slate-600">Arrastra una imagen o haz click para elegir</p>
+            <Upload size={24} className="mx-auto mb-3 text-slate-300 dark:text-slate-500" />
+            <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Arrastra una imagen o haz click para elegir</p>
             <p className="text-xs text-slate-400 mt-1">PNG, JPG, WEBP — máx. 5MB</p>
             <input
               ref={inputRef}
@@ -174,7 +177,7 @@ const SettingsPage = () => {
             <div className="flex gap-3">
               <button
                 onClick={() => { setImageSrc(null); setZoom(1); setCrop({ x: 0, y: 0 }) }}
-                className="flex items-center gap-2 border border-slate-200 text-slate-600 px-4 py-2 rounded-lg text-sm hover:bg-slate-50 transition-colors"
+                className="flex items-center gap-2 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 px-4 py-2 rounded-lg text-sm hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors hover:cursor-pointer"
               >
                 <X size={14} />
                 Cancelar
@@ -182,7 +185,7 @@ const SettingsPage = () => {
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50 hover:cursor-pointer"
               >
                 {saving ? <Spinner size="sm" /> : <Check size={14} />}
                 Guardar foto
@@ -192,7 +195,7 @@ const SettingsPage = () => {
         )}
 
         {success && (
-          <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+          <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg px-3 py-2">
             <Check size={14} />
             Foto actualizada correctamente
           </div>

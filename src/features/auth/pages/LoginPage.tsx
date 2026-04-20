@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { type AppDispatch, type RootState } from '../../../store'
-import { loginWithEmail } from '../store/authSlice'
+import { loginWithEmail, registerWithEmail } from '../store/authSlice'
 import Spinner from '../../../components/shared/Spinner'
 
 const loginSchema = z.object({
@@ -21,8 +21,9 @@ export const LoginPage = () => {
   const { loading, error } = useSelector((state: RootState) => state.auth)
 
   const from = (location.state as any)?.from?.pathname || '/'
+  const isEmailNotConfirmed = error === 'EMAIL_NOT_CONFIRMED'
 
-  const { register, handleSubmit, formState: { errors } } = useForm<LoginForm>({
+  const { register, handleSubmit, getValues, formState: { errors } } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
   })
 
@@ -64,23 +65,47 @@ export const LoginPage = () => {
             {errors.password && <p className="text-xs text-red-500 mt-1">{errors.password.message}</p>}
           </div>
 
-          {error && (
+          {error && !isEmailNotConfirmed && (
             <p className="text-xs text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>
+          )}
+
+          {isEmailNotConfirmed && (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-3 space-y-2">
+              <p className="text-xs text-amber-800 font-medium">Tu email aún no está verificado.</p>
+              <p className="text-xs text-amber-700">Revisa tu bandeja de entrada o solicita un nuevo código.</p>
+              <button
+                type="button"
+                onClick={() => navigate('/verify-email', { state: { email: getValues('email') } })}
+                className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 hover:cursor-pointer transition-colors underline"
+              >
+                Ir a verificar mi cuenta →
+              </button>
+            </div>
           )}
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-indigo-600 text-white rounded-lg py-2.5 text-sm font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+            className="w-full bg-indigo-600 text-white rounded-lg py-2.5 text-sm font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 hover:cursor-pointer"
           >
             {loading ? <Spinner size="sm" /> : 'Iniciar sesión'}
           </button>
         </form>
 
-        <p className="text-center text-sm text-slate-500 mt-6">
-          ¿No tienes cuenta?{' '}
-          <Link to="/register" className="text-indigo-600 font-medium hover:underline">Regístrate</Link>
-        </p>
+        <div className="flex items-center justify-between mt-4">
+          <Link
+            to="/forgot-password"
+            className="text-xs text-slate-400 hover:text-indigo-600 transition-colors"
+          >
+            ¿Olvidaste tu contraseña?
+          </Link>
+          <Link
+            to="/register"
+            className="text-xs text-indigo-600 font-medium hover:underline"
+          >
+            Crear cuenta
+          </Link>
+        </div>
       </div>
     </div>
   )
@@ -108,15 +133,13 @@ export const RegisterPage = () => {
   })
 
   const onSubmit = async (data: RegisterForm) => {
-    const { registerWithEmail, loginWithEmail } = await import('../store/authSlice')
     const result = await dispatch(registerWithEmail({
       email: data.email,
       password: data.password,
       username: data.username,
     }))
     if (registerWithEmail.fulfilled.match(result)) {
-      await dispatch(loginWithEmail({ email: data.email, password: data.password }))
-      navigate('/', { replace: true })
+      navigate('/verify-email', { state: { email: data.email }, replace: true })
     }
   }
 
@@ -175,7 +198,7 @@ export const RegisterPage = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-indigo-600 text-white rounded-lg py-2.5 text-sm font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+            className="w-full bg-indigo-600 text-white rounded-lg py-2.5 text-sm font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 hover:cursor-pointer"
           >
             {loading ? <Spinner size="sm" /> : 'Crear cuenta'}
           </button>

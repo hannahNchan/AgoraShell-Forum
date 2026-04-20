@@ -8,8 +8,14 @@ import AdminPage from '../../src/features/auth/pages/AdminPage.tsx'
 import HotTopicsPage from '../features/threads/pages/HotTopicsPage'
 import SettingsPage from '../features/auth/pages/SettingsPage.tsx'
 import ComingSoon from '../components/ComingSoon'
+import SearchPage from '../features/search/pages/SearchPage'
+import HomePage from '../features/forums/pages/HomePage'
+import TagPage from '../features/tags/pages/TagPage'
+import VerifyEmailPage from '../features/auth/pages/VerifyEmailPage'
+import AuthCallbackPage from '../features/auth/pages/AuthCallbackPage'
+import ThreadPage from '../features/threads/pages/ThreadPage'
 
-const MAINTENANCE_MODE = true
+const MAINTENANCE_MODE = false
 
 const maintenanceRoutes = [
   { path: '*', element: <ComingSoon /> },
@@ -20,17 +26,23 @@ const appRoutes = [
     path: '/',
     element: <MainLayout />,
     children: [
-      { index: true, element: <ForumsPage /> },
+      { index: true, element: <HomePage /> },
+      { path: 'channels', element: <ForumsPage /> },
       { path: 'channels/:channelId', element: <ThreadsPage /> },
       { path: 'channels/:channelId/topics/:topicId', element: <ThreadDetailPage /> },
+      { path: 'channels/topics/:topicId/thread/:replyId', element: <ThreadPage /> },
+      { path: 'tags/:slug', element: <TagPage /> },
       { path: 'saved', element: <div className="text-slate-400 text-center py-16">Temas guardados — próximamente</div> },
       { path: 'admin', element: <AdminPage /> },
       { path: 'hot', element: <HotTopicsPage /> },
       { path: 'settings', element: <SettingsPage /> },
+      { path: 'search', element: <SearchPage /> },
     ],
   },
   { path: '/login', element: <LoginPage /> },
   { path: '/register', element: <RegisterPage /> },
+  { path: '/verify-email', element: <VerifyEmailPage /> },
+  { path: '/auth/callback', element: <AuthCallbackPage /> },
   { path: '*', element: <Navigate to="/" replace /> },
 ]
 

@@ -1,311 +1,28 @@
-import { useEffect, useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
-import { useDispatch, useSelector } from 'react-redux'
-import { Plus, Star, MessageSquare, Clock, X, ChevronDown, ChevronUp, Trash2 } from 'lucide-react'
-import { formatDistanceToNow } from 'date-fns'
-import { es } from 'date-fns/locale'
-import { type AppDispatch, type RootState } from '../../../store'
-import { useRole } from '../../auth/hooks/useRole'
-import { selectProfile } from '../../auth/store/authSelectors'
-import { fetchTopicsByChannel, createTopic, toggleStar, setRepliesCount, deleteTopic } from '../store/threadsSlice'
+import { useState } from 'react'
+import { useParams } from 'react-router-dom'
+import { Plus, MessageSquare, Tag as TagIcon, X } from 'lucide-react'
 import { useAuth } from '../../auth/hooks/useAuth'
+import { useRole } from '../../auth/hooks/useRole'
+import { useChannel } from '../hooks/useChannel'
+import CreateTopicModal from '../components/CreateTopicModal'
+import ChannelTopicCard from '../components/ChannelTopicCard'
 import Spinner from '../../../components/shared/Spinner'
-import RichTextEditor from '../../../components/shared/RichTextEditor'
-import { supabase } from '../../../services/supabase'
+import { type Tag } from '../../../types'
 
-const CreateTopicModal = ({ channelId, onClose }: { channelId: string; onClose: () => void }) => {
-  const dispatch = useDispatch<AppDispatch>()
-  const [title, setTitle] = useState('')
-  const [content, setContent] = useState('')
-  const [submitting, setSubmitting] = useState(false)
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!title.trim() || !content || content === '<p></p>') return
-    setSubmitting(true)
-    try {
-      await dispatch(createTopic({ channel_id: channelId, title: title.trim(), content })).unwrap()
-      onClose()
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 backdrop-blur-sm pt-10 pb-4 px-4 overflow-y-auto">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl">
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-slate-800">Nuevo tema</h3>
-          <button onClick={onClose} className="hover:cursor-pointer text-slate-400 hover:text-slate-600 transition-colors">
-            <X size={20} />
-          </button>
-        </div>
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Título *</label>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="¿Sobre qué quieres hablar?"
-              className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              autoFocus
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Contenido *</label>
-            <RichTextEditor
-              onChange={setContent}
-              placeholder="Escribe el contenido de tu tema..."
-              minHeight="200px"
-            />
-          </div>
-          <div className="flex gap-3 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 border border-slate-200 text-slate-600 rounded-lg py-2.5 text-sm font-medium hover:bg-slate-50 transition-colors"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={submitting || !title.trim()}
-              className="flex-1 bg-indigo-600 text-white rounded-lg py-2.5 text-sm font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-            >
-              {submitting ? <Spinner size="sm" /> : 'Publicar tema'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  )
-}
-
-const TopicCard = ({ topic }: { topic: any }) => {
-  const dispatch = useDispatch<AppDispatch>()
-  const { isAuthenticated } = useAuth()
-  const profile = useSelector(selectProfile)
-  const { isModerator } = useRole()
-  const canDelete = isModerator || profile?.id === topic.author_id
-  const [expanded, setExpanded] = useState(false)
-  const [replies, setReplies] = useState<any[]>([])
-  const [loadingReplies, setLoadingReplies] = useState(false)
-  const [fetched, setFetched] = useState(false)
-
-  const handleStar = (e: React.MouseEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    if (!isAuthenticated) return
-    dispatch(toggleStar({ topicId: topic.id, isStarred: topic.is_starred }))
-  }
-
-  const handleToggle = async (e: React.MouseEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-
-    if (!expanded && !fetched) {
-      setLoadingReplies(true)
-      const { data } = await supabase
-        .from('replies')
-        .select('id, content, created_at, author:profiles(username, avatar_url)')
-        .eq('topic_id', topic.id)
-        .order('created_at', { ascending: true })
-        .limit(5)
-      setReplies(data || [])
-      setFetched(true)
-      setLoadingReplies(false)
-    }
-
-    setExpanded(!expanded)
-  }
-
-  const stripHtml = (html: string) => {
-    const tmp = document.createElement('div')
-    tmp.innerHTML = html
-    return tmp.textContent || tmp.innerText || ''
-  }
-
-  return (
-    <div className="bg-white rounded-xl border border-slate-200 hover:border-indigo-200 hover:shadow-sm transition-all overflow-hidden">
-      <div className="flex items-start gap-4 p-5">
-        <div className="w-9 h-9 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-semibold text-sm flex-shrink-0 overflow-hidden">
-          {topic.author?.avatar_url ? (
-            <img src={topic.author.avatar_url} alt="" className="w-9 h-9 object-cover" />
-          ) : (
-            topic.author?.username?.charAt(0).toUpperCase()
-          )}
-        </div>
-
-        <div className="flex-1 min-w-0">
-          <Link
-            to={`topics/${topic.id}`}
-            className="font-semibold text-slate-800 hover:text-indigo-600 transition-colors leading-tight block"
-          >
-            {topic.title}
-          </Link>
-          <div className="flex items-center gap-3 mt-1.5 text-xs text-slate-400">
-            <span className="font-medium text-slate-500">{topic.author?.username}</span>
-            <span className="flex items-center gap-1">
-              <Clock size={11} />
-              {formatDistanceToNow(new Date(topic.created_at), { addSuffix: true, locale: es })}
-            </span>
-          </div>
-        </div>
-
-        <div className="flex flex-col items-start md:flex-row md:items-center gap-4 text-slate-400 flex-shrink-0">
-          <div className="flex flex-row gap-4">
-            <button
-              onClick={handleStar}
-              className={`flex items-center gap-1 text-xs transition-colors ${topic.is_starred ? 'text-amber-500' : 'hover:text-amber-500'}`}
-            >
-              <Star size={14} fill={topic.is_starred ? 'currentColor' : 'none'} />
-              <span>{topic.stars_count}</span>
-            </button>
-
-            <span className="flex items-center gap-1 text-xs text-slate-400">
-              <MessageSquare size={14} />
-              <span>{topic.replies_count} {topic.replies_count === 1 ? 'respuesta' : 'respuestas'}</span>
-            </span>
-          </div>
-
-          {canDelete && isAuthenticated && (
-            <button
-              onClick={(e) => {
-                e.preventDefault()
-                e.stopPropagation()
-                if (!window.confirm('¿Eliminar este tema? Esta acción no se puede deshacer.')) return
-                dispatch(deleteTopic(topic.id))
-              }}
-              className="px-2 py-1 rounded-sm bg-red-100 hover:bg-red-200 hover:cursor-pointer flex items-center gap-1 text-xs text-red-400 hover:text-red-500 transition-colors"
-              title="Eliminar tema"
-            >
-              <Trash2 size={18} />
-              Eliminar tema
-            </button>
-          )}
-        </div>
-      </div>
-
-      {topic.replies_count > 0 && (
-        <button
-          onClick={handleToggle}
-          className={`w-full flex items-center justify-center gap-2 py-2 text-xs font-medium hover:cursor-pointer border-t transition-colors ${expanded
-            ? 'border-indigo-100 bg-indigo-50 text-indigo-600 hover:bg-indigo-100'
-            : 'border-slate-100 bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-slate-600'
-            }`}
-        >
-          {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-          {expanded ? 'Ocultar respuestas' : `Previsualizar ${topic.replies_count === 1 ? 'respuesta' : 'respuestas'}`}
-        </button>
-      )}
-
-      {expanded && (
-        <div className="border-t border-slate-100 ml-[52px] mr-4 mb-4">
-          {loadingReplies ? (
-            <div className="flex justify-center py-4">
-              <Spinner size="sm" />
-            </div>
-          ) : replies.length === 0 ? (
-            <p className="text-xs text-slate-400 py-3">Sin respuestas aún.</p>
-          ) : (
-            <div className="relative pl-4">
-              <div className="absolute left-0 top-0 bottom-0 w-px bg-slate-200" />
-              <div className="flex items-center gap-1.5 pt-3 pb-2">
-                <div className="flex -space-x-2">
-                  {replies
-                    .filter((r: any, idx: number, arr: any[]) =>
-                      arr.findIndex((x: any) => x.author?.username === r.author?.username) === idx
-                    )
-                    .slice(0, 4)
-                    .map((r: any) => (
-                      <div
-                        key={r.author?.username}
-                        className="w-6 h-6 rounded-full bg-indigo-100 border-2 border-white flex items-center justify-center text-indigo-700 font-semibold text-[10px] overflow-hidden flex-shrink-0"
-                      >
-                        {r.author?.avatar_url ? (
-                          <img src={r.author.avatar_url} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                          r.author?.username?.charAt(0).toUpperCase()
-                        )}
-                      </div>
-                    ))}
-                </div>
-                <span className="text-xs text-slate-400 ml-1">
-                  {topic.replies_count} {topic.replies_count === 1 ? 'respuesta' : 'respuestas'}
-                </span>
-              </div>
-              <div className="space-y-2 pb-2">
-                {replies.map((r: any) => (
-                  <div key={r.id} className="flex items-start gap-2.5">
-                    <div className="w-6 h-6 rounded-full bg-indigo-100 flex-shrink-0 flex items-center justify-center text-indigo-700 font-semibold text-[10px] overflow-hidden mt-0.5">
-                      {r.author?.avatar_url ? (
-                        <img src={r.author.avatar_url} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        r.author?.username?.charAt(0).toUpperCase()
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <span className="text-xs font-medium text-slate-600">{r.author?.username} </span>
-                      <span className="text-xs text-slate-400">
-                        {stripHtml(r.content).slice(0, 80)}{stripHtml(r.content).length > 80 ? '…' : ''}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              {topic.replies_count > 5 && (
-                <Link
-                  to={`topics/${topic.id}`}
-                  className="text-xs text-indigo-500 hover:underline pb-2 block"
-                >
-                  Ver las {topic.replies_count - 5} respuestas restantes →
-                </Link>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  )
-}
-
-export const ThreadsPage = () => {
+const ThreadsPage = () => {
   const { channelId } = useParams<{ channelId: string }>()
-  const dispatch = useDispatch<AppDispatch>()
   const { isAuthenticated } = useAuth()
   const { isBanned } = useRole()
   const [showCreate, setShowCreate] = useState(false)
 
-  const { items: topics, loading } = useSelector((state: RootState) => state.topics)
-  const currentChannel = useSelector((state: RootState) =>
-    state.channels.items.find((c) => c.id === channelId)
-  )
+  const {
+    topics, loading, loadingMore, hasMore,
+    maxTags, currentChannel, channelTags, activeTags,
+    loaderRef, handleTagFilter, clearTagFilters,
+  } = useChannel(channelId)
 
-  useEffect(() => {
-    if (!channelId) return
-
-    dispatch(fetchTopicsByChannel(channelId))
-
-    const realtimeChannel = supabase
-      .channel(`replies-count:${channelId}`)
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'replies' },
-        async (payload) => {
-          const topicId = payload.new.topic_id
-          const { data } = await supabase
-            .from('topics')
-            .select('replies_count')
-            .eq('id', topicId)
-            .single()
-          if (data) dispatch(setRepliesCount({ topicId, count: data.replies_count }))
-        }
-      )
-      .subscribe()
-
-    return () => { supabase.removeChannel(realtimeChannel) }
-  }, [channelId, dispatch])
+  const pinnedTopics = topics.filter((t) => t.is_pinned)
+  const normalTopics = topics.filter((t) => !t.is_pinned)
 
   return (
     <div className="space-y-4">
@@ -313,16 +30,16 @@ export const ThreadsPage = () => {
         <div>
           <div className="flex items-center gap-2">
             <span className="text-2xl">{currentChannel?.icon}</span>
-            <h1 className="text-2xl font-bold text-slate-800">{currentChannel?.name || 'Canal'}</h1>
+            <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">{currentChannel?.name || 'Canal'}</h1>
           </div>
           {currentChannel?.description && (
-            <p className="text-slate-500 text-sm mt-1">{currentChannel.description}</p>
+            <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">{currentChannel.description}</p>
           )}
         </div>
         {isAuthenticated && !isBanned && (
           <button
             onClick={() => setShowCreate(true)}
-            className="flex hover:cursor-pointer items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors flex-shrink-0"
+            className="flex hover:cursor-pointer items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors shrink-0"
           >
             <Plus size={16} />
             Nuevo tema
@@ -330,18 +47,54 @@ export const ThreadsPage = () => {
         )}
       </div>
 
-      {loading ? (
-        <div className="flex justify-center py-16">
-          <Spinner size="lg" />
+      {channelTags.length > 0 && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs text-slate-400 font-medium flex items-center gap-1">
+            <TagIcon size={12} />
+            Filtrar:
+          </span>
+          {channelTags.map((tag: Tag) => {
+            const isActive = activeTags.some((t) => t.id === tag.id)
+            return (
+              <button
+                key={tag.id}
+                onClick={() => handleTagFilter(tag)}
+                className={`hover:cursor-pointer inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${isActive
+                    ? 'bg-indigo-600 text-white border-indigo-600'
+                    : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-600 hover:border-indigo-300 dark:hover:border-indigo-600 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30'
+                  }`}
+              >
+                <TagIcon size={9} />
+                {tag.name}
+                {isActive && <X size={11} className="ml-0.5" />}
+              </button>
+            )
+          })}
+          {activeTags.length > 0 && (
+            <button
+              onClick={clearTagFilters}
+              className="hover:cursor-pointer text-xs text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors underline"
+            >
+              Limpiar filtros
+            </button>
+          )}
         </div>
+      )}
+
+      {loading ? (
+        <div className="flex justify-center py-16"><Spinner size="lg" /></div>
       ) : topics.length === 0 ? (
         <div className="text-center py-16 text-slate-400">
           <MessageSquare size={40} className="mx-auto mb-3 opacity-30" />
-          <p className="font-medium">Nadie ha publicado aún</p>
-          {isAuthenticated && !isBanned && (
+          <p className="font-medium">
+            {activeTags.length > 0
+              ? `No hay temas con ${activeTags.length === 1 ? `el tag "${activeTags[0].name}"` : 'esos tags'}`
+              : 'Nadie ha publicado aún'}
+          </p>
+          {isAuthenticated && !isBanned && activeTags.length === 0 && (
             <button
               onClick={() => setShowCreate(true)}
-              className="mt-4 text-indigo-600 text-sm font-medium hover:underline"
+              className="mt-4 text-indigo-600 text-sm font-medium hover:underline hover:cursor-pointer"
             >
               Sé el primero en publicar
             </button>
@@ -349,14 +102,43 @@ export const ThreadsPage = () => {
         </div>
       ) : (
         <div className="space-y-2">
-          {topics.map((topic) => (
-            <TopicCard key={topic.id} topic={topic} />
+          {pinnedTopics.length > 0 && (
+            <>
+              {pinnedTopics.map((topic) => (
+                <ChannelTopicCard key={topic.id} topic={topic} maxTags={maxTags} />
+              ))}
+              {normalTopics.length > 0 && (
+                <div className="flex items-center gap-3 py-1">
+                  <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
+                  <span className="text-xs text-slate-400 font-medium whitespace-nowrap">Todos los temas</span>
+                  <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
+                </div>
+              )}
+            </>
+          )}
+          {normalTopics.map((topic) => (
+            <ChannelTopicCard key={topic.id} topic={topic} maxTags={maxTags} />
           ))}
         </div>
       )}
 
+      <div ref={loaderRef} className="flex flex-col items-center py-3 gap-3">
+        {loadingMore && (
+          <>
+            <img src="/images/big_logo.svg" alt="Cargando" className="w-64 animate-pulse" />
+            <span className="text-base text-slate-400">Cargando más temas...</span>
+          </>
+        )}
+        {!hasMore && topics.length > 0 && (
+          <div className="flex flex-col items-center gap-2">
+            <img src="/images/big_logo.svg" alt="" className="w-10 h-10 opacity-20" />
+            <span className="text-xs text-slate-400">No hay más temas</span>
+          </div>
+        )}
+      </div>
+
       {showCreate && channelId && (
-        <CreateTopicModal channelId={channelId} onClose={() => setShowCreate(false)} />
+        <CreateTopicModal channelId={channelId} onClose={() => setShowCreate(false)} maxTags={maxTags} />
       )}
     </div>
   )

@@ -5,18 +5,22 @@ import { type AppDispatch } from '../../../store'
 import { createTopic } from '../store/threadsSlice'
 import Spinner from '../../../components/shared/Spinner'
 import RichTextEditor from '../../../components/shared/RichTextEditor'
+import TagInput from '../../tags/components/TagInput'
 import { useRole } from '../../auth/hooks/useRole'
+import { type Tag } from '../../../types'
 
 interface CreateTopicModalProps {
   channelId: string
   onClose: () => void
+  maxTags: number
 }
 
-const CreateTopicModal = ({ channelId, onClose }: CreateTopicModalProps) => {
+const CreateTopicModal = ({ channelId, onClose, maxTags }: CreateTopicModalProps) => {
   const dispatch = useDispatch<AppDispatch>()
   const { isBanned } = useRole()
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
+  const [selectedTags, setSelectedTags] = useState<Tag[]>([])
   const [submitting, setSubmitting] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -24,7 +28,12 @@ const CreateTopicModal = ({ channelId, onClose }: CreateTopicModalProps) => {
     if (!title.trim() || !content || content === '<p></p>') return
     setSubmitting(true)
     try {
-      await dispatch(createTopic({ channel_id: channelId, title: title.trim(), content })).unwrap()
+      await dispatch(createTopic({
+        channel_id: channelId,
+        title: title.trim(),
+        content,
+        tagIds: selectedTags.map((t) => t.id),
+      })).unwrap()
       onClose()
     } finally {
       setSubmitting(false)
@@ -33,54 +42,54 @@ const CreateTopicModal = ({ channelId, onClose }: CreateTopicModalProps) => {
 
   if (isBanned) return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 text-center space-y-4">
-        <p className="text-slate-700 font-medium">Tu cuenta ha sido suspendida y no puedes publicar contenido.</p>
-        <button onClick={onClose} className="text-sm text-slate-500 hover:text-slate-700 transition-colors">Cerrar</button>
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md p-6 text-center space-y-4">
+        <p className="text-slate-700 dark:text-slate-300 font-medium">Tu cuenta ha sido suspendida y no puedes publicar contenido.</p>
+        <button onClick={onClose} className="text-sm text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors hover:cursor-pointer">Cerrar</button>
       </div>
     </div>
   )
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 backdrop-blur-sm pt-10 pb-4 px-4 overflow-y-auto">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl">
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-slate-800">Nuevo tema</h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition-colors">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-2xl">
+        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100">Nuevo tema</h3>
+          <button onClick={onClose} className="hover:cursor-pointer text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
             <X size={20} />
           </button>
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Título *</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Título *</label>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="¿Sobre qué quieres hablar?"
-              className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 dark:placeholder-slate-400 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               autoFocus
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Contenido *</label>
-            <RichTextEditor
-              onChange={setContent}
-              placeholder="Escribe el contenido de tu tema..."
-              minHeight="200px"
-            />
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Contenido *</label>
+            <RichTextEditor onChange={setContent} placeholder="Escribe el contenido de tu tema..." minHeight="200px" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Tags</label>
+            <TagInput selected={selectedTags} onChange={setSelectedTags} maxTags={maxTags} />
           </div>
           <div className="flex gap-3 pt-2">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 border border-slate-200 text-slate-600 rounded-lg py-2.5 text-sm font-medium hover:bg-slate-50 transition-colors"
+              className="flex-1 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-lg py-2.5 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors hover:cursor-pointer"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={submitting || !title.trim()}
-              className="flex-1 bg-indigo-600 text-white rounded-lg py-2.5 text-sm font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              className="flex-1 bg-indigo-600 text-white rounded-lg py-2.5 text-sm font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 hover:cursor-pointer"
             >
               {submitting ? <Spinner size="sm" /> : 'Publicar tema'}
             </button>

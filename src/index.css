@@ -1,7 +1,10 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
-/* Tiptap placeholder */
+/* ── Dark mode variant ──────────────────────────────────────────── */
+@variant dark (&:where(.dark, .dark *));
+
+/* ── Tiptap placeholder ─────────────────────────────────────────── */
 .tiptap p.is-editor-empty:first-child::before {
   color: #94a3b8;
   content: attr(data-placeholder);
@@ -9,16 +12,22 @@
   height: 0;
   pointer-events: none;
 }
+.dark .tiptap p.is-editor-empty:first-child::before {
+  color: #64748b;
+}
 
-/* Tiptap focus */
+/* ── Tiptap focus ───────────────────────────────────────────────── */
 .tiptap:focus {
   outline: none;
 }
 
-/* Smooth scrollbar */
+/* ── Smooth scrollbar ───────────────────────────────────────────── */
 * {
   scrollbar-width: thin;
   scrollbar-color: #e2e8f0 transparent;
+}
+.dark * {
+  scrollbar-color: #334155 transparent;
 }
 
 /* ── Syntax highlighting (Catppuccin Mocha) ─────────────────────── */
@@ -54,7 +63,6 @@
   position: relative;
   white-space: pre;
 }
-
 .prose pre code {
   background: transparent !important;
   color: #cdd6f4;
@@ -62,3 +70,85 @@
   line-height: 1.5rem;
   font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
 }
+
+/* ── Dark mode prose overrides ──────────────────────────────────── */
+.dark .prose { color: #cbd5e1; }
+.dark .prose h1, .dark .prose h2, .dark .prose h3,
+.dark .prose h4, .dark .prose h5, .dark .prose h6 { color: #f1f5f9; }
+.dark .prose strong { color: #f1f5f9; }
+.dark .prose a { color: #818cf8; }
+.dark .prose blockquote { color: #94a3b8; border-left-color: #334155; }
+.dark .prose code:not(pre code) {
+  background: #1e293b;
+  color: #a5b4fc;
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+.dark .prose hr { border-color: #1e293b; }
+
+/* ── Mention chip ───────────────────────────────────────────────── */
+.mention {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  background: rgba(99, 102, 241, 0.1);
+  color: #4f46e5;
+  font-weight: 600;
+  font-size: 0.85em;
+  padding: 0 6px;
+  border-radius: 999px;
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  cursor: default;
+  white-space: nowrap;
+  text-decoration: none;
+}
+.mention::before {
+  content: '@';
+  opacity: 0.6;
+  font-weight: 400;
+}
+.dark .mention {
+  background: rgba(129, 140, 248, 0.15);
+  color: #a5b4fc;
+  border-color: rgba(129, 140, 248, 0.3);
+}
+
+/* ── Tippy mention dropdown ─────────────────────────────────────── */
+.tippy-box[data-theme~='mention'] {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+}
+.tippy-box[data-theme~='mention'] > .tippy-content {
+  padding: 0;
+}
+
+/* ── RichTextEditor dark ────────────────────────────────────────── */
+.dark .tiptap {
+  color: #e2e8f0;
+}
+
+
+/* Barra de busqueda */ 
+
+@keyframes neon-spin {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+.neon-border {
+  border-radius: 8px;
+  padding: 1.5px;
+  background: linear-gradient(270deg, #55cdfc, #f7a8b8, #3b82f6, #f7a8b8, #55cdfc);
+  background-size: 300% 300%;
+  animation: neon-spin 3s ease infinite;
+}
+.neon-inner {
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+}
+
