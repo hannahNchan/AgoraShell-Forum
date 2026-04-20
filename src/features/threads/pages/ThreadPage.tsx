@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useSelector, useDispatch } from 'react-redux'
-import { Lock, Send, ArrowLeft } from 'lucide-react'
+import { Send } from 'lucide-react'
 import { useAuth } from '../../auth/hooks/useAuth'
 import { useRole } from '../../auth/hooks/useRole'
 import { selectProfile } from '../../auth/store/authSelectors'
