@@ -13,6 +13,7 @@ import HomePage from '../features/forums/pages/HomePage'
 import TagPage from '../features/tags/pages/TagPage'
 import VerifyEmailPage from '../features/auth/pages/VerifyEmailPage'
 import AuthCallbackPage from '../features/auth/pages/AuthCallbackPage'
+import ThreadPage from '../features/threads/pages/ThreadPage'
 
 const MAINTENANCE_MODE = false
 
@@ -29,6 +30,7 @@ const appRoutes = [
       { path: 'channels', element: <ForumsPage /> },
       { path: 'channels/:channelId', element: <ThreadsPage /> },
       { path: 'channels/:channelId/topics/:topicId', element: <ThreadDetailPage /> },
+      { path: 'channels/topics/:topicId/thread/:replyId', element: <ThreadPage /> },
       { path: 'tags/:slug', element: <TagPage /> },
       { path: 'saved', element: <div className="text-slate-400 text-center py-16">Temas guardados — próximamente</div> },
       { path: 'admin', element: <AdminPage /> },

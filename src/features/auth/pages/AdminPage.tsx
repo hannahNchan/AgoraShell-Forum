@@ -4,9 +4,9 @@ import { selectIsAdmin } from '../store/authSelectors'
 import { supabase } from '../../../services/supabase'
 import { type UserRole } from '../../../types'
 import { type AppDispatch, type RootState } from '../../../store'
-import { fetchSettings, updateMaxTags } from '../../tags/store/tagsSlice'
+import { fetchSettings, updateMaxTags, updateMaxReplyDepth } from '../../tags/store/tagsSlice'
 import Spinner from '../../../components/shared/Spinner'
-import { Settings, Tag as TagIcon, Users } from 'lucide-react'
+import { Settings, Tag as TagIcon, Users, MessageSquare } from 'lucide-react'
 
 interface UserRow {
   id: string
@@ -41,6 +41,9 @@ const AdminPage = () => {
   const [maxTagsInput, setMaxTagsInput] = useState<number>(3)
   const [savingSettings, setSavingSettings] = useState(false)
   const [settingsSaved, setSettingsSaved] = useState(false)
+  const [maxDepthInput, setMaxDepthInput] = useState<number>(5)
+  const [savingDepth, setSavingDepth] = useState(false)
+  const [depthSaved, setDepthSaved] = useState(false)
 
   const fetchUsers = async () => {
     setLoading(true)
@@ -60,7 +63,10 @@ const AdminPage = () => {
   }, [dispatch])
 
   useEffect(() => {
-    if (settings) setMaxTagsInput(settings.max_tags_per_topic)
+    if (settings) {
+      setMaxTagsInput(settings.max_tags_per_topic)
+      setMaxDepthInput(settings.max_reply_depth ?? 5)
+    }
   }, [settings])
 
   const handleRoleChange = async (userId: string, roleId: number) => {
@@ -85,6 +91,15 @@ const AdminPage = () => {
     setTimeout(() => setSettingsSaved(false), 2000)
   }
 
+  const handleSaveDepth = async () => {
+    if (maxDepthInput < 1 || maxDepthInput > 20) return
+    setSavingDepth(true)
+    await dispatch(updateMaxReplyDepth(maxDepthInput)).unwrap()
+    setSavingDepth(false)
+    setDepthSaved(true)
+    setTimeout(() => setDepthSaved(false), 2000)
+  }
+
   if (!isAdmin) {
     return (
       <div className="text-center py-16 text-slate-400">
@@ -102,7 +117,7 @@ const AdminPage = () => {
           <Settings size={16} className="text-slate-400" />
           <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Configuración general</h2>
         </div>
-        <div className="p-5">
+        <div className="p-5 space-y-6">
           <div className="flex items-center justify-between gap-6">
             <div>
               <div className="flex items-center gap-2 mb-0.5">
@@ -128,6 +143,35 @@ const AdminPage = () => {
                 className="hover:cursor-pointer px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center gap-2"
               >
                 {savingSettings ? <Spinner size="sm" /> : settingsSaved ? '✓ Guardado' : 'Guardar'}
+              </button>
+            </div>
+          </div>
+
+          <div className="border-t border-slate-100 dark:border-slate-700 pt-6 flex items-center justify-between gap-6">
+            <div>
+              <div className="flex items-center gap-2 mb-0.5">
+                <MessageSquare size={14} className="text-indigo-500" />
+                <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Profundidad máxima de hilos</span>
+              </div>
+              <p className="text-xs text-slate-400">
+                Niveles de anidación antes de mostrar "Seguir viendo este hilo". (1–20)
+              </p>
+            </div>
+            <div className="flex items-center gap-3 shrink-0">
+              <input
+                type="number"
+                min={1}
+                max={20}
+                value={maxDepthInput}
+                onChange={(e) => setMaxDepthInput(Number(e.target.value))}
+                className="w-20 border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg px-3 py-2 text-sm text-center focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+              <button
+                onClick={handleSaveDepth}
+                disabled={savingDepth || maxDepthInput < 1 || maxDepthInput > 20}
+                className="hover:cursor-pointer px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+              >
+                {savingDepth ? <Spinner size="sm" /> : depthSaved ? '✓ Guardado' : 'Guardar'}
               </button>
             </div>
           </div>
@@ -176,7 +220,7 @@ const AdminPage = () => {
                         value={u.role_id}
                         onChange={(e) => handleRoleChange(u.id, Number(e.target.value))}
                         disabled={saving === u.id}
-                        className="text-xs border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
+                        className="text-xs border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 hover:cursor-pointer"
                       >
                         {ROLES.map((r) => (
                           <option key={r.id} value={r.id}>{r.label}</option>

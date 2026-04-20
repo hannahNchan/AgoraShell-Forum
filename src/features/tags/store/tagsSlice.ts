@@ -113,6 +113,24 @@ export const updateMaxTags = createAsyncThunk(
   }
 )
 
+export const updateMaxReplyDepth = createAsyncThunk(
+  'tags/updateMaxReplyDepth',
+  async (depth: number, { rejectWithValue }) => {
+    try {
+      const { data, error } = await supabase
+        .from('app_settings')
+        .update({ max_reply_depth: depth })
+        .eq('id', 1)
+        .select()
+        .single()
+      if (error) throw error
+      return data as AppSettings
+    } catch (error: any) {
+      return rejectWithValue(error.message)
+    }
+  }
+)
+
 const tagsSlice = createSlice({
   name: 'tags',
   initialState,
@@ -130,21 +148,20 @@ const tagsSlice = createSlice({
         state.loading = false
         state.error = action.payload as string
       })
-
       .addCase(searchTags.fulfilled, (state, action) => {
         state.items = action.payload
       })
-
       .addCase(createTag.fulfilled, (state, action) => {
         const exists = state.items.find((t) => t.id === action.payload.id)
         if (!exists) state.items.push(action.payload)
       })
-
       .addCase(fetchSettings.fulfilled, (state, action) => {
         state.settings = action.payload
       })
-
       .addCase(updateMaxTags.fulfilled, (state, action) => {
+        state.settings = action.payload
+      })
+      .addCase(updateMaxReplyDepth.fulfilled, (state, action) => {
         state.settings = action.payload
       })
   },

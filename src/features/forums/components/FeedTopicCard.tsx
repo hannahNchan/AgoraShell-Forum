@@ -10,14 +10,15 @@ import { useAuth } from '../../auth/hooks/useAuth'
 import { supabase } from '../../../services/supabase'
 import Spinner from '../../../components/shared/Spinner'
 import { type Topic } from '../../../types'
+import ImageCarousel from '../../threads/components/ImageCarousel'
 
 interface FeedTopicCardProps {
   topic: Topic
 }
 
-const extractThumbnail = (html: string): string | null => {
-  const match = html.match(/<img[^>]+src=["']([^"']+)["']/)
-  return match ? match[1] : null
+const extractImages = (html: string): string[] => {
+  const matches = [...html.matchAll(/<img[^>]+src=["']([^"']+)["'][^>]*>/g)]
+  return matches.map((m) => m[1])
 }
 
 const stripHtml = (html: string) => {
@@ -34,7 +35,7 @@ const FeedTopicCard = ({ topic }: FeedTopicCardProps) => {
   const [loadingReplies, setLoadingReplies] = useState(false)
   const [fetched, setFetched] = useState(false)
 
-  const thumbnail = extractThumbnail(topic.content)
+  const images = extractImages(topic.content)
   const preview = stripHtml(topic.content).slice(0, 120)
 
   const handleStar = (e: React.MouseEvent) => {
@@ -64,17 +65,8 @@ const FeedTopicCard = ({ topic }: FeedTopicCardProps) => {
 
   return (
     <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-indigo-200 dark:hover:border-slate-400 hover:shadow-sm transition-all overflow-hidden">
-      {thumbnail && (
-        <Link to={`/channels/${topic.channel_id}/topics/${topic.id}`}>
-          <div className="w-full h-48 overflow-hidden bg-slate-100 dark:bg-slate-700">
-            <img
-              src={thumbnail}
-              alt=""
-              className="w-full h-full object-cover"
-              onError={(e) => { (e.target as HTMLImageElement).closest('div')!.style.display = 'none' }}
-            />
-          </div>
-        </Link>
+      {images.length > 0 && (
+        <ImageCarousel images={images} linkTo={`/channels/${topic.channel_id}/topics/${topic.id}`} />
       )}
 
       <div className="p-5">

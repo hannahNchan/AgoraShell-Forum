@@ -2,6 +2,7 @@ import { useRef, useEffect } from 'react'
 import { Clock, Smile, Send, Trash2, MessageCircle, Pencil, Check } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { es } from 'date-fns/locale'
+import { useNavigate } from 'react-router-dom'
 import EmojiPicker from 'emoji-picker-react'
 import { groupReactions } from '../../posts/store/postsSlice'
 import { useHighlightCode } from '../../../hooks/useHighlightCode'
@@ -35,14 +36,16 @@ interface ReplyCardProps {
   topicId: string
   topicClosed: boolean
   depth?: number
+  maxDepth?: number
 }
 
-const ReplyCard = ({ reply, topicId, topicClosed, depth = 0 }: ReplyCardProps) => {
+const ReplyCard = ({ reply, topicId, topicClosed, depth = 0, maxDepth = 5 }: ReplyCardProps) => {
   const replyContentRef = useRef<HTMLDivElement>(null)
   const linesRef = useRef<any[]>([])
   const scrollHandlerRef = useRef<(() => void) | null>(null)
   const repositionTimersRef = useRef<ReturnType<typeof setTimeout>[]>([])
   const containerRef = useRef<HTMLDivElement>(null)
+  const navigate = useNavigate()
   useHighlightCode(replyContentRef)
   useCodeCollapse(replyContentRef)
 
@@ -70,13 +73,8 @@ const ReplyCard = ({ reply, topicId, topicClosed, depth = 0 }: ReplyCardProps) =
           if (!childEl) return
           try {
             const line = new LL(parentEl, childEl, {
-              path: 'grid',
-              startSocket: 'bottom',
-              endSocket: 'left',
-              color: '#cbd5e1',
-              size: 2,
-              startPlug: 'behind',
-              endPlug: 'arrow2',
+              path: 'grid', startSocket: 'bottom', endSocket: 'left',
+              color: '#cbd5e1', size: 1, startPlug: 'behind', endPlug: 'arrow2', endSocketGravity: 8,
             })
             linesRef.current.push(line)
           } catch (_) { }
@@ -138,6 +136,8 @@ const ReplyCard = ({ reply, topicId, topicClosed, depth = 0 }: ReplyCardProps) =
 
   const reactionGroups = groupReactions(reply.reactions || [], user?.id)
   const wasEdited = reply.updated_at && reply.updated_at !== reply.created_at
+  const hasChildren = reply.children && reply.children.length > 0
+  const depthExceeded = depth >= maxDepth
 
   return (
     <div ref={containerRef} className={depth > 0 ? 'relative pl-0 md:pl-5' : ''}>
@@ -288,12 +288,29 @@ const ReplyCard = ({ reply, topicId, topicClosed, depth = 0 }: ReplyCardProps) =
             submitting={submitting}
           />
 
-          {reply.children && reply.children.length > 0 && (
+          {hasChildren && !depthExceeded && (
             <div className="mt-4 space-y-2">
-              {reply.children.map((child) => (
-                <ReplyCard key={child.id} reply={child} topicId={topicId} topicClosed={topicClosed} depth={depth + 1} />
+              {reply.children!.map((child) => (
+                <ReplyCard
+                  key={child.id}
+                  reply={child}
+                  topicId={topicId}
+                  topicClosed={topicClosed}
+                  depth={depth + 1}
+                  maxDepth={maxDepth}
+                />
               ))}
             </div>
+          )}
+
+          {hasChildren && depthExceeded && (
+            <button
+              onClick={() => navigate(`/channels/topics/${topicId}/thread/${reply.children![0].id}`)}
+              className="mt-3 flex items-center gap-2 text-xs text-indigo-500 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 hover:cursor-pointer transition-colors"
+            >
+              <MessageCircle size={13} />
+              Seguir viendo este hilo →
+            </button>
           )}
         </div>
       </div>

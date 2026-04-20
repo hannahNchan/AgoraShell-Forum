@@ -14,11 +14,17 @@ import { supabase } from '../../../services/supabase'
 import Spinner from '../../../components/shared/Spinner'
 import EditTopicModal from './EditTopicModal'
 import { type Tag } from '../../../types'
+import ImageCarousel from './ImageCarousel'
 
 const stripHtml = (html: string) => {
   const tmp = document.createElement('div')
   tmp.innerHTML = html
   return tmp.textContent || tmp.innerText || ''
+}
+
+const extractImages = (html: string): string[] => {
+  const matches = [...html.matchAll(/<img[^>]+src=["']([^"']+)["'][^>]*>/g)]
+  return matches.map((m) => m[1])
 }
 
 interface ChannelTopicCardProps {
@@ -43,6 +49,7 @@ const ChannelTopicCard = ({ topic, maxTags }: ChannelTopicCardProps) => {
   const [showEditModal, setShowEditModal] = useState(false)
 
   const wasEdited = topic.updated_at && topic.updated_at !== topic.created_at
+  const images = extractImages(topic.content)
 
   const handleStar = (e: React.MouseEvent) => {
     e.preventDefault(); e.stopPropagation()
@@ -103,6 +110,10 @@ const ChannelTopicCard = ({ topic, maxTags }: ChannelTopicCardProps) => {
             <Lock size={11} className="text-red-400" />
             <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Tema cerrado — no se aceptan más respuestas</span>
           </div>
+        )}
+
+        {images.length > 0 && (
+          <ImageCarousel images={images} linkTo={`topics/${topic.id}`} />
         )}
 
         <div className="flex items-start gap-4 p-5">
