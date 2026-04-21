@@ -18,6 +18,7 @@ import { useConfirm } from '../hooks/useConfirm'
 import EmojiPicker, { type EmojiClickData } from 'emoji-picker-react'
 import GlobalSearch from '../components/GlobalSearch'
 import NotificationPanel from '../features/notifications/components/NotificationPanel'
+import { useForoBloqueado } from '../hooks/useForoBloqueado'
 
 const CreateChannelModal = ({ onClose }: { onClose: () => void }) => {
   const dispatch = useDispatch<AppDispatch>()
@@ -165,6 +166,7 @@ export const MainLayout = () => {
   const unreadCount = useSelector((state: RootState) => state.notifications.unreadCount)
   const { confirm } = useConfirm()
   const isHome = location.pathname === '/'
+  const foroBloqueado = useForoBloqueado()
 
   useEffect(() => {
     dispatch(fetchChannels())
@@ -197,7 +199,9 @@ export const MainLayout = () => {
         className={`flex items-center gap-3 px-4 py-5 ${collapsed ? 'justify-center' : ''}`}
         style={{ borderBottom: '1px solid rgba(85,205,252,0.15)' }}
       >
-        <img src="/images/big_logo.svg" alt="Logo Agora shell" className="w-auto" />
+        {collapsed ?
+          (<img src="/agorashell.svg" alt="Logo Agora shell" className="w-auto" />)
+          : (<img src="/images/big_logo.svg" alt="Logo Agora shell" className="w-auto" />)}
       </div>
 
       <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-1">
@@ -304,7 +308,7 @@ export const MainLayout = () => {
           ))
         )}
 
-        {isModerator && (
+        {isModerator && !foroBloqueado && (
           <button
             onClick={() => setShowCreateChannel(true)}
             className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm hover:cursor-pointer transition-colors w-full ${collapsed ? 'justify-center' : ''}`}
@@ -436,7 +440,7 @@ export const MainLayout = () => {
         className={`
           fixed lg:relative z-40 lg:z-auto h-full flex flex-col transition-all duration-300 ease-in-out shrink-0
           ${collapsed ? 'lg:w-16' : 'lg:w-64'}
-          w-[80vw] lg:w-64
+          w-[80vw]
           ${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}
         style={{ background: '#0e1e40' }}

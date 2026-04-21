@@ -7,6 +7,7 @@ import Spinner from '../../../components/shared/Spinner'
 import RichTextEditor from '../../../components/shared/RichTextEditor'
 import TagInput from '../../tags/components/TagInput'
 import { useRole } from '../../auth/hooks/useRole'
+import { useForoBloqueado } from '../../../hooks/useForoBloqueado'
 import { type Tag } from '../../../types'
 
 interface CreateTopicModalProps {
@@ -18,6 +19,7 @@ interface CreateTopicModalProps {
 const CreateTopicModal = ({ channelId, onClose, maxTags }: CreateTopicModalProps) => {
   const dispatch = useDispatch<AppDispatch>()
   const { isBanned } = useRole()
+  const foroBloqueado = useForoBloqueado()
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
   const [selectedTags, setSelectedTags] = useState<Tag[]>([])
@@ -44,6 +46,15 @@ const CreateTopicModal = ({ channelId, onClose, maxTags }: CreateTopicModalProps
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
       <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md p-6 text-center space-y-4">
         <p className="text-slate-700 dark:text-slate-300 font-medium">Tu cuenta ha sido suspendida y no puedes publicar contenido.</p>
+        <button onClick={onClose} className="text-sm text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors hover:cursor-pointer">Cerrar</button>
+      </div>
+    </div>
+  )
+
+  if (foroBloqueado) return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md p-6 text-center space-y-4">
+        <p className="text-slate-700 dark:text-slate-300 font-medium">El foro está temporalmente bloqueado. Intenta más tarde.</p>
         <button onClick={onClose} className="text-sm text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors hover:cursor-pointer">Cerrar</button>
       </div>
     </div>
