@@ -12,6 +12,7 @@ import TopicHeader from '../components/TopicHeader'
 import ReplyCard from '../components/ReplyCard'
 import Spinner from '../../../components/shared/Spinner'
 import RichTextEditor from '../../../components/shared/RichTextEditor'
+import { useForoBloqueado } from '../../../hooks/useForoBloqueado'
 
 const ThreadDetailPage = () => {
   const { topicId } = useParams<{ topicId: string }>()
@@ -26,6 +27,7 @@ const ThreadDetailPage = () => {
   const [submitting, setSubmitting] = useState(false)
 
   const isClosed = topic?.is_closed ?? false
+  const foroBloqueado = useForoBloqueado()
   const canEditTopic = !!(topic && profile?.id === topic.author_id)
 
   const handleSubmitReply = async (e: React.FormEvent) => {
@@ -81,6 +83,10 @@ const ThreadDetailPage = () => {
         <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 p-5 text-center flex items-center justify-center gap-2 text-sm text-slate-500 dark:text-slate-400">
           <Lock size={15} className="text-slate-400" />
           Este tema está cerrado y no acepta más respuestas.
+        </div>
+      ) : foroBloqueado ? (
+        <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800 p-5 text-center text-sm text-amber-700 dark:text-amber-400">
+          El foro está temporalmente bloqueado.
         </div>
       ) : isAuthenticated ? (
         isBanned ? (

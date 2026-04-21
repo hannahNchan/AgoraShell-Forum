@@ -6,7 +6,7 @@ import { type UserRole } from '../../../types'
 import { type AppDispatch, type RootState } from '../../../store'
 import { fetchSettings, updateMaxTags, updateMaxReplyDepth } from '../../tags/store/tagsSlice'
 import Spinner from '../../../components/shared/Spinner'
-import { Settings, Tag as TagIcon, Users, MessageSquare } from 'lucide-react'
+import { ShieldAlert, Settings, Tag as TagIcon, Users, MessageSquare } from 'lucide-react'
 
 interface UserRow {
   id: string
@@ -44,6 +44,8 @@ const AdminPage = () => {
   const [maxDepthInput, setMaxDepthInput] = useState<number>(5)
   const [savingDepth, setSavingDepth] = useState(false)
   const [depthSaved, setDepthSaved] = useState(false)
+  const [foroBloqueado, setForoBloqueado] = useState(false)
+  const [savingBloqueo, setSavingBloqueo] = useState(false)
 
   const fetchUsers = async () => {
     setLoading(true)
@@ -58,8 +60,13 @@ const AdminPage = () => {
   }
 
   useEffect(() => {
-    fetchUsers()
-    dispatch(fetchSettings())
+    const init = async () => {
+      fetchUsers()
+      dispatch(fetchSettings())
+      const { data: settingsData } = await supabase.from('app_settings').select('foro_bloqueado').eq('id', 1).single()
+      if (settingsData) setForoBloqueado(settingsData.foro_bloqueado ?? false)
+    }
+    init()
   }, [dispatch])
 
   useEffect(() => {
@@ -80,6 +87,14 @@ const AdminPage = () => {
       )
     )
     setSaving(null)
+  }
+
+  const handleToggleBloqueo = async () => {
+    setSavingBloqueo(true)
+    const next = !foroBloqueado
+    await supabase.from('app_settings').update({ foro_bloqueado: next }).eq('id', 1)
+    setForoBloqueado(next)
+    setSavingBloqueo(false)
   }
 
   const handleSaveSettings = async () => {
@@ -174,6 +189,29 @@ const AdminPage = () => {
                 {savingDepth ? <Spinner size="sm" /> : depthSaved ? '✓ Guardado' : 'Guardar'}
               </button>
             </div>
+          </div>
+          <div className="border-t border-slate-100 dark:border-slate-700 pt-6 flex items-center justify-between gap-6">
+            <div>
+              <div className="flex items-center gap-2 mb-0.5">
+                <ShieldAlert size={14} className={foroBloqueado ? 'text-red-500' : 'text-slate-400'} />
+                <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Modo emergencia</span>
+              </div>
+              <p className="text-xs text-slate-400">
+                {foroBloqueado
+                  ? 'El foro está bloqueado — nadie puede crear canales, topics ni replies.'
+                  : 'Bloquea toda la actividad del foro instantáneamente.'}
+              </p>
+            </div>
+            <button
+              onClick={handleToggleBloqueo}
+              disabled={savingBloqueo}
+              className={`hover:cursor-pointer px-4 py-2 text-sm font-medium rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2 shrink-0 ${foroBloqueado
+                ? 'bg-green-600 hover:bg-green-700 text-white'
+                : 'bg-red-600 hover:bg-red-700 text-white'
+                }`}
+            >
+              {savingBloqueo ? <Spinner size="sm" /> : foroBloqueado ? '✓ Reactivar foro' : '⚠ Bloquear foro'}
+            </button>
           </div>
         </div>
       </div>
