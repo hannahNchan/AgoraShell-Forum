@@ -92,3 +92,26 @@ export interface AppSettings {
   max_reply_depth: number
   foro_bloqueado: boolean
 }
+
+export type ReportTargetType = 'topic' | 'reply' | 'user'
+export type ReportReason = 'spam' | 'abuse' | 'offensive' | 'personal_info' | 'off_topic' | 'other'
+export type ReportStatus = 'pending' | 'reviewed' | 'dismissed'
+
+export interface Report {
+  id: string
+  reporter_id: string
+  reported_user_id: string | null
+  target_type: ReportTargetType
+  target_topic_id: string | null
+  target_reply_id: string | null
+  target_user_id: string | null
+  reason: ReportReason
+  details: string | null
+  status: ReportStatus
+  created_at: string
+  updated_at: string
+  reporter?: Pick<Profile, 'id' | 'username' | 'avatar_url'>
+  reported_user?: Pick<Profile, 'id' | 'username' | 'avatar_url' | 'role'>
+  target_topic?: Pick<Topic, 'id' | 'title' | 'channel_id'>
+  target_reply?: Pick<Reply, 'id' | 'topic_id' | 'content'>
+}
