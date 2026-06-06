@@ -3,6 +3,7 @@ import { supabase } from '../../../services/supabase'
 import { type Reply, type ReplyReaction, type ReactionGroup } from '../../../types'
 import { incrementRepliesCount, decrementRepliesCount } from '../../threads/store/threadsSlice'
 import { ensureForumCanPublish } from '../../../services/forumLock'
+import { ensureUserCanCreateContent } from '../../../services/userRestrictions'
 
 interface PostsState {
   items: Reply[]
@@ -61,6 +62,7 @@ export const createReply = createAsyncThunk(
     try {
       const { data: { user } } = await supabase.auth.getUser()
       await ensureForumCanPublish(user?.id)
+      await ensureUserCanCreateContent(user?.id)
       const { data, error } = await supabase
         .from('replies')
         .insert([{ topic_id: topicId, content, author_id: user?.id, parent_id: parentId ?? null }])
