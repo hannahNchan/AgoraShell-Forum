@@ -6,6 +6,12 @@ export interface Profile {
   bio: string | null
   role_id: number
   role?: UserRole
+  suspended_until?: string | null
+  suspension_reason?: string | null
+  banned_reason?: string | null
+  moderation_previous_role_id?: number | null
+  moderation_updated_by?: string | null
+  moderation_updated_at?: string | null
   created_at: string
 }
 export interface Channel {

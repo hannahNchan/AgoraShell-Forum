@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
 import { supabase } from '../../../services/supabase'
 import { type Tag, type AppSettings } from '../../../types'
+import { ensureUserCanCreateContent } from '../../../services/userRestrictions'
 
 interface TagsState {
   items: Tag[]
@@ -58,6 +59,7 @@ export const createTag = createAsyncThunk(
   async (name: string, { rejectWithValue }) => {
     try {
       const { data: { user } } = await supabase.auth.getUser()
+      await ensureUserCanCreateContent(user?.id)
       const slug = toSlug(name)
       const { data: existing } = await supabase
         .from('tags')

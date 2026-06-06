@@ -13,6 +13,7 @@ export const selectIsModerator = (state: RootState) =>
   state.auth.profile?.role === 'moderator' || state.auth.profile?.role === 'admin'
 
 export const selectIsBanned = (state: RootState) =>
-  state.auth.profile?.role === 'banned'
+  state.auth.profile?.role === 'banned' ||
+  (!!state.auth.profile?.suspended_until && new Date(state.auth.profile.suspended_until).getTime() > Date.now())
 
 export const selectCanModerate = selectIsModerator
