@@ -13,6 +13,7 @@ import ReplyCard from '../components/ReplyCard'
 import Spinner from '../../../components/shared/Spinner'
 import RichTextEditor from '../../../components/shared/RichTextEditor'
 import { type Reply } from '../../../types'
+import { useForoBloqueado } from '../../../hooks/useForoBloqueado'
 
 const findReplyById = (replies: Reply[], id: string): Reply | null => {
   for (const r of replies) {
@@ -39,13 +40,14 @@ const ThreadPage = () => {
   const [submitting, setSubmitting] = useState(false)
 
   const isClosed = topic?.is_closed ?? false
+  const foroBloqueado = useForoBloqueado()
   const canEditTopic = !!(topic && profile?.id === topic.author_id)
 
   const rootReply = replyId ? findReplyById(replies, replyId) : null
 
   const handleSubmitReply = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!replyContent || replyContent === '<p></p>' || !topicId) return
+    if (!replyContent || replyContent === '<p></p>' || !topicId || foroBloqueado) return
     setSubmitting(true)
     try {
       await dispatch(createReply({ topicId, content: replyContent, parentId: replyId })).unwrap()
@@ -102,6 +104,11 @@ const ThreadPage = () => {
       )}
 
       {!isClosed && rootReply && (
+        foroBloqueado ? (
+          <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800 p-5 text-center text-sm text-amber-700 dark:text-amber-400">
+            El foro está temporalmente bloqueado.
+          </div>
+        ) :
         isAuthenticated ? (
           isBanned ? (
             <div className="bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-800 p-5 text-center text-sm text-red-500 dark:text-red-400">

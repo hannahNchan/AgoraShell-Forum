@@ -17,6 +17,10 @@ interface UserRow {
   created_at: string
 }
 
+type UserQueryRow = UserRow & {
+  roles?: { name?: UserRole } | null
+}
+
 const ROLES: { label: string; value: UserRole; id: number }[] = [
   { id: 1, label: 'Admin', value: 'admin' },
   { id: 2, label: 'Moderador', value: 'moderator' },
@@ -46,6 +50,7 @@ const AdminPage = () => {
   const [depthSaved, setDepthSaved] = useState(false)
   const [foroBloqueado, setForoBloqueado] = useState(false)
   const [savingBloqueo, setSavingBloqueo] = useState(false)
+  const [bloqueoError, setBloqueoError] = useState('')
 
   const fetchUsers = async () => {
     setLoading(true)
@@ -54,7 +59,7 @@ const AdminPage = () => {
       .select('*, roles(name)')
       .order('created_at', { ascending: false })
     setUsers(
-      (data || []).map((u: any) => ({ ...u, role: u.roles?.name as UserRole }))
+      ((data || []) as UserQueryRow[]).map((u) => ({ ...u, role: u.roles?.name as UserRole }))
     )
     setLoading(false)
   }
@@ -91,9 +96,19 @@ const AdminPage = () => {
 
   const handleToggleBloqueo = async () => {
     setSavingBloqueo(true)
+    setBloqueoError('')
     const next = !foroBloqueado
-    await supabase.from('app_settings').update({ foro_bloqueado: next }).eq('id', 1)
-    setForoBloqueado(next)
+    const { data, error } = await supabase
+      .from('app_settings')
+      .update({ foro_bloqueado: next })
+      .eq('id', 1)
+      .select('foro_bloqueado')
+      .single()
+    if (error) {
+      setBloqueoError(error.message)
+    } else {
+      setForoBloqueado(data.foro_bloqueado ?? false)
+    }
     setSavingBloqueo(false)
   }
 
@@ -198,9 +213,10 @@ const AdminPage = () => {
               </div>
               <p className="text-xs text-slate-400">
                 {foroBloqueado
-                  ? 'El foro está bloqueado — nadie puede crear canales, topics ni replies.'
-                  : 'Bloquea toda la actividad del foro instantáneamente.'}
+                  ? 'El foro está bloqueado para usuarios no admin: no pueden crear canales, temas ni replies.'
+                  : 'Bloquea la creación de canales, temas y replies para usuarios no admin.'}
               </p>
+              {bloqueoError && <p className="text-xs text-red-500 mt-2">{bloqueoError}</p>}
             </div>
             <button
               onClick={handleToggleBloqueo}

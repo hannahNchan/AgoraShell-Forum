@@ -22,6 +22,7 @@ import { useForoBloqueado } from '../hooks/useForoBloqueado'
 
 const CreateChannelModal = ({ onClose }: { onClose: () => void }) => {
   const dispatch = useDispatch<AppDispatch>()
+  const foroBloqueado = useForoBloqueado()
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [icon, setIcon] = useState('💬')
@@ -36,7 +37,7 @@ const CreateChannelModal = ({ onClose }: { onClose: () => void }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!name.trim()) return
+    if (!name.trim() || foroBloqueado) return
     setSubmitting(true)
     setError('')
     try {
@@ -83,6 +84,20 @@ const CreateChannelModal = ({ onClose }: { onClose: () => void }) => {
             <EmojiPicker onEmojiClick={handleEmojiClick} width={320} height={380} />
           </div>
 
+          {foroBloqueado ? (
+            <div className="flex-1 p-6 flex flex-col justify-center gap-4">
+              <p className="text-sm text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2">
+                El foro está temporalmente bloqueado.
+              </p>
+              <button
+                type="button"
+                onClick={onClose}
+                className="border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-lg py-2 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700 hover:cursor-pointer transition-colors"
+              >
+                Cerrar
+              </button>
+            </div>
+          ) : (
           <form onSubmit={handleSubmit} className="flex-1 p-6 space-y-4">
             <div className="md:hidden">
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
@@ -140,6 +155,7 @@ const CreateChannelModal = ({ onClose }: { onClose: () => void }) => {
               </button>
             </div>
           </form>
+          )}
         </div>
       </div>
     </div>
