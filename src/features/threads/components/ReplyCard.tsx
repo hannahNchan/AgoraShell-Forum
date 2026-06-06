@@ -111,6 +111,7 @@ const ReplyCard = ({ reply, topicId, topicClosed, depth = 0, maxDepth = 5 }: Rep
     user,
     isAuthenticated,
     isBanned,
+    foroBloqueado,
     canDelete,
     canEdit,
     showReplyEditor,
@@ -206,7 +207,7 @@ const ReplyCard = ({ reply, topicId, topicClosed, depth = 0, maxDepth = 5 }: Rep
                   </button>
                 ))}
 
-                {isAuthenticated && !isBanned && !topicClosed && (
+                {isAuthenticated && !isBanned && !topicClosed && !foroBloqueado && (
                   <button
                     onClick={handleReplyClick}
                     className="hover:cursor-pointer flex items-center gap-1 px-2 py-0.5 rounded-full border border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-indigo-500 hover:border-indigo-300 transition-colors text-xs"

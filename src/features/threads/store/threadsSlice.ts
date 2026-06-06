@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk, type PayloadAction } from '@reduxjs/toolkit'
 import { supabase } from '../../../services/supabase'
 import { type Topic, type Tag } from '../../../types'
+import { ensureForumCanPublish } from '../../../services/forumLock'
 
 const PAGE_SIZE = 20
 
@@ -168,6 +169,7 @@ export const createTopic = createAsyncThunk(
   ) => {
     try {
       const { data: { user } } = await supabase.auth.getUser()
+      await ensureForumCanPublish(user?.id)
       const { tagIds, ...topicPayload } = payload
       const { data, error } = await supabase
         .from('topics')
