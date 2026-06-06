@@ -32,7 +32,7 @@ const ThreadDetailPage = () => {
 
   const handleSubmitReply = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!replyContent || replyContent === '<p></p>' || !topicId) return
+    if (!replyContent || replyContent === '<p></p>' || !topicId || foroBloqueado) return
     setSubmitting(true)
     try {
       await dispatch(createReply({ topicId, content: replyContent })).unwrap()

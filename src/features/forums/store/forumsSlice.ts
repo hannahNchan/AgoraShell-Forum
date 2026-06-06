@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
 import { supabase } from '../../../services/supabase'
 import { type Channel } from '../../../types'
+import { ensureForumCanPublish } from '../../../services/forumLock'
 
 interface ChannelsState {
   items: Channel[]
@@ -35,6 +36,7 @@ export const createChannel = createAsyncThunk(
   ) => {
     try {
       const { data: { user } } = await supabase.auth.getUser()
+      await ensureForumCanPublish(user?.id)
       const { data, error } = await supabase
         .from('channels')
         .insert([{ ...payload, created_by: user?.id }])
@@ -52,11 +54,7 @@ export const deleteChannel = createAsyncThunk(
   'channels/delete',
   async (id: string, { rejectWithValue }) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      console.log('user id:', user?.id)
-      console.log('deleting channel:', id)
       const { error } = await supabase.from('channels').delete().eq('id', id)
-      console.log('delete error:', error)
       if (error) throw error
       return id
     } catch (error: any) {

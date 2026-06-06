@@ -90,4 +90,5 @@ export interface AppSettings {
   id: number
   max_tags_per_topic: number
   max_reply_depth: number
+  foro_bloqueado: boolean
 }

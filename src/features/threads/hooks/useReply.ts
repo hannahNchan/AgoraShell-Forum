@@ -7,6 +7,7 @@ import { useAuth } from '../../auth/hooks/useAuth'
 import { createReply, updateReply, deleteReply, toggleReaction } from '../../posts/store/postsSlice'
 import { useConfirm } from '../../../hooks/useConfirm'
 import { type Reply } from '../../../types'
+import { useForoBloqueado } from '../../../hooks/useForoBloqueado'
 
 export const useReply = (reply: Reply, topicId: string) => {
   const dispatch = useDispatch<AppDispatch>()
@@ -14,6 +15,7 @@ export const useReply = (reply: Reply, topicId: string) => {
   const profile = useSelector(selectProfile)
   const { isModerator, isBanned } = useRole()
   const { confirm } = useConfirm()
+  const foroBloqueado = useForoBloqueado()
 
   const canDelete = isModerator || profile?.id === reply.author_id
   const canEdit = profile?.id === reply.author_id
@@ -28,6 +30,7 @@ export const useReply = (reply: Reply, topicId: string) => {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
 
   const handleReplyClick = () => {
+    if (foroBloqueado) return
     const isMobile = window.innerWidth < 768
     if (isMobile) {
       setShowBottomSheet(true)
@@ -38,7 +41,7 @@ export const useReply = (reply: Reply, topicId: string) => {
   }
 
   const handleSubmitReply = async (content: string) => {
-    if (!content || content === '<p></p>') return
+    if (!content || content === '<p></p>' || foroBloqueado) return
     setSubmitting(true)
     try {
       await dispatch(createReply({ topicId, content, parentId: reply.id })).unwrap()
@@ -89,6 +92,7 @@ export const useReply = (reply: Reply, topicId: string) => {
     isAuthenticated,
     isModerator,
     isBanned,
+    foroBloqueado,
     canDelete,
     canEdit,
     showReplyEditor,

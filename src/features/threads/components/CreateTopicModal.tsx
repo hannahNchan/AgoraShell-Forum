@@ -27,7 +27,7 @@ const CreateTopicModal = ({ channelId, onClose, maxTags }: CreateTopicModalProps
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!title.trim() || !content || content === '<p></p>') return
+    if (!title.trim() || !content || content === '<p></p>' || foroBloqueado) return
     setSubmitting(true)
     try {
       await dispatch(createTopic({
