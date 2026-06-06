@@ -3,6 +3,8 @@ import { supabase } from '../../../services/supabase'
 import { type Topic, type Tag } from '../../../types'
 import { ensureForumCanPublish } from '../../../services/forumLock'
 import { ensureUserCanCreateContent } from '../../../services/userRestrictions'
+import { requireSyncedAuthUser } from '../../../services/authGuard'
+import { type RootState } from '../../../store'
 
 const PAGE_SIZE = 20
 
@@ -166,16 +168,16 @@ export const createTopic = createAsyncThunk(
   'topics/create',
   async (
     payload: { channel_id: string; title: string; content: string; tagIds?: string[] },
-    { rejectWithValue }
+    { getState, rejectWithValue }
   ) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      await ensureForumCanPublish(user?.id)
-      await ensureUserCanCreateContent(user?.id)
+      const user = await requireSyncedAuthUser(getState() as RootState)
+      await ensureForumCanPublish(user.id)
+      await ensureUserCanCreateContent(user.id)
       const { tagIds, ...topicPayload } = payload
       const { data, error } = await supabase
         .from('topics')
-        .insert([{ ...topicPayload, author_id: user?.id }])
+        .insert([{ ...topicPayload, author_id: user.id }])
         .select('id')
         .single()
       if (error) throw error
