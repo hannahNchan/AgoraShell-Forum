@@ -1,5 +1,5 @@
-import { useRef, useEffect } from 'react'
-import { Clock, Smile, Send, Trash2, MessageCircle, Pencil, Check } from 'lucide-react'
+import { useRef, useEffect, useState } from 'react'
+import { Clock, Smile, Send, Trash2, MessageCircle, Pencil, Check, Flag } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { useNavigate } from 'react-router-dom'
@@ -12,6 +12,7 @@ import ReplyBottomSheet from './ReplyBottomSheet'
 import RichTextEditor from '../../../components/shared/RichTextEditor'
 import Spinner from '../../../components/shared/Spinner'
 import { type Reply } from '../../../types'
+import ReportModal from '../../reports/components/ReportModal'
 
 interface AvatarProps {
   profile: any
@@ -45,6 +46,7 @@ const ReplyCard = ({ reply, topicId, topicClosed, depth = 0, maxDepth = 5 }: Rep
   const scrollHandlerRef = useRef<(() => void) | null>(null)
   const repositionTimersRef = useRef<ReturnType<typeof setTimeout>[]>([])
   const containerRef = useRef<HTMLDivElement>(null)
+  const [reportOpen, setReportOpen] = useState(false)
   const navigate = useNavigate()
   useHighlightCode(replyContentRef)
   useCodeCollapse(replyContentRef)
@@ -227,6 +229,16 @@ const ReplyCard = ({ reply, topicId, topicClosed, depth = 0, maxDepth = 5 }: Rep
                   </button>
                 )}
 
+                {isAuthenticated && (
+                  <button
+                    onClick={() => setReportOpen(true)}
+                    className="hover:cursor-pointer flex items-center gap-1 px-2 py-0.5 rounded-full border border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-red-500 hover:border-red-300 transition-colors text-xs"
+                  >
+                    <Flag size={12} />
+                    <span>Reportar</span>
+                  </button>
+                )}
+
                 {canDelete && isAuthenticated && (
                   <button
                     onClick={handleDeleteReply}
@@ -287,6 +299,28 @@ const ReplyCard = ({ reply, topicId, topicClosed, depth = 0, maxDepth = 5 }: Rep
             onSubmit={handleSubmitReply}
             replyingTo={reply.author?.username || ''}
             submitting={submitting}
+          />
+
+          <ReportModal
+            open={reportOpen}
+            onClose={() => setReportOpen(false)}
+            title="Reportar respuesta"
+            author={reply.author}
+            options={[
+              {
+                type: 'reply',
+                label: 'Respuesta',
+                targetTopicId: topicId,
+                targetReplyId: reply.id,
+                reportedUserId: reply.author_id,
+              },
+              {
+                type: 'user',
+                label: 'Autor',
+                targetUserId: reply.author_id,
+                reportedUserId: reply.author_id,
+              },
+            ]}
           />
 
           {hasChildren && !depthExceeded && (

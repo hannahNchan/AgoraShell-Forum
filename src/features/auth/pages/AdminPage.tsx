@@ -7,6 +7,7 @@ import { type AppDispatch, type RootState } from '../../../store'
 import { fetchSettings, updateMaxTags, updateMaxReplyDepth } from '../../tags/store/tagsSlice'
 import Spinner from '../../../components/shared/Spinner'
 import { ShieldAlert, Settings, Tag as TagIcon, Users, MessageSquare } from 'lucide-react'
+import ReportsAdminPanel from '../../reports/components/ReportsAdminPanel'
 
 interface UserRow {
   id: string
@@ -141,6 +142,8 @@ const AdminPage = () => {
   return (
     <div className="space-y-8">
       <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">Panel de administración</h1>
+
+      <ReportsAdminPanel />
 
       <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-700 flex items-center gap-2">
