@@ -2,6 +2,8 @@ import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
 import { supabase } from '../../../services/supabase'
 import { type Tag, type AppSettings } from '../../../types'
 import { ensureUserCanCreateContent } from '../../../services/userRestrictions'
+import { requireSyncedAuthUser } from '../../../services/authGuard'
+import { type RootState } from '../../../store'
 
 interface TagsState {
   items: Tag[]
@@ -56,10 +58,10 @@ export const searchTags = createAsyncThunk(
 
 export const createTag = createAsyncThunk(
   'tags/create',
-  async (name: string, { rejectWithValue }) => {
+  async (name: string, { getState, rejectWithValue }) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      await ensureUserCanCreateContent(user?.id)
+      const user = await requireSyncedAuthUser(getState() as RootState)
+      await ensureUserCanCreateContent(user.id)
       const slug = toSlug(name)
       const { data: existing } = await supabase
         .from('tags')
@@ -69,7 +71,7 @@ export const createTag = createAsyncThunk(
       if (existing) return existing as Tag
       const { data, error } = await supabase
         .from('tags')
-        .insert([{ name: name.trim(), slug, created_by: user?.id }])
+        .insert([{ name: name.trim(), slug, created_by: user.id }])
         .select()
         .single()
       if (error) throw error

@@ -176,6 +176,14 @@ const authSlice = createSlice({
     setSession: (state, action: PayloadAction<Session | null>) => {
       state.session = action.payload
       state.user = action.payload?.user ?? null
+      if (!action.payload) state.profile = null
+    },
+    clearAuthState: (state) => {
+      state.user = null
+      state.profile = null
+      state.session = null
+      state.loading = false
+      state.error = null
     },
     clearError: (state) => {
       state.error = null
@@ -237,5 +245,5 @@ const authSlice = createSlice({
   },
 })
 
-export const { setSession, clearError } = authSlice.actions
+export const { setSession, clearAuthState, clearError } = authSlice.actions
 export default authSlice.reducer
