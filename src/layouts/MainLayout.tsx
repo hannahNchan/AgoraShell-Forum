@@ -175,7 +175,7 @@ export const MainLayout = () => {
   const location = useLocation()
   const { channelId } = useParams()
 
-  const { profile, isAuthenticated, isModerator } = useAuth()
+  const { profile, isAuthenticated, isModerator, loading: authLoading } = useAuth()
   const { isAdmin } = useRole()
   const channels = useSelector((state: RootState) => state.channels.items)
   const channelsLoading = useSelector((state: RootState) => state.channels.loading)
@@ -515,7 +515,11 @@ export const MainLayout = () => {
               </div>
             )}
 
-            {isAuthenticated && profile ? (
+            {authLoading ? (
+              <div className="flex h-9 w-9 items-center justify-center">
+                <Spinner size="sm" />
+              </div>
+            ) : isAuthenticated && profile ? (
               <div className="relative">
                 <button
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
