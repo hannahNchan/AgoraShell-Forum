@@ -20,6 +20,8 @@ const REPORT_SELECT = `
   *,
   reporter:profiles!reports_reporter_id_fkey(id, username, avatar_url),
   reported_user:profiles!reports_reported_user_id_fkey(id, username, avatar_url, role),
+  assigned_moderator:profiles!reports_assigned_moderator_id_fkey(id, username, avatar_url),
+  handled_by:profiles!reports_handled_by_id_fkey(id, username, avatar_url),
   target_topic:topics!reports_target_topic_id_fkey(id, title, channel_id),
   target_reply:replies!reports_target_reply_id_fkey(id, topic_id, content)
 `
@@ -95,12 +97,77 @@ export const fetchReports = createAsyncThunk(
 
 export const updateReportStatus = createAsyncThunk(
   'reports/updateStatus',
-  async ({ reportId, status }: { reportId: string; status: ReportStatus }, { rejectWithValue }) => {
+  async ({ reportId, status, moderatorNote }: { reportId: string; status: ReportStatus; moderatorNote?: string }, { rejectWithValue }) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Debes iniciar sesión.')
+      const patch = status === 'reviewed' || status === 'dismissed'
+        ? {
+          status,
+          handled_by_id: user.id,
+          handled_at: new Date().toISOString(),
+          moderator_note: moderatorNote?.trim() || null,
+          updated_at: new Date().toISOString(),
+        }
+        : {
+          status,
+          handled_by_id: null,
+          handled_at: null,
+          moderator_note: null,
+          updated_at: new Date().toISOString(),
+        }
+      const { data, error } = await supabase
+        .from('reports')
+        .update(patch)
+        .eq('id', reportId)
+        .select(REPORT_SELECT)
+        .single()
+      if (error) throw error
+      return data as Report
+    } catch (error: unknown) {
+      return rejectWithValue(getErrorMessage(error))
+    }
+  }
+)
+
+export const claimReport = createAsyncThunk(
+  'reports/claim',
+  async (reportId: string, { rejectWithValue }) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Debes iniciar sesión.')
+      const { data, error } = await supabase
+        .from('reports')
+        .update({
+          status: 'in_review',
+          assigned_moderator_id: user.id,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', reportId)
+        .in('status', ['pending', 'in_review'])
+        .select(REPORT_SELECT)
+        .single()
+      if (error) throw error
+      return data as Report
+    } catch (error: unknown) {
+      return rejectWithValue(getErrorMessage(error))
+    }
+  }
+)
+
+export const releaseReport = createAsyncThunk(
+  'reports/release',
+  async (reportId: string, { rejectWithValue }) => {
     try {
       const { data, error } = await supabase
         .from('reports')
-        .update({ status, updated_at: new Date().toISOString() })
+        .update({
+          status: 'pending',
+          assigned_moderator_id: null,
+          updated_at: new Date().toISOString(),
+        })
         .eq('id', reportId)
+        .eq('status', 'in_review')
         .select(REPORT_SELECT)
         .single()
       if (error) throw error
@@ -144,6 +211,14 @@ const reportsSlice = createSlice({
         state.error = action.payload as string
       })
       .addCase(updateReportStatus.fulfilled, (state, action) => {
+        const index = state.items.findIndex((report) => report.id === action.payload.id)
+        if (index !== -1) state.items[index] = action.payload
+      })
+      .addCase(claimReport.fulfilled, (state, action) => {
+        const index = state.items.findIndex((report) => report.id === action.payload.id)
+        if (index !== -1) state.items[index] = action.payload
+      })
+      .addCase(releaseReport.fulfilled, (state, action) => {
         const index = state.items.findIndex((report) => report.id === action.payload.id)
         if (index !== -1) state.items[index] = action.payload
       })
