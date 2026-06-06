@@ -95,7 +95,7 @@ export interface AppSettings {
 
 export type ReportTargetType = 'topic' | 'reply' | 'user'
 export type ReportReason = 'spam' | 'abuse' | 'offensive' | 'personal_info' | 'off_topic' | 'other'
-export type ReportStatus = 'pending' | 'reviewed' | 'dismissed'
+export type ReportStatus = 'pending' | 'in_review' | 'reviewed' | 'dismissed'
 
 export interface Report {
   id: string
@@ -108,10 +108,16 @@ export interface Report {
   reason: ReportReason
   details: string | null
   status: ReportStatus
+  assigned_moderator_id: string | null
+  handled_by_id: string | null
+  handled_at: string | null
+  moderator_note: string | null
   created_at: string
   updated_at: string
   reporter?: Pick<Profile, 'id' | 'username' | 'avatar_url'>
   reported_user?: Pick<Profile, 'id' | 'username' | 'avatar_url' | 'role'>
+  assigned_moderator?: Pick<Profile, 'id' | 'username' | 'avatar_url'>
+  handled_by?: Pick<Profile, 'id' | 'username' | 'avatar_url'>
   target_topic?: Pick<Topic, 'id' | 'title' | 'channel_id'>
   target_reply?: Pick<Reply, 'id' | 'topic_id' | 'content'>
 }
