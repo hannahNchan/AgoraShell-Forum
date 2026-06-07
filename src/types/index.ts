@@ -121,7 +121,7 @@ export interface Report {
   created_at: string
   updated_at: string
   reporter?: Pick<Profile, 'id' | 'username' | 'avatar_url'>
-  reported_user?: Pick<Profile, 'id' | 'username' | 'avatar_url' | 'role'>
+  reported_user?: Pick<Profile, 'id' | 'username' | 'avatar_url' | 'role' | 'role_id' | 'suspended_until' | 'suspension_reason' | 'banned_reason' | 'moderation_previous_role_id'>
   assigned_moderator?: Pick<Profile, 'id' | 'username' | 'avatar_url'>
   handled_by?: Pick<Profile, 'id' | 'username' | 'avatar_url'>
   target_topic?: Pick<Topic, 'id' | 'title' | 'channel_id'>

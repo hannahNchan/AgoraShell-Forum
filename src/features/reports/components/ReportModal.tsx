@@ -38,7 +38,7 @@ const ReportModal = ({ open, onClose, title, author, options }: ReportModalProps
   const submitting = useSelector((state: RootState) => state.reports.submitting)
   const user = useSelector(selectUser)
   const availableOptions = useMemo(
-    () => options.filter((option) => !(option.type === 'user' && option.targetUserId === user?.id)),
+    () => options.filter((option) => (option.reportedUserId ?? option.targetUserId) !== user?.id),
     [options, user?.id]
   )
   const [selectedType, setSelectedType] = useState<ReportTargetType>(availableOptions[0]?.type ?? options[0]?.type ?? 'topic')
@@ -114,6 +114,12 @@ const ReportModal = ({ open, onClose, title, author, options }: ReportModalProps
                 ))}
               </div>
             </div>
+          )}
+
+          {availableOptions.length === 0 && (
+            <p className="rounded-lg border border-amber-100 bg-amber-50 px-3 py-2 text-sm text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/20 dark:text-amber-300">
+              No puedes reportarte a ti mismo ni reportar contenido propio.
+            </p>
           )}
 
           <div>
