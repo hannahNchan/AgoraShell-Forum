@@ -1,6 +1,7 @@
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../features/auth/hooks/useAuth'
 import Spinner from './Spinner'
+import { useRole } from '../../features/auth/hooks/useRole'
 
 interface ProtectedRouteProps {
   children: React.ReactNode
@@ -8,7 +9,8 @@ interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute = ({ children, requireAdmin = false }: ProtectedRouteProps) => {
-  const { isAuthenticated, isAdmin, loading } = useAuth()
+  const { isAuthenticated, loading } = useAuth()
+  const { can } = useRole()
   const location = useLocation()
 
   if (loading) {
@@ -23,7 +25,7 @@ export const ProtectedRoute = ({ children, requireAdmin = false }: ProtectedRout
     return <Navigate to="/login" state={{ from: location }} replace />
   }
 
-  if (requireAdmin && !isAdmin) {
+  if (requireAdmin && !can('manage_admin_settings')) {
     return <Navigate to="/" replace />
   }
 

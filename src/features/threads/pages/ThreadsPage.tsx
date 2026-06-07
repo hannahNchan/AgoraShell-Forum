@@ -12,7 +12,7 @@ import { type Tag } from '../../../types'
 const ThreadsPage = () => {
   const { channelId } = useParams<{ channelId: string }>()
   const { isAuthenticated } = useAuth()
-  const { isBanned } = useRole()
+  const { can } = useRole()
   const [showCreate, setShowCreate] = useState(false)
 
   const {
@@ -36,7 +36,7 @@ const ThreadsPage = () => {
             <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">{currentChannel.description}</p>
           )}
         </div>
-        {isAuthenticated && !isBanned && (
+        {isAuthenticated && can('create_topic') && (
           <button
             onClick={() => setShowCreate(true)}
             className="flex hover:cursor-pointer items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors shrink-0"
@@ -91,7 +91,7 @@ const ThreadsPage = () => {
               ? `No hay temas con ${activeTags.length === 1 ? `el tag "${activeTags[0].name}"` : 'esos tags'}`
               : 'Nadie ha publicado aún'}
           </p>
-          {isAuthenticated && !isBanned && activeTags.length === 0 && (
+          {isAuthenticated && can('create_topic') && activeTags.length === 0 && (
             <button
               onClick={() => setShowCreate(true)}
               className="mt-4 text-indigo-600 text-sm font-medium hover:underline hover:cursor-pointer"

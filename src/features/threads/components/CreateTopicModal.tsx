@@ -18,7 +18,7 @@ interface CreateTopicModalProps {
 
 const CreateTopicModal = ({ channelId, onClose, maxTags }: CreateTopicModalProps) => {
   const dispatch = useDispatch<AppDispatch>()
-  const { isBanned } = useRole()
+  const { isBanned, can } = useRole()
   const foroBloqueado = useForoBloqueado()
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
@@ -27,7 +27,7 @@ const CreateTopicModal = ({ channelId, onClose, maxTags }: CreateTopicModalProps
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!title.trim() || !content || content === '<p></p>' || foroBloqueado) return
+    if (!title.trim() || !content || content === '<p></p>' || foroBloqueado || !can('create_topic')) return
     setSubmitting(true)
     try {
       await dispatch(createTopic({

@@ -29,8 +29,8 @@ const TopicCard = ({ topic }: TopicCardProps) => {
   const dispatch = useDispatch<AppDispatch>()
   const { isAuthenticated } = useAuth()
   const profile = useSelector(selectProfile)
-  const { isModerator } = useRole()
-  const canDelete = isModerator || profile?.id === topic.author_id
+  const { can } = useRole()
+  const canDelete = can('delete_any_content') || (profile?.id === topic.author_id && can('delete_own_content'))
   const [expanded, setExpanded] = useState(false)
   const [replies, setReplies] = useState<any[]>([])
   const [loadingReplies, setLoadingReplies] = useState(false)

@@ -1,6 +1,8 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
 import { supabase } from '../../../services/supabase'
-import { type Report, type ReportReason, type ReportStatus, type ReportTargetType } from '../../../types'
+import { type Profile, type Report, type ReportReason, type ReportStatus, type ReportTargetType } from '../../../types'
+import { can, canModerateTarget } from '../../../services/permissions'
+import { type RootState } from '../../../store'
 import {
   buildModerationReasonText,
   moderationDeletedReplyHtml,
@@ -37,6 +39,18 @@ const getErrorMessage = (error: unknown) =>
 const getErrorCode = (error: unknown) =>
   typeof error === 'object' && error !== null && 'code' in error ? String((error as { code?: unknown }).code) : null
 
+const PROFILE_PERMISSION_SELECT = 'id, username, avatar_url, bio, role_id, role, suspended_until, suspension_reason, banned_reason, moderation_previous_role_id, moderation_updated_by, moderation_updated_at, created_at'
+
+const getProfileForUser = async (userId: string) => {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select(PROFILE_PERMISSION_SELECT)
+    .eq('id', userId)
+    .single()
+  if (error) throw error
+  return data as Profile
+}
+
 export const createReport = createAsyncThunk(
   'reports/create',
   async (
@@ -49,11 +63,13 @@ export const createReport = createAsyncThunk(
       targetReplyId?: string | null
       targetUserId?: string | null
     },
-    { rejectWithValue }
+    { getState, rejectWithValue }
   ) => {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Debes iniciar sesión para reportar.')
+      const profile = (getState() as RootState).auth.profile ?? await getProfileForUser(user.id)
+      if (!can(profile, 'report_content')) throw new Error('No tienes permisos para reportar contenido.')
       if ((payload.reportedUserId ?? payload.targetUserId) === user.id) {
         throw new Error('No puedes reportarte a ti mismo.')
       }
@@ -106,6 +122,10 @@ export const updateReportStatus = createAsyncThunk(
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Debes iniciar sesión.')
+      const profile = await getProfileForUser(user.id)
+      if (!can(profile, status === 'reviewed' || status === 'dismissed' ? 'resolve_reports' : 'review_reports')) {
+        throw new Error('No tienes permisos para moderar reportes.')
+      }
       const patch = status === 'reviewed' || status === 'dismissed'
         ? {
           status,
@@ -151,10 +171,12 @@ export const resolveReportWithAction = createAsyncThunk(
     reasonId: string
     durationDays?: number
     deleteReply?: boolean
-  }, { rejectWithValue }) => {
+  }, { getState, rejectWithValue }) => {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Debes iniciar sesión.')
+      const actorProfile = (getState() as RootState).auth.profile ?? await getProfileForUser(user.id)
+      if (!can(actorProfile, 'resolve_reports')) throw new Error('No tienes permisos para resolver reportes.')
 
       const reasonText = buildModerationReasonText(reasonId, moderatorNote)
       const now = new Date().toISOString()
@@ -175,8 +197,12 @@ export const resolveReportWithAction = createAsyncThunk(
           throw new Error('Este reporte no tiene usuario reportado.')
         }
 
-        if (report.reported_user.role === 'admin' || report.reported_user.role_id === 1) {
-          throw new Error('No se puede banear o suspender a un admin.')
+        if (!can(actorProfile, penalty === 'ban' ? 'ban_user' : 'suspend_user')) {
+          throw new Error('No tienes permisos para aplicar esta sancion.')
+        }
+
+        if (!canModerateTarget(actorProfile, report.reported_user)) {
+          throw new Error('No se puede banear o suspender a este rol.')
         }
 
         if (penalty === 'ban') {
@@ -244,6 +270,8 @@ export const claimReport = createAsyncThunk(
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Debes iniciar sesión.')
+      const profile = await getProfileForUser(user.id)
+      if (!can(profile, 'review_reports')) throw new Error('No tienes permisos para tomar reportes.')
       const { data, error } = await supabase
         .from('reports')
         .update({
@@ -267,6 +295,10 @@ export const releaseReport = createAsyncThunk(
   'reports/release',
   async (reportId: string, { rejectWithValue }) => {
     try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Debes iniciar sesión.')
+      const profile = await getProfileForUser(user.id)
+      if (!can(profile, 'review_reports')) throw new Error('No tienes permisos para soltar reportes.')
       const { data, error } = await supabase
         .from('reports')
         .update({
