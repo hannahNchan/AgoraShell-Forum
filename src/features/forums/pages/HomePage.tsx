@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Link } from 'react-router-dom'
 import { Flame, TrendingUp, Clock, Star, Zap, MessageSquare } from 'lucide-react'
@@ -19,17 +19,29 @@ const FILTERS: { key: FeedFilter; label: string; icon: React.ReactNode; descript
 
 export const HomePage = () => {
   const dispatch = useDispatch<AppDispatch>()
-  const { items, filter, loading, loadingMore, hasMore } = useSelector((state: RootState) => state.feed)
+  const { items, filter, loading, loadingMore, hasMore, loadMoreError } = useSelector((state: RootState) => state.feed)
   const { hotTopics } = useHotTopics(5)
   const loaderRef = useRef<HTMLDivElement>(null)
   const pageRef = useRef(1)
   const loadingMoreRef = useRef(false)
   const hasMoreRef = useRef(true)
+  const loadingRef = useRef(false)
   const lastScrollY = useRef(0)
   const [filtersVisible, setFiltersVisible] = useState(true)
 
   useEffect(() => { loadingMoreRef.current = loadingMore }, [loadingMore])
   useEffect(() => { hasMoreRef.current = hasMore }, [hasMore])
+  useEffect(() => { loadingRef.current = loading }, [loading])
+
+  const handleLoadMore = useCallback(async () => {
+    const page = pageRef.current
+    try {
+      await dispatch(fetchMoreFeed({ filter, page })).unwrap()
+      pageRef.current = page + 1
+    } catch {
+      pageRef.current = page
+    }
+  }, [dispatch, filter])
 
   useEffect(() => {
     pageRef.current = 1
@@ -61,16 +73,15 @@ export const HomePage = () => {
     const scrollRoot = document.getElementById('main-scroll')
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && !loadingMoreRef.current && hasMoreRef.current) {
-          dispatch(fetchMoreFeed({ filter, page: pageRef.current }))
-          pageRef.current += 1
+        if (entries[0].isIntersecting && !loadingRef.current && !loadingMoreRef.current && hasMoreRef.current) {
+          void handleLoadMore()
         }
       },
       { root: scrollRoot, threshold: 0.1 }
     )
     observer.observe(el)
     return () => observer.disconnect()
-  }, [filter, dispatch])
+  }, [handleLoadMore])
 
   const handleFilter = (f: FeedFilter) => {
     if (f === filter) return
@@ -149,6 +160,15 @@ export const HomePage = () => {
                 <img src="/images/big_logo.svg" alt="Cargando" className="w-48 animate-pulse" />
                 <span className="text-xs text-slate-400">Cargando más temas...</span>
               </>
+            )}
+            {loadMoreError && !loadingMore && (
+              <button
+                type="button"
+                onClick={() => void handleLoadMore()}
+                className="rounded-lg border border-red-200 px-3 py-2 text-xs font-medium text-red-600 transition-colors hover:bg-red-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/30"
+              >
+                No se pudo cargar mas. Reintentar
+              </button>
             )}
             {!hasMore && items.length > 0 && (
               <div className="flex flex-col items-center gap-2">

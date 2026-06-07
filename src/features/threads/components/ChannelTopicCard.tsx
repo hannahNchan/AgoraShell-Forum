@@ -36,11 +36,13 @@ const ChannelTopicCard = ({ topic, maxTags }: ChannelTopicCardProps) => {
   const dispatch = useDispatch<AppDispatch>()
   const { isAuthenticated } = useAuth()
   const profile = useSelector(selectProfile)
-  const { isModerator, isBanned } = useRole()
+  const { isBanned, can } = useRole()
   const { confirm } = useConfirm()
 
-  const canDelete = isModerator || profile?.id === topic.author_id
-  const canEdit = profile?.id === topic.author_id
+  const canDelete = can('delete_any_content') || (profile?.id === topic.author_id && can('delete_own_content'))
+  const canEdit = profile?.id === topic.author_id && can('edit_own_content')
+  const canClose = can('close_topic')
+  const canPin = can('pin_topic')
 
   const [expanded, setExpanded] = useState(false)
   const [replies, setReplies] = useState<any[]>([])
@@ -173,7 +175,7 @@ const ChannelTopicCard = ({ topic, maxTags }: ChannelTopicCardProps) => {
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                {isModerator && isAuthenticated && (
+                {canClose && isAuthenticated && (
                   <button
                     onClick={handleClose}
                     title={topic.is_closed ? 'Reabrir tema' : 'Cerrar tema'}
@@ -186,7 +188,7 @@ const ChannelTopicCard = ({ topic, maxTags }: ChannelTopicCardProps) => {
                     {topic.is_closed ? 'Reabrir' : 'Cerrar'}
                   </button>
                 )}
-                {isModerator && isAuthenticated && (
+                {canPin && isAuthenticated && (
                   <button
                     onClick={handlePin}
                     title={topic.is_pinned ? 'Desfijar tema' : 'Fijar tema'}

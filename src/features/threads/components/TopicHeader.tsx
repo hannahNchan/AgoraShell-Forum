@@ -19,6 +19,7 @@ interface TopicHeaderProps {
   isAuthenticated: boolean
   isBanned: boolean
   canEdit: boolean
+  canReport: boolean
   maxTags: number
   onStar: () => void
   onClose: () => void
@@ -26,7 +27,7 @@ interface TopicHeaderProps {
 }
 
 const TopicHeader = ({
-  topic, isClosed, isModerator, isAuthenticated, isBanned, canEdit, maxTags,
+  topic, isClosed, isModerator, isAuthenticated, isBanned, canEdit, canReport, maxTags,
   onStar, onClose, onSaveEdit,
 }: TopicHeaderProps) => {
   const [isEditing, setIsEditing] = useState(false)
@@ -211,7 +212,7 @@ const TopicHeader = ({
             <span className="hidden sm:inline">Editar</span>
           </button>
         )}
-        {isAuthenticated && !isEditing && (
+        {isAuthenticated && canReport && !isEditing && (
           <button
             onClick={() => setReportOpen(true)}
             title="Reportar"

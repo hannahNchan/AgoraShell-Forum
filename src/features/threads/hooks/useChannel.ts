@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useSearchParams } from 'react-router-dom'
 import { type AppDispatch, type RootState } from '../../../store'
@@ -16,8 +16,10 @@ export const useChannel = (channelId: string | undefined) => {
   const loaderRef = useRef<HTMLDivElement>(null)
   const loadingMoreRef = useRef(false)
   const hasMoreRef = useRef(true)
+  const loadingRef = useRef(false)
+  const paginationTagIdsRef = useRef<string[] | undefined>(undefined)
 
-  const { items: topics, loading, loadingMore, hasMore } = useSelector((state: RootState) => state.topics)
+  const { items: topics, loading, loadingMore, hasMore, loadMoreError } = useSelector((state: RootState) => state.topics)
   const maxTags = useSelector((state: RootState) => state.tags.settings?.max_tags_per_topic ?? 3)
   const currentChannel = useSelector((state: RootState) =>
     state.channels.items.find((c) => c.id === channelId)
@@ -25,6 +27,7 @@ export const useChannel = (channelId: string | undefined) => {
 
   useEffect(() => { loadingMoreRef.current = loadingMore }, [loadingMore])
   useEffect(() => { hasMoreRef.current = hasMore }, [hasMore])
+  useEffect(() => { loadingRef.current = loading }, [loading])
 
   useEffect(() => {
     dispatch(fetchSettings())
@@ -54,10 +57,12 @@ export const useChannel = (channelId: string | undefined) => {
 
     const runFetch = async () => {
       if (resolved.length === 0) {
+        paginationTagIdsRef.current = undefined
         dispatch(fetchTopicsByChannel({ channelId }))
         return
       }
       if (resolved.length === 1) {
+        paginationTagIdsRef.current = undefined
         dispatch(fetchTopicsByChannel({ channelId, tagId: resolved[0].id }))
         return
       }
@@ -68,6 +73,7 @@ export const useChannel = (channelId: string | undefined) => {
         })
       )
       const intersection = [...sets[0]].filter((id) => sets.every((s) => s.has(id)))
+      paginationTagIdsRef.current = intersection
       dispatch(fetchTopicsByChannel({ channelId, tagIds: intersection }))
     }
     runFetch()
@@ -86,6 +92,19 @@ export const useChannel = (channelId: string | undefined) => {
     return () => { supabase.removeChannel(realtimeChannel) }
   }, [channelId, searchParams, channelTags, dispatch])
 
+  const handleLoadMore = useCallback(async () => {
+    if (!channelId) return
+    const page = pageRef.current
+    const tagId = activeTags.length === 1 ? activeTags[0].id : undefined
+    const tagIds = activeTags.length > 1 ? paginationTagIdsRef.current : undefined
+    try {
+      await dispatch(fetchMoreTopics({ channelId, page, tagId, tagIds })).unwrap()
+      pageRef.current = page + 1
+    } catch {
+      pageRef.current = page
+    }
+  }, [activeTags, channelId, dispatch])
+
   useEffect(() => {
     const el = loaderRef.current
     if (!el) return
@@ -93,17 +112,15 @@ export const useChannel = (channelId: string | undefined) => {
     const observer = new IntersectionObserver(
       (entries) => {
         const entry = entries[0]
-        if (entry.isIntersecting && !loadingMoreRef.current && hasMoreRef.current && channelId) {
-          const tagId = activeTags.length === 1 ? activeTags[0].id : undefined
-          dispatch(fetchMoreTopics({ channelId, page: pageRef.current, tagId }))
-          pageRef.current += 1
+        if (entry.isIntersecting && !loadingRef.current && !loadingMoreRef.current && hasMoreRef.current && channelId) {
+          void handleLoadMore()
         }
       },
       { root: scrollRoot, threshold: 0.1 }
     )
     observer.observe(el)
     return () => { observer.disconnect() }
-  }, [channelId, activeTags, dispatch])
+  }, [channelId, handleLoadMore])
 
   const handleTagFilter = (tag: Tag) => {
     const isActive = activeTags.some((t) => t.id === tag.id)
@@ -115,8 +132,8 @@ export const useChannel = (channelId: string | undefined) => {
   const clearTagFilters = () => setSearchParams({})
 
   return {
-    topics, loading, loadingMore, hasMore,
+    topics, loading, loadingMore, hasMore, loadMoreError,
     maxTags, currentChannel, channelTags, activeTags,
-    loaderRef, handleTagFilter, clearTagFilters,
+    loaderRef, handleLoadMore, handleTagFilter, clearTagFilters,
   }
 }

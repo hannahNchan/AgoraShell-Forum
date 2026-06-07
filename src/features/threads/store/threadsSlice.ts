@@ -33,6 +33,9 @@ interface TopicsState {
   loadingMore: boolean
   hasMore: boolean
   error: string | null
+  loadMoreError: string | null
+  currentRequestId?: string
+  currentMoreRequestId?: string
 }
 
 const initialState: TopicsState = {
@@ -42,6 +45,7 @@ const initialState: TopicsState = {
   loadingMore: false,
   hasMore: true,
   error: null,
+  loadMoreError: null,
 }
 
 const fetchStars = async (data: any[], userId: string) => {
@@ -59,6 +63,15 @@ const sortPinnedFirst = (topics: Topic[]) => [
   ...topics.filter((t) => t.is_pinned),
   ...topics.filter((t) => !t.is_pinned),
 ]
+
+const mergeUniqueTopics = (current: Topic[], incoming: Topic[]) => {
+  const seen = new Set(current.map((topic) => topic.id))
+  return [...current, ...incoming.filter((topic) => {
+    if (seen.has(topic.id)) return false
+    seen.add(topic.id)
+    return true
+  })]
+}
 
 const resolveFilterIds = async (tagId?: string, tagIds?: string[]): Promise<string[] | null> => {
   if (tagIds && tagIds.length > 0) return tagIds
@@ -83,6 +96,7 @@ export const fetchTopicsByChannel = createAsyncThunk(
         .eq('channel_id', channelId)
         .order('is_pinned', { ascending: false })
         .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
         .range(0, PAGE_SIZE - 1)
 
       const ids = await resolveFilterIds(tagId, tagIds)
@@ -118,6 +132,7 @@ export const fetchMoreTopics = createAsyncThunk(
         .eq('channel_id', channelId)
         .order('is_pinned', { ascending: false })
         .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
         .range(from, to)
 
       const ids = await resolveFilterIds(tagId, tagIds)
@@ -330,25 +345,45 @@ const topicsSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      .addCase(fetchTopicsByChannel.pending, (state) => { state.loading = true; state.hasMore = true })
+      .addCase(fetchTopicsByChannel.pending, (state, action) => {
+        state.loading = true
+        state.hasMore = true
+        state.error = null
+        state.loadMoreError = null
+        state.currentRequestId = action.meta.requestId
+      })
       .addCase(fetchTopicsByChannel.fulfilled, (state, action) => {
+        if (state.currentRequestId !== action.meta.requestId) return
         state.loading = false
         state.items = action.payload
         state.hasMore = action.payload.length === PAGE_SIZE
+        state.currentRequestId = undefined
       })
       .addCase(fetchTopicsByChannel.rejected, (state, action) => {
+        if (state.currentRequestId !== action.meta.requestId) return
         state.loading = false
         state.error = action.payload as string
+        state.currentRequestId = undefined
       })
 
-      .addCase(fetchMoreTopics.pending, (state) => { state.loadingMore = true })
-      .addCase(fetchMoreTopics.fulfilled, (state, action) => {
-        state.loadingMore = false
-        const newItems = action.payload.filter((t) => !state.items.find((e) => e.id === t.id))
-        state.items = sortPinnedFirst([...state.items, ...newItems])
-        state.hasMore = action.payload.length === PAGE_SIZE
+      .addCase(fetchMoreTopics.pending, (state, action) => {
+        state.loadingMore = true
+        state.loadMoreError = null
+        state.currentMoreRequestId = action.meta.requestId
       })
-      .addCase(fetchMoreTopics.rejected, (state) => { state.loadingMore = false })
+      .addCase(fetchMoreTopics.fulfilled, (state, action) => {
+        if (state.currentMoreRequestId !== action.meta.requestId) return
+        state.loadingMore = false
+        state.items = sortPinnedFirst(mergeUniqueTopics(state.items, action.payload))
+        state.hasMore = action.payload.length === PAGE_SIZE
+        state.currentMoreRequestId = undefined
+      })
+      .addCase(fetchMoreTopics.rejected, (state, action) => {
+        if (state.currentMoreRequestId !== action.meta.requestId) return
+        state.loadingMore = false
+        state.loadMoreError = action.payload as string
+        state.currentMoreRequestId = undefined
+      })
 
       .addCase(fetchTopicById.pending, (state) => { state.loading = true })
       .addCase(fetchTopicById.fulfilled, (state, action) => {

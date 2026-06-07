@@ -11,7 +11,7 @@ import { supabase } from '../../../services/supabase'
 export const ForumsPage = () => {
   const dispatch = useDispatch<AppDispatch>()
   const channels = useSelector((state: RootState) => state.channels.items)
-  const { isAdmin } = useRole()
+  const { can } = useRole()
   const { confirm } = useConfirm()
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [errorId, setErrorId] = useState<string | null>(null)
@@ -69,7 +69,7 @@ export const ForumsPage = () => {
                   <MessageSquare size={20} />
                 </div>
               </Link>
-              {isAdmin && (
+              {can('delete_channel') && (
                 <div className="flex items-center gap-4 px-5 pb-3">
                   <span className="text-xs text-slate-400 dark:text-slate-500">
                     Creado por @<span className="font-medium">
