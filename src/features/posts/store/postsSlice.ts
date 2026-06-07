@@ -6,6 +6,7 @@ import { ensureForumCanPublish } from '../../../services/forumLock'
 import { ensureUserCanCreateContent } from '../../../services/userRestrictions'
 import { requireSyncedAuthUser } from '../../../services/authGuard'
 import { type RootState } from '../../../store'
+import { logAdminAction } from '../../../services/adminAudit'
 
 const REPLIES_PAGE_SIZE = 20
 const REPLY_SELECT = '*, author:profiles(id, username, avatar_url, role), reactions:reply_reactions(id, user_id, emoji)'
@@ -194,10 +195,30 @@ export const toggleReaction = createAsyncThunk(
 
 export const deleteReply = createAsyncThunk(
   'posts/delete',
-  async ({ replyId, topicId }: { replyId: string; topicId: string }, { dispatch, rejectWithValue }) => {
+  async ({ replyId, topicId }: { replyId: string; topicId: string }, { dispatch, getState, rejectWithValue }) => {
     try {
+      const state = getState() as RootState
+      const findReply = (replies: Reply[]): Reply | null => {
+        for (const reply of replies) {
+          if (reply.id === replyId) return reply
+          const found = reply.children ? findReply(reply.children) : null
+          if (found) return found
+        }
+        return null
+      }
+      const reply = findReply(state.posts.items)
       const { error } = await supabase.from('replies').delete().eq('id', replyId)
       if (error) throw error
+      if (state.auth.profile?.id && reply?.author_id && state.auth.profile.id !== reply.author_id) {
+        await logAdminAction({
+          actor: state.auth.profile,
+          action: 'reply.delete',
+          targetType: 'reply',
+          targetId: replyId,
+          targetLabel: reply.author?.username ? `Respuesta de ${reply.author.username}` : undefined,
+          metadata: { topicId },
+        })
+      }
       dispatch(decrementRepliesCount(topicId))
       return replyId
     } catch (error: any) {
