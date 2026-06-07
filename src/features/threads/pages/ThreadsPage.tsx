@@ -16,9 +16,9 @@ const ThreadsPage = () => {
   const [showCreate, setShowCreate] = useState(false)
 
   const {
-    topics, loading, loadingMore, hasMore,
+    topics, loading, loadingMore, hasMore, loadMoreError,
     maxTags, currentChannel, channelTags, activeTags,
-    loaderRef, handleTagFilter, clearTagFilters,
+    loaderRef, handleLoadMore, handleTagFilter, clearTagFilters,
   } = useChannel(channelId)
 
   const pinnedTopics = topics.filter((t) => t.is_pinned)
@@ -128,6 +128,15 @@ const ThreadsPage = () => {
             <img src="/images/big_logo.svg" alt="Cargando" className="w-64 animate-pulse" />
             <span className="text-base text-slate-400">Cargando más temas...</span>
           </>
+        )}
+        {loadMoreError && !loadingMore && (
+          <button
+            type="button"
+            onClick={() => void handleLoadMore()}
+            className="rounded-lg border border-red-200 px-3 py-2 text-xs font-medium text-red-600 transition-colors hover:bg-red-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/30"
+          >
+            No se pudo cargar mas. Reintentar
+          </button>
         )}
         {!hasMore && topics.length > 0 && (
           <div className="flex flex-col items-center gap-2">

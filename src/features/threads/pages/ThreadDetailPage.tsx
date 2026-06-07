@@ -21,7 +21,21 @@ const ThreadDetailPage = () => {
   const { isBanned, isModerator } = useRole()
   const profile = useSelector(selectProfile)
 
-  const { topic, topicLoading, replies, repliesLoading, maxTags, handleStar, handleClose, handleSaveEdit } = useTopicDetail(topicId)
+  const {
+    topic,
+    topicLoading,
+    replies,
+    repliesLoading,
+    repliesLoadingMore,
+    repliesHasMore,
+    repliesLoadMoreError,
+    repliesLoaderRef,
+    maxTags,
+    handleStar,
+    handleClose,
+    handleSaveEdit,
+    handleLoadMoreReplies,
+  } = useTopicDetail(topicId)
 
   const [replyContent, setReplyContent] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -76,6 +90,26 @@ const ThreadDetailPage = () => {
           {!isClosed && replies.length === 0 && (
             <div className="text-center py-8 text-slate-400 text-sm">Nadie ha respondido todavía. ¡Sé el primero!</div>
           )}
+          <div ref={repliesLoaderRef} className="flex flex-col items-center py-4 gap-3">
+            {repliesLoadingMore && (
+              <>
+                <img src="/images/big_logo.svg" alt="Cargando" className="w-40 animate-pulse" />
+                <span className="text-xs text-slate-400">Cargando mas respuestas...</span>
+              </>
+            )}
+            {repliesLoadMoreError && !repliesLoadingMore && (
+              <button
+                type="button"
+                onClick={() => void handleLoadMoreReplies()}
+                className="rounded-lg border border-red-200 px-3 py-2 text-xs font-medium text-red-600 transition-colors hover:bg-red-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/30"
+              >
+                No se pudieron cargar mas respuestas. Reintentar
+              </button>
+            )}
+            {!repliesHasMore && replies.length > 0 && (
+              <span className="text-xs text-slate-400">No hay mas respuestas</span>
+            )}
+          </div>
         </div>
       )}
 

@@ -34,7 +34,7 @@ const ThreadPage = () => {
   const profile = useSelector(selectProfile)
   const maxDepth = useSelector((state: RootState) => state.tags.settings?.max_reply_depth ?? 5)
 
-  const { topic, topicLoading, replies, repliesLoading, maxTags, handleStar, handleClose, handleSaveEdit } = useTopicDetail(topicId)
+  const { topic, topicLoading, replies, repliesLoading, maxTags, handleStar, handleClose, handleSaveEdit } = useTopicDetail(topicId, replyId)
 
   const [replyContent, setReplyContent] = useState('')
   const [submitting, setSubmitting] = useState(false)
