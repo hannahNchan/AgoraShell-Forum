@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Star, Clock, Pencil, Check, Tag as TagIcon, Lock, LockOpen } from 'lucide-react'
+import { Star, Clock, Pencil, Check, Tag as TagIcon, Lock, LockOpen, Flag } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { useHighlightCode } from '../../../hooks/useHighlightCode'
@@ -10,6 +10,7 @@ import TagInput from '../../tags/components/TagInput'
 import Spinner from '../../../components/shared/Spinner'
 import { Avatar } from './ReplyCard'
 import { type Topic, type Tag } from '../../../types'
+import ReportModal from '../../reports/components/ReportModal'
 
 interface TopicHeaderProps {
   topic: Topic
@@ -33,6 +34,7 @@ const TopicHeader = ({
   const [editContent, setEditContent] = useState(topic.content)
   const [editTags, setEditTags] = useState<Tag[]>(topic.tags || [])
   const [saving, setSaving] = useState(false)
+  const [reportOpen, setReportOpen] = useState(false)
   const topicContentRef = useRef<HTMLDivElement>(null)
   useHighlightCode(topicContentRef)
   useCodeCollapse(topicContentRef)
@@ -209,6 +211,16 @@ const TopicHeader = ({
             <span className="hidden sm:inline">Editar</span>
           </button>
         )}
+        {isAuthenticated && !isEditing && (
+          <button
+            onClick={() => setReportOpen(true)}
+            title="Reportar"
+            className="hover:cursor-pointer flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:border-red-300 hover:text-red-500 dark:hover:border-red-700 dark:hover:text-red-400 text-sm transition-colors"
+          >
+            <Flag size={14} />
+            <span className="hidden sm:inline">Reportar</span>
+          </button>
+        )}
         <button
           onClick={onStar}
           disabled={!isAuthenticated}
@@ -221,6 +233,26 @@ const TopicHeader = ({
           <span className="font-medium">{topic.stars_count}</span>
         </button>
       </div>
+      <ReportModal
+        open={reportOpen}
+        onClose={() => setReportOpen(false)}
+        title="Reportar tema"
+        author={topic.author}
+        options={[
+          {
+            type: 'topic',
+            label: 'Tema',
+            targetTopicId: topic.id,
+            reportedUserId: topic.author_id,
+          },
+          {
+            type: 'user',
+            label: 'Autor',
+            targetUserId: topic.author_id,
+            reportedUserId: topic.author_id,
+          },
+        ]}
+      />
     </div>
   )
 }

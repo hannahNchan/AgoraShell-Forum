@@ -19,14 +19,49 @@ const initialState: AuthState = {
   error: null,
 }
 
+const roleFromId = (roleId?: number | null): UserRole => {
+  if (roleId === 1) return 'admin'
+  if (roleId === 2) return 'moderator'
+  if (roleId === 4) return 'banned'
+  return 'user'
+}
+
+type ProfileWithRole = Profile & {
+  roles?: { name?: UserRole } | { name?: UserRole }[] | null
+}
+
+const normalizeProfile = (profile: ProfileWithRole): Profile => {
+  const roles = profile.roles
+  const roleName = Array.isArray(roles) ? roles[0]?.name : roles?.name
+  const cleanProfile = { ...profile }
+  delete cleanProfile.roles
+  return { ...cleanProfile, role: roleName ?? profile.role ?? roleFromId(profile.role_id) }
+}
+
 const fetchProfile = async (userId: string): Promise<Profile | null> => {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('profiles')
     .select('*, roles(name)')
     .eq('id', userId)
     .single()
-  if (!data) return null
-  return { ...data, role: data.roles?.name as UserRole }
+
+  if (data) return normalizeProfile(data as ProfileWithRole)
+
+  const { data: fallbackData, error: fallbackError } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', userId)
+    .single()
+
+  if (fallbackData) return normalizeProfile(fallbackData as ProfileWithRole)
+  if (error || fallbackError) throw error ?? fallbackError
+  return null
+}
+
+const requireProfile = async (userId: string) => {
+  const profile = await fetchProfile(userId)
+  if (!profile) throw new Error('No se pudo cargar tu perfil. Intenta cerrar sesion e iniciar de nuevo.')
+  return profile
 }
 
 export const loadAuthUser = createAsyncThunk('auth/loadAuthUser', async (_, { rejectWithValue }) => {
@@ -34,12 +69,25 @@ export const loadAuthUser = createAsyncThunk('auth/loadAuthUser', async (_, { re
     const { data: { session }, error } = await supabase.auth.getSession()
     if (error) throw error
     if (!session) return { session: null, user: null, profile: null }
-    const profile = await fetchProfile(session.user.id)
+    const profile = await requireProfile(session.user.id)
     return { session, user: session.user, profile }
   } catch (error: any) {
     return rejectWithValue(error.message)
   }
 })
+
+export const hydrateAuthSession = createAsyncThunk(
+  'auth/hydrateAuthSession',
+  async (session: Session | null, { rejectWithValue }) => {
+    try {
+      if (!session) return { session: null, user: null, profile: null }
+      const profile = await requireProfile(session.user.id)
+      return { session, user: session.user, profile }
+    } catch (error: any) {
+      return rejectWithValue(error.message)
+    }
+  }
+)
 
 export const loginWithEmail = createAsyncThunk(
   'auth/loginWithEmail',
@@ -52,7 +100,7 @@ export const loginWithEmail = createAsyncThunk(
         }
         throw error
       }
-      const profile = await fetchProfile(data.user.id)
+      const profile = await requireProfile(data.user.id)
       return { session: data.session, user: data.user, profile }
     } catch (error: any) {
       return rejectWithValue(error.message)
@@ -94,7 +142,7 @@ export const verifyOtp = createAsyncThunk(
       })
       if (error) throw error
       if (!data.session) throw new Error('No session after verification')
-      const profile = await fetchProfile(data.user!.id)
+      const profile = await requireProfile(data.user!.id)
       return { session: data.session, user: data.user!, profile }
     } catch (error: any) {
       return rejectWithValue(error.message)
@@ -176,6 +224,14 @@ const authSlice = createSlice({
     setSession: (state, action: PayloadAction<Session | null>) => {
       state.session = action.payload
       state.user = action.payload?.user ?? null
+      if (!action.payload) state.profile = null
+    },
+    clearAuthState: (state) => {
+      state.user = null
+      state.profile = null
+      state.session = null
+      state.loading = false
+      state.error = null
     },
     clearError: (state) => {
       state.error = null
@@ -191,6 +247,21 @@ const authSlice = createSlice({
         state.profile = action.payload.profile
       })
       .addCase(loadAuthUser.rejected, (state) => { state.loading = false })
+
+      .addCase(hydrateAuthSession.pending, (state) => { state.loading = true; state.error = null })
+      .addCase(hydrateAuthSession.fulfilled, (state, action) => {
+        state.loading = false
+        state.session = action.payload.session
+        state.user = action.payload.user
+        state.profile = action.payload.profile
+      })
+      .addCase(hydrateAuthSession.rejected, (state, action) => {
+        state.loading = false
+        state.user = null
+        state.profile = null
+        state.session = null
+        state.error = action.payload as string
+      })
 
       .addCase(loginWithEmail.pending, (state) => { state.loading = true; state.error = null })
       .addCase(loginWithEmail.fulfilled, (state, action) => {
@@ -237,5 +308,5 @@ const authSlice = createSlice({
   },
 })
 
-export const { setSession, clearError } = authSlice.actions
+export const { setSession, clearAuthState, clearError } = authSlice.actions
 export default authSlice.reducer

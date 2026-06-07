@@ -3,6 +3,9 @@ import { supabase } from '../../../services/supabase'
 import { type Reply, type ReplyReaction, type ReactionGroup } from '../../../types'
 import { incrementRepliesCount, decrementRepliesCount } from '../../threads/store/threadsSlice'
 import { ensureForumCanPublish } from '../../../services/forumLock'
+import { ensureUserCanCreateContent } from '../../../services/userRestrictions'
+import { requireSyncedAuthUser } from '../../../services/authGuard'
+import { type RootState } from '../../../store'
 
 interface PostsState {
   items: Reply[]
@@ -56,14 +59,15 @@ export const createReply = createAsyncThunk(
   'posts/create',
   async (
     { topicId, content, parentId }: { topicId: string; content: string; parentId?: string },
-    { dispatch, rejectWithValue }
+    { dispatch, getState, rejectWithValue }
   ) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      await ensureForumCanPublish(user?.id)
+      const user = await requireSyncedAuthUser(getState() as RootState)
+      await ensureForumCanPublish(user.id)
+      await ensureUserCanCreateContent(user.id)
       const { data, error } = await supabase
         .from('replies')
-        .insert([{ topic_id: topicId, content, author_id: user?.id, parent_id: parentId ?? null }])
+        .insert([{ topic_id: topicId, content, author_id: user.id, parent_id: parentId ?? null }])
         .select(`*, author:profiles(id, username, avatar_url, role), reactions:reply_reactions(id, user_id, emoji)`)
         .single()
       if (error) throw error

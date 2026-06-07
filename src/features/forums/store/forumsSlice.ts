@@ -2,6 +2,9 @@ import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
 import { supabase } from '../../../services/supabase'
 import { type Channel } from '../../../types'
 import { ensureForumCanPublish } from '../../../services/forumLock'
+import { ensureUserCanCreateContent } from '../../../services/userRestrictions'
+import { requireSyncedAuthUser } from '../../../services/authGuard'
+import { type RootState } from '../../../store'
 
 interface ChannelsState {
   items: Channel[]
@@ -32,14 +35,15 @@ export const createChannel = createAsyncThunk(
   'channels/create',
   async (
     payload: { name: string; description?: string; slug: string; icon?: string },
-    { rejectWithValue }
+    { getState, rejectWithValue }
   ) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      await ensureForumCanPublish(user?.id)
+      const user = await requireSyncedAuthUser(getState() as RootState)
+      await ensureForumCanPublish(user.id)
+      await ensureUserCanCreateContent(user.id)
       const { data, error } = await supabase
         .from('channels')
-        .insert([{ ...payload, created_by: user?.id }])
+        .insert([{ ...payload, created_by: user.id }])
         .select()
         .single()
       if (error) throw error
