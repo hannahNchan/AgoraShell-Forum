@@ -5,6 +5,7 @@ import { ensureForumCanPublish } from '../../../services/forumLock'
 import { ensureUserCanCreateContent } from '../../../services/userRestrictions'
 import { requireSyncedAuthUser } from '../../../services/authGuard'
 import { type RootState } from '../../../store'
+import { logAdminAction } from '../../../services/adminAudit'
 
 const PAGE_SIZE = 20
 
@@ -253,13 +254,22 @@ export const updateTopic = createAsyncThunk(
 
 export const pinTopic = createAsyncThunk(
   'topics/pin',
-  async ({ topicId, isPinned }: { topicId: string; isPinned: boolean }, { rejectWithValue }) => {
+  async ({ topicId, isPinned }: { topicId: string; isPinned: boolean }, { getState, rejectWithValue }) => {
     try {
       const { error } = await supabase
         .from('topics')
         .update({ is_pinned: !isPinned })
         .eq('id', topicId)
       if (error) throw error
+      const state = getState() as RootState
+      const topic = state.topics.items.find((item) => item.id === topicId) ?? state.topics.currentTopic
+      await logAdminAction({
+        actor: state.auth.profile,
+        action: isPinned ? 'topic.unpin' : 'topic.pin',
+        targetType: 'topic',
+        targetId: topicId,
+        targetLabel: topic?.title,
+      })
       return { topicId, is_pinned: !isPinned }
     } catch (error: any) {
       return rejectWithValue(error.message)
@@ -269,13 +279,22 @@ export const pinTopic = createAsyncThunk(
 
 export const closeTopic = createAsyncThunk(
   'topics/close',
-  async ({ topicId, isClosed }: { topicId: string; isClosed: boolean }, { rejectWithValue }) => {
+  async ({ topicId, isClosed }: { topicId: string; isClosed: boolean }, { getState, rejectWithValue }) => {
     try {
       const { error } = await supabase
         .from('topics')
         .update({ is_closed: !isClosed })
         .eq('id', topicId)
       if (error) throw error
+      const state = getState() as RootState
+      const topic = state.topics.items.find((item) => item.id === topicId) ?? state.topics.currentTopic
+      await logAdminAction({
+        actor: state.auth.profile,
+        action: isClosed ? 'topic.reopen' : 'topic.close',
+        targetType: 'topic',
+        targetId: topicId,
+        targetLabel: topic?.title,
+      })
       return { topicId, is_closed: !isClosed }
     } catch (error: any) {
       return rejectWithValue(error.message)
@@ -304,10 +323,21 @@ export const toggleStar = createAsyncThunk(
 
 export const deleteTopic = createAsyncThunk(
   'topics/delete',
-  async (topicId: string, { rejectWithValue }) => {
+  async (topicId: string, { getState, rejectWithValue }) => {
     try {
+      const state = getState() as RootState
+      const topic = state.topics.items.find((item) => item.id === topicId) ?? state.topics.currentTopic
       const { error } = await supabase.from('topics').delete().eq('id', topicId)
       if (error) throw error
+      if (state.auth.profile?.id && topic?.author_id && state.auth.profile.id !== topic.author_id) {
+        await logAdminAction({
+          actor: state.auth.profile,
+          action: 'topic.delete',
+          targetType: 'topic',
+          targetId: topicId,
+          targetLabel: topic?.title,
+        })
+      }
       return topicId
     } catch (error: any) {
       return rejectWithValue(error.message)

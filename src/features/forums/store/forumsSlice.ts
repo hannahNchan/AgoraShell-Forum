@@ -6,6 +6,7 @@ import { ensureUserCanCreateContent } from '../../../services/userRestrictions'
 import { requireSyncedAuthUser } from '../../../services/authGuard'
 import { type RootState } from '../../../store'
 import { can } from '../../../services/permissions'
+import { logAdminAction } from '../../../services/adminAudit'
 
 interface ChannelsState {
   items: Channel[]
@@ -52,6 +53,13 @@ export const createChannel = createAsyncThunk(
         .select()
         .single()
       if (error) throw error
+      await logAdminAction({
+        actor: profile,
+        action: 'channel.create',
+        targetType: 'channel',
+        targetId: data.id,
+        targetLabel: data.name,
+      })
       return data as Channel
     } catch (error: any) {
       return rejectWithValue(error.message)
@@ -61,10 +69,19 @@ export const createChannel = createAsyncThunk(
 
 export const deleteChannel = createAsyncThunk(
   'channels/delete',
-  async (id: string, { rejectWithValue }) => {
+  async (id: string, { getState, rejectWithValue }) => {
     try {
+      const profile = (getState() as RootState).auth.profile
+      const channel = (getState() as RootState).channels.items.find((item) => item.id === id)
       const { error } = await supabase.from('channels').delete().eq('id', id)
       if (error) throw error
+      await logAdminAction({
+        actor: profile,
+        action: 'channel.delete',
+        targetType: 'channel',
+        targetId: id,
+        targetLabel: channel?.name,
+      })
       return id
     } catch (error: any) {
       return rejectWithValue(error.message)
