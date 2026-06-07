@@ -1,16 +1,17 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  AlertTriangle, CheckCircle, ClipboardList, ExternalLink, Flag, Inbox,
-  RotateCcw, Search, UserCheck, XCircle,
+  AlertTriangle, Ban, CheckCircle, ClipboardList, ExternalLink, Flag, Inbox,
+  RotateCcw, Search, Trash2, UserCheck, XCircle,
 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { useDispatch, useSelector } from 'react-redux'
 import { type AppDispatch, type RootState } from '../../../store'
-import { claimReport, fetchReports, releaseReport, updateReportStatus } from '../store/reportsSlice'
+import { claimReport, fetchReports, releaseReport, resolveReportWithAction, updateReportStatus } from '../store/reportsSlice'
 import Spinner from '../../../components/shared/Spinner'
 import { type Report, type ReportReason, type ReportStatus, type ReportTargetType } from '../../../types'
+import { MODERATION_REASONS, getModerationReason, type ModerationPenalty } from '../constants/moderationCatalog'
 
 type StatusFilter = 'open' | ReportStatus | 'all'
 type TargetFilter = ReportTargetType | 'all'
@@ -83,6 +84,12 @@ const ReportsAdminPanel = () => {
   const [query, setQuery] = useState('')
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null)
   const [moderatorNote, setModeratorNote] = useState('')
+  const [penalty, setPenalty] = useState<ModerationPenalty>('none')
+  const [moderationReasonId, setModerationReasonId] = useState(MODERATION_REASONS[0].id)
+  const [durationDays, setDurationDays] = useState(7)
+  const [deleteReply, setDeleteReply] = useState(false)
+  const [resolveError, setResolveError] = useState('')
+  const [resolvingId, setResolvingId] = useState<string | null>(null)
 
   useEffect(() => {
     dispatch(fetchReports())
@@ -128,6 +135,50 @@ const ReportsAdminPanel = () => {
     dispatch(updateReportStatus({ reportId, status, moderatorNote }))
     setActiveNoteId(null)
     setModeratorNote('')
+  }
+
+  const openResolve = (report: Report, noteOpen: boolean) => {
+    setActiveNoteId(noteOpen ? null : report.id)
+    setModeratorNote(report.moderator_note ?? '')
+    setResolveError('')
+    setPenalty('none')
+    const mappedReason = report.reason === 'spam'
+      ? 'spam_or_manipulation'
+      : report.reason === 'abuse'
+        ? 'harassment_or_bullying'
+        : report.reason === 'offensive'
+          ? 'hate_or_abuse'
+          : report.reason === 'personal_info'
+            ? 'personal_information'
+            : report.reason === 'off_topic'
+              ? 'off_topic_or_low_quality'
+              : 'custom_moderator_reason'
+    setModerationReasonId(mappedReason)
+    setDurationDays(getModerationReason(mappedReason).defaultDays ?? 7)
+    setDeleteReply(false)
+  }
+
+  const handleResolve = async (report: Report) => {
+    setResolveError('')
+    setResolvingId(report.id)
+    try {
+      await dispatch(resolveReportWithAction({
+        report,
+        moderatorNote,
+        penalty,
+        reasonId: moderationReasonId,
+        durationDays,
+        deleteReply,
+      })).unwrap()
+      setActiveNoteId(null)
+      setModeratorNote('')
+      setPenalty('none')
+      setDeleteReply(false)
+    } catch (error) {
+      setResolveError(String(error))
+    } finally {
+      setResolvingId(null)
+    }
   }
 
   return (
@@ -273,22 +324,97 @@ const ReportsAdminPanel = () => {
                     )}
 
                     {noteOpen && (
-                      <div className="space-y-2">
+                      <div className="space-y-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-3">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                            Accion final
+                            <select
+                              value={penalty}
+                              onChange={(event) => setPenalty(event.target.value as ModerationPenalty)}
+                              className="mt-1 w-full border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            >
+                              <option value="none">Sin castigo</option>
+                              <option value="suspend">Suspender usuario</option>
+                              <option value="ban">Ban permanente</option>
+                            </select>
+                          </label>
+                          <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                            Motivo de moderacion
+                            <select
+                              value={moderationReasonId}
+                              onChange={(event) => {
+                                const next = event.target.value
+                                setModerationReasonId(next)
+                                setDurationDays(getModerationReason(next).defaultDays ?? durationDays)
+                              }}
+                              className="mt-1 w-full border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            >
+                              {MODERATION_REASONS.map((reason) => (
+                                <option key={reason.id} value={reason.id}>{reason.label}</option>
+                              ))}
+                            </select>
+                          </label>
+                        </div>
+                        {penalty === 'suspend' && (
+                          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                            Duracion de suspension
+                            <div className="mt-1 grid grid-cols-4 gap-2">
+                              {[1, 3, 7, 30].map((days) => (
+                                <button
+                                  key={days}
+                                  type="button"
+                                  onClick={() => setDurationDays(days)}
+                                  className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${durationDays === days
+                                    ? 'border-indigo-500 bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300'
+                                    : 'border-slate-200 text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700'
+                                    }`}
+                                >
+                                  {days}d
+                                </button>
+                              ))}
+                            </div>
+                            <input
+                              type="number"
+                              min={1}
+                              max={365}
+                              value={durationDays}
+                              onChange={(event) => setDurationDays(Number(event.target.value))}
+                              className="mt-2 w-full border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            />
+                          </label>
+                        )}
+                        {report.target_type === 'reply' && (
+                          <label className="flex items-start gap-2 rounded-lg border border-red-100 dark:border-red-900/60 bg-red-50/50 dark:bg-red-950/20 px-3 py-2 text-sm text-red-700 dark:text-red-300">
+                            <input
+                              type="checkbox"
+                              checked={deleteReply}
+                              onChange={(event) => setDeleteReply(event.target.checked)}
+                              className="mt-1"
+                            />
+                            <span>Eliminar mensaje y reemplazarlo por la leyenda de moderacion.</span>
+                          </label>
+                        )}
                         <textarea
                           value={moderatorNote}
                           onChange={(event) => setModeratorNote(event.target.value)}
                           maxLength={1000}
                           rows={3}
-                          placeholder="Nota interna opcional para cerrar este reporte"
+                          placeholder="Comentario del moderador. Se usara junto al motivo del catalogo."
                           className="w-full border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 dark:placeholder-slate-400 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
                         />
+                        {resolveError && (
+                          <p className="rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/20 dark:text-red-300">
+                            {resolveError}
+                          </p>
+                        )}
                         <div className="flex flex-col sm:flex-row gap-2 sm:justify-end">
                           <button
-                            onClick={() => handleClose(report.id, 'reviewed')}
-                            className="hover:cursor-pointer inline-flex items-center justify-center gap-2 bg-blue-600 text-white rounded-lg px-3 py-2 text-sm font-medium hover:bg-blue-700 transition-colors"
+                            onClick={() => handleResolve(report)}
+                            disabled={resolvingId === report.id}
+                            className="hover:cursor-pointer inline-flex items-center justify-center gap-2 bg-blue-600 text-white rounded-lg px-3 py-2 text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-60"
                           >
-                            <CheckCircle size={14} />
-                            Cerrar como revisado
+                            {resolvingId === report.id ? <Spinner size="sm" /> : penalty === 'ban' ? <Ban size={14} /> : deleteReply ? <Trash2 size={14} /> : <CheckCircle size={14} />}
+                            {resolvingId === report.id ? 'Aplicando...' : 'Aplicar decision'}
                           </button>
                           <button
                             onClick={() => handleClose(report.id, 'dismissed')}
@@ -332,10 +458,7 @@ const ReportsAdminPanel = () => {
                     )}
                     {(report.status === 'pending' || report.status === 'in_review') && (
                       <button
-                        onClick={() => {
-                          setActiveNoteId(noteOpen ? null : report.id)
-                          setModeratorNote(report.moderator_note ?? '')
-                        }}
+                        onClick={() => openResolve(report, noteOpen)}
                         className="hover:cursor-pointer inline-flex items-center justify-center gap-2 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 rounded-lg px-3 py-2 text-sm font-medium hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
                       >
                         <Flag size={14} />

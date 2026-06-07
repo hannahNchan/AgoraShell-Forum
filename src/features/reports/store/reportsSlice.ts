@@ -1,6 +1,11 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
 import { supabase } from '../../../services/supabase'
 import { type Report, type ReportReason, type ReportStatus, type ReportTargetType } from '../../../types'
+import {
+  buildModerationReasonText,
+  moderationDeletedReplyHtml,
+  type ModerationPenalty,
+} from '../constants/moderationCatalog'
 
 interface ReportsState {
   items: Report[]
@@ -19,7 +24,7 @@ const initialState: ReportsState = {
 const REPORT_SELECT = `
   *,
   reporter:profiles!reports_reporter_id_fkey(id, username, avatar_url),
-  reported_user:profiles!reports_reported_user_id_fkey(id, username, avatar_url, role),
+  reported_user:profiles!reports_reported_user_id_fkey(id, username, avatar_url, role, role_id, suspended_until, suspension_reason, banned_reason, moderation_previous_role_id),
   assigned_moderator:profiles!reports_assigned_moderator_id_fkey(id, username, avatar_url),
   handled_by:profiles!reports_handled_by_id_fkey(id, username, avatar_url),
   target_topic:topics!reports_target_topic_id_fkey(id, title, channel_id),
@@ -49,7 +54,7 @@ export const createReport = createAsyncThunk(
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Debes iniciar sesión para reportar.')
-      if (payload.targetType === 'user' && payload.targetUserId === user.id) {
+      if ((payload.reportedUserId ?? payload.targetUserId) === user.id) {
         throw new Error('No puedes reportarte a ti mismo.')
       }
 
@@ -120,6 +125,109 @@ export const updateReportStatus = createAsyncThunk(
         .from('reports')
         .update(patch)
         .eq('id', reportId)
+        .select(REPORT_SELECT)
+        .single()
+      if (error) throw error
+      return data as Report
+    } catch (error: unknown) {
+      return rejectWithValue(getErrorMessage(error))
+    }
+  }
+)
+
+export const resolveReportWithAction = createAsyncThunk(
+  'reports/resolveWithAction',
+  async ({
+    report,
+    moderatorNote,
+    penalty,
+    reasonId,
+    durationDays,
+    deleteReply,
+  }: {
+    report: Report
+    moderatorNote?: string
+    penalty: ModerationPenalty
+    reasonId: string
+    durationDays?: number
+    deleteReply?: boolean
+  }, { rejectWithValue }) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Debes iniciar sesión.')
+
+      const reasonText = buildModerationReasonText(reasonId, moderatorNote)
+      const now = new Date().toISOString()
+
+      if (deleteReply && report.target_type === 'reply' && report.target_reply_id) {
+        const { error: replyError } = await supabase
+          .from('replies')
+          .update({
+            content: moderationDeletedReplyHtml(reasonText),
+            updated_at: now,
+          })
+          .eq('id', report.target_reply_id)
+        if (replyError) throw replyError
+      }
+
+      if (penalty !== 'none') {
+        if (!report.reported_user_id || !report.reported_user) {
+          throw new Error('Este reporte no tiene usuario reportado.')
+        }
+
+        if (report.reported_user.role === 'admin' || report.reported_user.role_id === 1) {
+          throw new Error('No se puede banear o suspender a un admin.')
+        }
+
+        if (penalty === 'ban') {
+          const previousRoleId = report.reported_user.role_id === 4
+            ? report.reported_user.moderation_previous_role_id ?? 3
+            : report.reported_user.role_id ?? 3
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .update({
+              role_id: 4,
+              role: 'banned',
+              banned_reason: reasonText,
+              suspended_until: null,
+              suspension_reason: null,
+              moderation_previous_role_id: previousRoleId,
+            })
+            .eq('id', report.reported_user_id)
+          if (profileError) throw profileError
+        }
+
+        if (penalty === 'suspend') {
+          const days = Math.max(1, durationDays ?? 1)
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .update({
+              suspended_until: new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString(),
+              suspension_reason: reasonText,
+              banned_reason: null,
+            })
+            .eq('id', report.reported_user_id)
+          if (profileError) throw profileError
+        }
+      }
+
+      const actionSummary = [
+        moderatorNote?.trim() ? `Nota: ${moderatorNote.trim()}` : null,
+        penalty === 'ban' ? `Accion: ban permanente (${reasonText})` : null,
+        penalty === 'suspend' ? `Accion: suspension ${Math.max(1, durationDays ?? 1)} dias (${reasonText})` : null,
+        deleteReply ? `Contenido: mensaje borrado por moderacion (${reasonText})` : null,
+      ].filter(Boolean).join('\n')
+
+      const { data, error } = await supabase
+        .from('reports')
+        .update({
+          status: 'reviewed',
+          handled_by_id: user.id,
+          handled_at: now,
+          moderator_note: actionSummary || null,
+          updated_at: now,
+        })
+        .eq('id', report.id)
         .select(REPORT_SELECT)
         .single()
       if (error) throw error
@@ -211,6 +319,10 @@ const reportsSlice = createSlice({
         state.error = action.payload as string
       })
       .addCase(updateReportStatus.fulfilled, (state, action) => {
+        const index = state.items.findIndex((report) => report.id === action.payload.id)
+        if (index !== -1) state.items[index] = action.payload
+      })
+      .addCase(resolveReportWithAction.fulfilled, (state, action) => {
         const index = state.items.findIndex((report) => report.id === action.payload.id)
         if (index !== -1) state.items[index] = action.payload
       })

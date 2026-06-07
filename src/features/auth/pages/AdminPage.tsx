@@ -8,6 +8,7 @@ import { type AppDispatch, type RootState } from '../../../store'
 import { fetchSettings, updateMaxReplyDepth, updateMaxTags } from '../../tags/store/tagsSlice'
 import Spinner from '../../../components/shared/Spinner'
 import ReportsAdminPanel from '../../reports/components/ReportsAdminPanel'
+import { MODERATION_REASONS, buildModerationReasonText, getModerationReason } from '../../reports/constants/moderationCatalog'
 
 interface UserRow {
   id: string
@@ -25,7 +26,7 @@ interface UserRow {
 }
 
 type UserQueryRow = UserRow & {
-  roles?: { name?: UserRole } | null
+  roles?: { name?: UserRole } | { name?: UserRole }[] | null
 }
 
 type RestrictionAction = 'ban' | 'suspend'
@@ -45,6 +46,10 @@ const roleBadge: Record<UserRole, string> = {
 }
 
 const getRoleValue = (roleId: number) => ROLES.find((role) => role.id === roleId)?.value ?? 'user'
+const resolveUserRole = (user: UserQueryRow): UserRole => {
+  const role = Array.isArray(user.roles) ? user.roles[0]?.name : user.roles?.name
+  return role ?? user.role ?? getRoleValue(user.role_id)
+}
 
 const formatDateTime = (value: string) =>
   new Intl.DateTimeFormat('es-MX', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
@@ -97,6 +102,7 @@ const AdminPage = () => {
   const [bloqueoError, setBloqueoError] = useState('')
   const [restrictionModal, setRestrictionModal] = useState<{ user: UserRow; action: RestrictionAction } | null>(null)
   const [reason, setReason] = useState('')
+  const [reasonId, setReasonId] = useState(MODERATION_REASONS[0].id)
   const [durationDays, setDurationDays] = useState(7)
   const [modalError, setModalError] = useState('')
 
@@ -106,12 +112,30 @@ const AdminPage = () => {
 
   const fetchUsers = async () => {
     setLoading(true)
-    const { data } = await supabase
+    setUserError('')
+    const { data, error } = await supabase
       .from('profiles')
       .select('*, roles(name)')
       .order('created_at', { ascending: false })
+
+    if (error) {
+      const { data: fallbackData, error: fallbackError } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false })
+      if (fallbackError) {
+        setUserError(fallbackError.message)
+        setUsers([])
+        setLoading(false)
+        return
+      }
+      setUsers(((fallbackData || []) as UserQueryRow[]).map((u) => ({ ...u, role: resolveUserRole(u) })))
+      setLoading(false)
+      return
+    }
+
     setUsers(
-      ((data || []) as UserQueryRow[]).map((u) => ({ ...u, role: u.roles?.name as UserRole }))
+      ((data || []) as UserQueryRow[]).map((u) => ({ ...u, role: resolveUserRole(u) }))
     )
     setLoading(false)
   }
@@ -134,6 +158,9 @@ const AdminPage = () => {
   }, [settings])
 
   const userCountLabel = useMemo(() => `${users.length} usuarios`, [users.length])
+  const restrictedUsers = useMemo(() => users.filter((user) =>
+    user.role_id === 4 || (user.suspended_until ? new Date(user.suspended_until).getTime() > Date.now() : false)
+  ), [users])
 
   const updateUserInList = (updatedUser: UserRow) => {
     setUsers((prev) =>
@@ -154,13 +181,14 @@ const AdminPage = () => {
     if (error) throw error
 
     const updated = data as UserQueryRow
-    updateUserInList({ ...updated, role: updated.roles?.name as UserRole })
+    updateUserInList({ ...updated, role: resolveUserRole(updated) })
   }
 
   const openRestrictionModal = (user: UserRow, action: RestrictionAction) => {
     if (user.role_id === 1) return
     setRestrictionModal({ user, action })
     setReason('')
+    setReasonId(action === 'ban' ? 'hate_or_abuse' : 'harassment_or_bullying')
     setDurationDays(7)
     setModalError('')
   }
@@ -201,11 +229,7 @@ const AdminPage = () => {
   const handleApplyRestriction = async () => {
     if (!restrictionModal) return
 
-    const cleanReason = reason.trim()
-    if (cleanReason.length < 5) {
-      setModalError('Agrega una razon clara de al menos 5 caracteres.')
-      return
-    }
+    const cleanReason = buildModerationReasonText(reasonId, reason)
 
     if (restrictionModal.action === 'suspend' && durationDays < 1) {
       setModalError('La suspension debe durar al menos 1 dia.')
@@ -545,6 +569,62 @@ const AdminPage = () => {
         </div>
       )}
 
+      {!loading && (
+        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800">
+          <div className="flex flex-col gap-1 border-b border-slate-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between dark:border-slate-700">
+            <div className="flex items-center gap-2">
+              <Ban size={16} className="text-red-400" />
+              <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Usuarios baneados o suspendidos</h2>
+            </div>
+            <span className="text-xs text-slate-400">{restrictedUsers.length} restringidos</span>
+          </div>
+          {restrictedUsers.length === 0 ? (
+            <div className="px-5 py-8 text-center text-sm text-slate-400">No hay usuarios restringidos.</div>
+          ) : (
+            <div className="divide-y divide-slate-100 dark:divide-slate-700">
+              {restrictedUsers.map((user) => {
+                const restriction = getRestrictionState(user)
+                return (
+                  <div key={user.id} className="grid gap-4 p-5 md:grid-cols-[1fr_1.4fr_auto] md:items-center">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-slate-700 dark:text-slate-300">{user.username}</p>
+                      <p className="text-xs text-slate-400 capitalize">{user.role ?? getRoleValue(user.role_id)}</p>
+                    </div>
+                    <div>
+                      <span className={`inline-flex w-fit max-w-full items-center rounded-md border px-2 py-1 text-xs font-medium ${restriction.className}`}>
+                        {restriction.label}
+                      </span>
+                      {restriction.detail && <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{restriction.detail}</p>}
+                    </div>
+                    <div className="flex flex-wrap gap-2 md:justify-end">
+                      {user.role_id !== 4 && (
+                        <button
+                          type="button"
+                          onClick={() => openRestrictionModal(user, 'suspend')}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-amber-200 px-3 py-1.5 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-50 dark:border-amber-900 dark:text-amber-300 dark:hover:bg-amber-950/30"
+                        >
+                          <Clock size={13} />
+                          Prolongar
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => handleLiftRestriction(user)}
+                        disabled={saving === user.id}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 px-3 py-1.5 text-xs font-medium text-emerald-700 transition-colors hover:bg-emerald-50 disabled:opacity-50 dark:border-emerald-900 dark:text-emerald-300 dark:hover:bg-emerald-950/30"
+                      >
+                        <RotateCcw size={13} />
+                        Desbloquear
+                      </button>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
       {restrictionModal && restrictionTarget && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/50 px-0 sm:items-center sm:px-4">
           <div className="w-full rounded-t-2xl border border-slate-200 bg-white p-5 shadow-xl dark:border-slate-700 dark:bg-slate-800 sm:max-w-lg sm:rounded-2xl">
@@ -593,14 +673,31 @@ const AdminPage = () => {
               </label>
             )}
 
+            <label className="mb-4 block text-sm font-medium text-slate-700 dark:text-slate-300">
+              Motivo del catalogo
+              <select
+                value={reasonId}
+                onChange={(event) => {
+                  const next = event.target.value
+                  setReasonId(next)
+                  setDurationDays(getModerationReason(next).defaultDays ?? durationDays)
+                }}
+                className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100"
+              >
+                {MODERATION_REASONS.map((item) => (
+                  <option key={item.id} value={item.id}>{item.label}</option>
+                ))}
+              </select>
+            </label>
+
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-              Razon
+              Comentario adicional
               <textarea
                 value={reason}
                 onChange={(event) => setReason(event.target.value)}
                 rows={4}
                 maxLength={1000}
-                placeholder={restrictionModal.action === 'ban' ? 'Explica por que este usuario queda baneado.' : 'Explica por que se suspende temporalmente.'}
+                placeholder={restrictionModal.action === 'ban' ? 'Detalle opcional para el ban.' : 'Detalle opcional para la suspension.'}
                 className="mt-2 w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100"
               />
             </label>
