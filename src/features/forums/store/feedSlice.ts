@@ -14,6 +14,9 @@ interface FeedState {
   loadingMore: boolean
   hasMore: boolean
   error: string | null
+  loadMoreError: string | null
+  currentRequestId?: string
+  currentMoreRequestId?: string
 }
 
 const initialState: FeedState = {
@@ -23,6 +26,7 @@ const initialState: FeedState = {
   loadingMore: false,
   hasMore: true,
   error: null,
+  loadMoreError: null,
 }
 
 const fetchStars = async (data: any[], userId: string) => {
@@ -50,29 +54,43 @@ const buildQuery = (filter: FeedFilter, from: number, to: number) => {
         .order('stars_count', { ascending: false })
         .order('replies_count', { ascending: false })
         .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
         .range(from, to)
     case 'hot':
       return base
         .gte('created_at', hoursAgo(48))
         .order('replies_count', { ascending: false })
         .order('stars_count', { ascending: false })
+        .order('id', { ascending: false })
         .range(from, to)
     case 'new':
       return base
         .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
         .range(from, to)
     case 'top':
       return base
         .order('stars_count', { ascending: false })
         .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
         .range(from, to)
     case 'rising':
       return base
         .gte('created_at', hoursAgo(168))
         .order('replies_count', { ascending: false })
         .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
         .range(from, to)
   }
+}
+
+const mergeUniqueTopics = (current: Topic[], incoming: Topic[]) => {
+  const seen = new Set(current.map((topic) => topic.id))
+  return [...current, ...incoming.filter((topic) => {
+    if (seen.has(topic.id)) return false
+    seen.add(topic.id)
+    return true
+  })]
 }
 
 export const fetchFeed = createAsyncThunk(
@@ -119,24 +137,43 @@ const feedSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      .addCase(fetchFeed.pending, (state) => { state.loading = true; state.error = null })
+      .addCase(fetchFeed.pending, (state, action) => {
+        state.loading = true
+        state.error = null
+        state.loadMoreError = null
+        state.currentRequestId = action.meta.requestId
+      })
       .addCase(fetchFeed.fulfilled, (state, action) => {
+        if (state.currentRequestId !== action.meta.requestId) return
         state.loading = false
         state.items = action.payload
         state.hasMore = action.payload.length === PAGE_SIZE
+        state.currentRequestId = undefined
       })
       .addCase(fetchFeed.rejected, (state, action) => {
+        if (state.currentRequestId !== action.meta.requestId) return
         state.loading = false
         state.error = action.payload as string
+        state.currentRequestId = undefined
       })
-      .addCase(fetchMoreFeed.pending, (state) => { state.loadingMore = true })
+      .addCase(fetchMoreFeed.pending, (state, action) => {
+        state.loadingMore = true
+        state.loadMoreError = null
+        state.currentMoreRequestId = action.meta.requestId
+      })
       .addCase(fetchMoreFeed.fulfilled, (state, action) => {
+        if (state.currentMoreRequestId !== action.meta.requestId) return
         state.loadingMore = false
-        const newItems = action.payload.filter((t) => !state.items.find((e) => e.id === t.id))
-        state.items = [...state.items, ...newItems]
+        state.items = mergeUniqueTopics(state.items, action.payload)
         state.hasMore = action.payload.length === PAGE_SIZE
+        state.currentMoreRequestId = undefined
       })
-      .addCase(fetchMoreFeed.rejected, (state) => { state.loadingMore = false })
+      .addCase(fetchMoreFeed.rejected, (state, action) => {
+        if (state.currentMoreRequestId !== action.meta.requestId) return
+        state.loadingMore = false
+        state.loadMoreError = action.payload as string
+        state.currentMoreRequestId = undefined
+      })
       .addCase(toggleStar.fulfilled, (state, action) => {
         const { topicId, isStarred, stars_count } = action.payload
         const topic = state.items.find((t) => t.id === topicId)
