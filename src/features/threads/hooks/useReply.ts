@@ -13,12 +13,15 @@ export const useReply = (reply: Reply, topicId: string) => {
   const dispatch = useDispatch<AppDispatch>()
   const { user, isAuthenticated } = useAuth()
   const profile = useSelector(selectProfile)
-  const { isModerator, isBanned } = useRole()
+  const { isModerator, isBanned, can } = useRole()
   const { confirm } = useConfirm()
   const foroBloqueado = useForoBloqueado()
 
-  const canDelete = isModerator || profile?.id === reply.author_id
-  const canEdit = profile?.id === reply.author_id
+  const canDelete = can('delete_any_content') || (profile?.id === reply.author_id && can('delete_own_content'))
+  const canEdit = profile?.id === reply.author_id && can('edit_own_content')
+  const canReply = can('create_reply')
+  const canReact = can('react_to_content')
+  const canReport = can('report_content')
 
   const [showReplyEditor, setShowReplyEditor] = useState(false)
   const [showBottomSheet, setShowBottomSheet] = useState(false)
@@ -30,7 +33,7 @@ export const useReply = (reply: Reply, topicId: string) => {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
 
   const handleReplyClick = () => {
-    if (foroBloqueado) return
+    if (foroBloqueado || !canReply) return
     const isMobile = window.innerWidth < 768
     if (isMobile) {
       setShowBottomSheet(true)
@@ -41,7 +44,7 @@ export const useReply = (reply: Reply, topicId: string) => {
   }
 
   const handleSubmitReply = async (content: string) => {
-    if (!content || content === '<p></p>' || foroBloqueado) return
+    if (!content || content === '<p></p>' || foroBloqueado || !canReply) return
     setSubmitting(true)
     try {
       await dispatch(createReply({ topicId, content, parentId: reply.id })).unwrap()
@@ -72,7 +75,7 @@ export const useReply = (reply: Reply, topicId: string) => {
   }
 
   const handleReaction = (emoji: string) => {
-    if (!isAuthenticated) return
+    if (!isAuthenticated || !canReact) return
     dispatch(toggleReaction({ replyId: reply.id, emoji }))
     setShowEmojiPicker(false)
   }
@@ -95,6 +98,9 @@ export const useReply = (reply: Reply, topicId: string) => {
     foroBloqueado,
     canDelete,
     canEdit,
+    canReply,
+    canReact,
+    canReport,
     showReplyEditor,
     showBottomSheet,
     setShowBottomSheet,

@@ -18,7 +18,7 @@ const ThreadDetailPage = () => {
   const { topicId } = useParams<{ topicId: string }>()
   const dispatch = useDispatch<AppDispatch>()
   const { isAuthenticated } = useAuth()
-  const { isBanned, isModerator } = useRole()
+  const { isBanned, can } = useRole()
   const profile = useSelector(selectProfile)
 
   const {
@@ -42,11 +42,14 @@ const ThreadDetailPage = () => {
 
   const isClosed = topic?.is_closed ?? false
   const foroBloqueado = useForoBloqueado()
-  const canEditTopic = !!(topic && profile?.id === topic.author_id)
+  const canEditTopic = !!(topic && profile?.id === topic.author_id && can('edit_own_content'))
+  const canCreateReply = can('create_reply')
+  const canCloseTopic = can('close_topic')
+  const canReport = can('report_content')
 
   const handleSubmitReply = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!replyContent || replyContent === '<p></p>' || !topicId || foroBloqueado) return
+    if (!replyContent || replyContent === '<p></p>' || !topicId || foroBloqueado || !canCreateReply) return
     setSubmitting(true)
     try {
       await dispatch(createReply({ topicId, content: replyContent })).unwrap()
@@ -64,10 +67,11 @@ const ThreadDetailPage = () => {
       <TopicHeader
         topic={topic}
         isClosed={isClosed}
-        isModerator={isModerator}
+        isModerator={canCloseTopic}
         isAuthenticated={isAuthenticated}
         isBanned={isBanned}
         canEdit={canEditTopic}
+        canReport={canReport}
         maxTags={maxTags}
         onStar={handleStar}
         onClose={handleClose}
@@ -127,7 +131,7 @@ const ThreadDetailPage = () => {
           <div className="bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-800 p-5 text-center text-sm text-red-500 dark:text-red-400">
             Tu cuenta ha sido suspendida y no puedes publicar contenido.
           </div>
-        ) : (
+        ) : canCreateReply ? (
           <form onSubmit={handleSubmitReply} className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5 space-y-3">
             <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Agregar respuesta</h3>
             <RichTextEditor
@@ -147,6 +151,10 @@ const ThreadDetailPage = () => {
               </button>
             </div>
           </form>
+        ) : (
+          <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 p-5 text-center text-sm text-slate-500 dark:text-slate-400">
+            No tienes permisos para responder.
+          </div>
         )
       ) : (
         <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 p-5 text-center text-sm text-slate-500 dark:text-slate-400">

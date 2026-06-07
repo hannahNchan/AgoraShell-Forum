@@ -112,10 +112,12 @@ const ReplyCard = ({ reply, topicId, topicClosed, depth = 0, maxDepth = 5 }: Rep
   const {
     user,
     isAuthenticated,
-    isBanned,
     foroBloqueado,
     canDelete,
     canEdit,
+    canReply,
+    canReact,
+    canReport,
     showReplyEditor,
     showBottomSheet,
     setShowBottomSheet,
@@ -209,7 +211,7 @@ const ReplyCard = ({ reply, topicId, topicClosed, depth = 0, maxDepth = 5 }: Rep
                   </button>
                 ))}
 
-                {isAuthenticated && !isBanned && !topicClosed && !foroBloqueado && (
+                {isAuthenticated && canReply && !topicClosed && !foroBloqueado && (
                   <button
                     onClick={handleReplyClick}
                     className="hover:cursor-pointer flex items-center gap-1 px-2 py-0.5 rounded-full border border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-indigo-500 hover:border-indigo-300 transition-colors text-xs"
@@ -219,7 +221,7 @@ const ReplyCard = ({ reply, topicId, topicClosed, depth = 0, maxDepth = 5 }: Rep
                   </button>
                 )}
 
-                {canEdit && isAuthenticated && !isBanned && (
+                {canEdit && isAuthenticated && (
                   <button
                     onClick={startEditing}
                     className="hover:cursor-pointer flex items-center gap-1 px-2 py-0.5 rounded-full border border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-indigo-500 hover:border-indigo-300 transition-colors text-xs"
@@ -229,7 +231,7 @@ const ReplyCard = ({ reply, topicId, topicClosed, depth = 0, maxDepth = 5 }: Rep
                   </button>
                 )}
 
-                {isAuthenticated && (
+                {isAuthenticated && canReport && (
                   <button
                     onClick={() => setReportOpen(true)}
                     className="hover:cursor-pointer flex items-center gap-1 px-2 py-0.5 rounded-full border border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-red-500 hover:border-red-300 transition-colors text-xs"
@@ -248,7 +250,7 @@ const ReplyCard = ({ reply, topicId, topicClosed, depth = 0, maxDepth = 5 }: Rep
                   </button>
                 )}
 
-                {isAuthenticated && (
+                {isAuthenticated && canReact && (
                   <div className="relative">
                     <button
                       onClick={() => setShowEmojiPicker(!showEmojiPicker)}

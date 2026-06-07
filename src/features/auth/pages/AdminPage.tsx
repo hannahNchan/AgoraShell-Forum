@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Ban, Clock, MessageSquare, RotateCcw, Settings, ShieldAlert, Tag as TagIcon, Users, X } from 'lucide-react'
-import { selectIsAdmin } from '../store/authSelectors'
+import { selectIsAdmin, selectProfile } from '../store/authSelectors'
 import { supabase } from '../../../services/supabase'
 import { type UserRole } from '../../../types'
 import { type AppDispatch, type RootState } from '../../../store'
@@ -9,6 +9,7 @@ import { fetchSettings, updateMaxReplyDepth, updateMaxTags } from '../../tags/st
 import Spinner from '../../../components/shared/Spinner'
 import ReportsAdminPanel from '../../reports/components/ReportsAdminPanel'
 import { MODERATION_REASONS, buildModerationReasonText, getModerationReason } from '../../reports/constants/moderationCatalog'
+import { can } from '../../../services/permissions'
 
 interface UserRow {
   id: string
@@ -86,6 +87,8 @@ const getRestrictionState = (user: UserRow) => {
 const AdminPage = () => {
   const dispatch = useDispatch<AppDispatch>()
   const isAdmin = useSelector(selectIsAdmin)
+  const profile = useSelector(selectProfile)
+  const canReviewReports = can(profile, 'review_reports')
   const settings = useSelector((state: RootState) => state.tags.settings)
   const [users, setUsers] = useState<UserRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -370,10 +373,19 @@ const AdminPage = () => {
     )
   }
 
-  if (!isAdmin) {
+  if (!isAdmin && !canReviewReports) {
     return (
       <div className="py-16 text-center text-slate-400">
         No tienes permisos para ver esta pagina.
+      </div>
+    )
+  }
+
+  if (!isAdmin && canReviewReports) {
+    return (
+      <div className="space-y-8">
+        <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">Panel de moderacion</h1>
+        <ReportsAdminPanel />
       </div>
     )
   }

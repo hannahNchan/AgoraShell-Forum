@@ -5,6 +5,7 @@ import { ensureForumCanPublish } from '../../../services/forumLock'
 import { ensureUserCanCreateContent } from '../../../services/userRestrictions'
 import { requireSyncedAuthUser } from '../../../services/authGuard'
 import { type RootState } from '../../../store'
+import { can } from '../../../services/permissions'
 
 interface ChannelsState {
   items: Channel[]
@@ -39,6 +40,10 @@ export const createChannel = createAsyncThunk(
   ) => {
     try {
       const user = await requireSyncedAuthUser(getState() as RootState)
+      const profile = (getState() as RootState).auth.profile
+      if (!can(profile, 'create_channel')) {
+        throw new Error('No tienes permisos para crear canales.')
+      }
       await ensureForumCanPublish(user.id)
       await ensureUserCanCreateContent(user.id)
       const { data, error } = await supabase

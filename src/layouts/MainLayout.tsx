@@ -175,8 +175,8 @@ export const MainLayout = () => {
   const location = useLocation()
   const { channelId } = useParams()
 
-  const { profile, isAuthenticated, isModerator, loading: authLoading } = useAuth()
-  const { isAdmin } = useRole()
+  const { profile, isAuthenticated, loading: authLoading } = useAuth()
+  const { can } = useRole()
   const channels = useSelector((state: RootState) => state.channels.items)
   const channelsLoading = useSelector((state: RootState) => state.channels.loading)
   const unreadCount = useSelector((state: RootState) => state.notifications.unreadCount)
@@ -307,7 +307,7 @@ export const MainLayout = () => {
                     {channel.name}
                   </span>
                 )}
-                {!collapsed && isModerator && (
+                {!collapsed && can('delete_channel') && (
                   <button
                     onClick={(e) => { e.preventDefault(); handleDeleteChannel(channel) }}
                     className="hover:cursor-pointer opacity-0 group-hover:opacity-100 transition-all ml-auto"
@@ -324,7 +324,7 @@ export const MainLayout = () => {
           ))
         )}
 
-        {isModerator && !foroBloqueado && (
+        {can('create_channel') && !foroBloqueado && (
           <button
             onClick={() => setShowCreateChannel(true)}
             className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm hover:cursor-pointer transition-colors w-full ${collapsed ? 'justify-center' : ''}`}
@@ -364,7 +364,7 @@ export const MainLayout = () => {
             <Settings size={16} />
             {!collapsed && <span>Configuración</span>}
           </Link>
-          {isAdmin && (
+          {can('review_reports') && (
             <Link
               to="/admin"
               onClick={() => setUserMenuOpen(false)}
@@ -380,7 +380,7 @@ export const MainLayout = () => {
               }}
             >
               <Settings size={15} />
-              {!collapsed && <span>Administración</span>}
+              {!collapsed && <span>{can('manage_admin_settings') ? 'Administración' : 'Moderación'}</span>}
             </Link>
           )}
         </div>
