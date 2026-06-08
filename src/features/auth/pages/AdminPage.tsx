@@ -120,7 +120,7 @@ const AdminPage = () => {
     setUserError('')
     const { data, error } = await supabase
       .from('profiles')
-      .select('*, roles(name)')
+      .select('*, roles!profiles_role_id_fkey(name)')
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -180,7 +180,7 @@ const AdminPage = () => {
       .from('profiles')
       .update(payload)
       .eq('id', userId)
-      .select('*, roles(name)')
+      .select('*, roles!profiles_role_id_fkey(name)')
       .single()
 
     if (error) throw error
