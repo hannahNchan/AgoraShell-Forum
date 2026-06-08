@@ -18,7 +18,7 @@ export const ensureForumCanPublish = async (userId?: string) => {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role_id, role, roles(name)')
+    .select('role_id, role, roles!profiles_role_id_fkey(name)')
     .eq('id', userId)
     .single()
   const profileRow = profile as ProfileRoleRow | null
