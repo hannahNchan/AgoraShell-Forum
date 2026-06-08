@@ -232,15 +232,13 @@ export const updateProfileSettings = createAsyncThunk(
       const cleanUsername = username.trim()
       const cleanBio = bio.trim()
 
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('profiles')
         .update({
           username: cleanUsername,
           bio: cleanBio || null,
         })
         .eq('id', userId)
-        .select('*, roles!profiles_role_id_fkey(name)')
-        .single()
 
       if (error) {
         if (error.code === '23505') {
@@ -252,7 +250,8 @@ export const updateProfileSettings = createAsyncThunk(
         throw error
       }
 
-      return normalizeProfile(data as ProfileWithRole)
+      const profile = await requireProfile(userId)
+      return profile
     } catch (error: unknown) {
       return rejectWithValue(getErrorMessage(error))
     }
