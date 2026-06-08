@@ -14,6 +14,7 @@ import Spinner from '../../../components/shared/Spinner'
 import { type Topic } from '../../../types'
 import { useRole } from '../../auth/hooks/useRole'
 import { useConfirm } from '../../../hooks/useConfirm'
+import UserLink from '../../../components/shared/UserLink'
 
 interface TopicCardProps {
   topic: Topic
@@ -99,7 +100,7 @@ const TopicCard = ({ topic }: TopicCardProps) => {
             {topic.title}
           </Link>
           <div className="flex items-center gap-3 mt-1.5 text-xs text-slate-400">
-            <span className="font-medium text-slate-500 dark:text-slate-400">{topic.author?.username}</span>
+            <UserLink profile={topic.author} className="font-medium text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400" />
             <span className="flex items-center gap-1">
               <Clock size={11} />
               {formatDistanceToNow(new Date(topic.created_at), { addSuffix: true, locale: es })}
@@ -178,7 +179,9 @@ const TopicCard = ({ topic }: TopicCardProps) => {
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <span className="text-xs font-medium text-slate-600 dark:text-slate-300">{r.author?.username} </span>
+                      <UserLink profile={r.author} className="text-xs font-medium text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400">
+                        {r.author?.username}{' '}
+                      </UserLink>
                       <span className="text-xs text-slate-400 dark:text-slate-500">
                         {stripHtml(r.content).slice(0, 80)}{stripHtml(r.content).length > 80 ? '…' : ''}
                       </span>
