@@ -64,6 +64,8 @@ const requireProfile = async (userId: string) => {
   return profile
 }
 
+const getErrorMessage = (error: unknown) => error instanceof Error ? error.message : 'Ocurrió un error inesperado.'
+
 export const loadAuthUser = createAsyncThunk('auth/loadAuthUser', async (_, { rejectWithValue }) => {
   try {
     const { data: { session }, error } = await supabase.auth.getSession()
@@ -217,6 +219,40 @@ export const updateAvatar = createAsyncThunk(
   }
 )
 
+export const updateProfileSettings = createAsyncThunk(
+  'auth/updateProfileSettings',
+  async ({ userId, username, bio }: { userId: string; username: string; bio: string }, { rejectWithValue }) => {
+    try {
+      const cleanUsername = username.trim()
+      const cleanBio = bio.trim()
+
+      const { data, error } = await supabase
+        .from('profiles')
+        .update({
+          username: cleanUsername,
+          bio: cleanBio || null,
+        })
+        .eq('id', userId)
+        .select('*, roles(name)')
+        .single()
+
+      if (error) {
+        if (error.code === '23505') {
+          throw new Error('Ese username ya está en uso.')
+        }
+        if (error.code === '23514') {
+          throw new Error('El username debe tener 3-30 caracteres y usar solo letras, números o _.')
+        }
+        throw error
+      }
+
+      return normalizeProfile(data as ProfileWithRole)
+    } catch (error: unknown) {
+      return rejectWithValue(getErrorMessage(error))
+    }
+  }
+)
+
 const authSlice = createSlice({
   name: 'auth',
   initialState,
@@ -304,6 +340,9 @@ const authSlice = createSlice({
         if (state.profile) {
           state.profile.avatar_url = action.payload
         }
+      })
+      .addCase(updateProfileSettings.fulfilled, (state, action) => {
+        state.profile = action.payload
       })
   },
 })
