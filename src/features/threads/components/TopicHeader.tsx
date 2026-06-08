@@ -12,6 +12,7 @@ import { Avatar } from './ReplyCard'
 import { type Topic, type Tag } from '../../../types'
 import ReportModal from '../../reports/components/ReportModal'
 import UserLink from '../../../components/shared/UserLink'
+import ReputationBadge from '../../reputation/components/ReputationBadge'
 
 interface TopicHeaderProps {
   topic: Topic
@@ -87,6 +88,7 @@ const TopicHeader = ({
           )}
           <div className="flex items-center gap-3 mt-1 text-xs text-slate-400">
             <UserLink profile={topic.author} className="font-medium text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400" />
+            <ReputationBadge userId={topic.author?.id} compact />
             <span className="flex items-center gap-1">
               <Clock size={11} />
               {format(new Date(topic.created_at), "d 'de' MMMM, yyyy HH:mm", { locale: es })}

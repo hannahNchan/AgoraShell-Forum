@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { Clock, FileText, MessageSquare, Shield, Sparkles, Star } from 'lucide-react'
+import { Award, Clock, FileText, MessageSquare, Shield, Sparkles, Star, TrendingUp } from 'lucide-react'
 import { format, formatDistanceToNow } from 'date-fns'
 import { es } from 'date-fns/locale'
 import Spinner from '../../../components/shared/Spinner'
 import { supabase } from '../../../services/supabase'
 import { type Profile } from '../../../types'
+import { type ReputationSummary, getNextReputationLevel, getReputationProgress } from '../../reputation/reputation'
+import ReputationBadge from '../../reputation/components/ReputationBadge'
 
 type ProfileTopic = {
   id: string
@@ -59,6 +61,8 @@ const UserProfilePage = () => {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [topics, setTopics] = useState<ProfileTopic[]>([])
   const [replies, setReplies] = useState<ProfileReply[]>([])
+  const [reputation, setReputation] = useState<ReputationSummary | null>(null)
+  const [badges, setBadges] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'activity' | 'topics' | 'replies'>('activity')
@@ -80,7 +84,7 @@ const UserProfilePage = () => {
           .single()
         if (profileError) throw profileError
 
-        const [topicsResult, repliesResult] = await Promise.all([
+        const [topicsResult, repliesResult, reputationResult, badgesResult] = await Promise.all([
           supabase
             .from('topics')
             .select('id, channel_id, title, content, author_id, stars_count, replies_count, created_at, updated_at, is_pinned, is_closed, channel:channels(id, name, icon)')
@@ -93,13 +97,27 @@ const UserProfilePage = () => {
             .eq('author_id', profileData.id)
             .order('created_at', { ascending: false })
             .limit(30),
+          supabase
+            .from('user_reputation_scores')
+            .select('*')
+            .eq('user_id', profileData.id)
+            .maybeSingle(),
+          supabase
+            .from('user_reputation_badges')
+            .select('badges')
+            .eq('user_id', profileData.id)
+            .maybeSingle(),
         ])
 
         if (topicsResult.error) throw topicsResult.error
         if (repliesResult.error) throw repliesResult.error
+        if (reputationResult.error) throw reputationResult.error
+        if (badgesResult.error) throw badgesResult.error
 
         if (!cancelled) {
           setProfile(profileData as Profile)
+          setReputation(reputationResult.data as ReputationSummary | null)
+          setBadges(((badgesResult.data as { badges?: string[] } | null)?.badges ?? []))
           setTopics(((topicsResult.data ?? []) as Array<Omit<ProfileTopic, 'channel'> & { channel?: MaybeArray<ProfileTopic['channel']> }>).map((topic) => ({
             ...topic,
             channel: one(topic.channel),
@@ -151,6 +169,9 @@ const UserProfilePage = () => {
   const totalStars = topics.reduce((sum, topic) => sum + (topic.stars_count ?? 0), 0)
   const joinedAt = profile.created_at ? format(new Date(profile.created_at), "d MMM yyyy", { locale: es }) : 'Sin fecha'
   const isRestricted = profile.role === 'banned' || !!profile.banned_reason || (!!profile.suspended_until && new Date(profile.suspended_until) > new Date())
+  const shellScore = reputation?.shell_score ?? 0
+  const nextLevel = getNextReputationLevel(shellScore)
+  const progress = getReputationProgress(shellScore)
 
   return (
     <div className="mx-auto max-w-4xl space-y-4">
@@ -175,6 +196,7 @@ const UserProfilePage = () => {
                       {profile.role}
                     </span>
                   )}
+                  <ReputationBadge summary={reputation} />
                 </div>
                 <p className="text-xs text-slate-400">Miembro desde {joinedAt}</p>
               </div>
@@ -204,6 +226,47 @@ const UserProfilePage = () => {
               <p className="text-lg font-bold text-slate-800 dark:text-slate-100">{totalStars}</p>
               <p className="text-xs text-slate-400">Estrellas</p>
             </div>
+          </div>
+
+          <div className="mt-4 rounded-xl border border-indigo-100 bg-indigo-50/60 p-4 dark:border-indigo-900/60 dark:bg-indigo-950/20">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <div className="flex items-center gap-2 text-sm font-semibold text-indigo-700 dark:text-indigo-200">
+                  <TrendingUp size={16} />
+                  Reputación Shell
+                </div>
+                <div className="mt-1 flex flex-wrap items-baseline gap-2">
+                  <span className="text-3xl font-extrabold text-slate-800 dark:text-slate-100">{shellScore}</span>
+                  <span className="text-sm font-semibold text-slate-500 dark:text-slate-300">{reputation?.level_name ?? 'Visitante'} · {reputation?.level_range ?? '0 - 49'}</span>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-xs sm:min-w-64">
+                <MiniStat label="Estrellas recibidas" value={reputation?.stars_received ?? 0} />
+                <MiniStat label="Reacciones" value={reputation?.reply_reactions_received ?? 0} />
+                <MiniStat label="Temas" value={reputation?.topics_created ?? topics.length} />
+                <MiniStat label="Replies" value={reputation?.replies_created ?? replies.length} />
+              </div>
+            </div>
+
+            <div className="mt-4">
+              <div className="h-2 overflow-hidden rounded-full bg-white dark:bg-slate-800">
+                <div className="h-full rounded-full bg-indigo-600 transition-all" style={{ width: `${progress}%` }} />
+              </div>
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                {nextLevel ? `${Math.max(0, nextLevel.min - shellScore)} puntos para ${nextLevel.name}` : 'Nivel máximo alcanzado'}
+              </p>
+            </div>
+
+            {badges.length > 0 && (
+              <div className="mt-4 flex flex-wrap gap-2">
+                {badges.map((badge) => (
+                  <span key={badge} className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-700 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
+                    <Award size={12} />
+                    {badge}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </section>
@@ -257,6 +320,13 @@ const UserProfilePage = () => {
 const EmptyState = ({ text }: { text: string }) => (
   <div className="rounded-xl border border-slate-200 bg-white px-5 py-10 text-center text-sm text-slate-400 dark:border-slate-700 dark:bg-slate-800">
     {text}
+  </div>
+)
+
+const MiniStat = ({ label, value }: { label: string; value: number }) => (
+  <div className="rounded-lg border border-indigo-100 bg-white px-2 py-2 dark:border-indigo-900/60 dark:bg-slate-800">
+    <p className="font-bold text-slate-800 dark:text-slate-100">{value}</p>
+    <p className="text-slate-400">{label}</p>
   </div>
 )
 

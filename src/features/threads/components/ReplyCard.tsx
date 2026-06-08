@@ -14,6 +14,7 @@ import Spinner from '../../../components/shared/Spinner'
 import { type Reply } from '../../../types'
 import ReportModal from '../../reports/components/ReportModal'
 import UserLink from '../../../components/shared/UserLink'
+import ReputationBadge from '../../reputation/components/ReputationBadge'
 
 interface AvatarProps {
   profile: any
@@ -153,6 +154,7 @@ const ReplyCard = ({ reply, topicId, topicClosed, depth = 0, maxDepth = 5 }: Rep
           <div className="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl px-3 py-2">
             <div className="flex items-center gap-2 mb-2">
               <UserLink profile={reply.author} className="text-sm font-semibold text-slate-800 hover:text-indigo-600 dark:text-slate-100 dark:hover:text-indigo-400" />
+              <ReputationBadge userId={reply.author?.id} compact />
               {reply.author?.role && reply.author.role !== 'user' && (
                 <span className="text-xs bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 px-1.5 py-0.5 rounded-full font-medium capitalize">
                   {reply.author.role}
