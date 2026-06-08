@@ -41,7 +41,7 @@ const normalizeProfile = (profile: ProfileWithRole): Profile => {
 const fetchProfile = async (userId: string): Promise<Profile | null> => {
   const { data, error } = await supabase
     .from('profiles')
-    .select('*, roles(name)')
+    .select('*, roles!profiles_role_id_fkey(name)')
     .eq('id', userId)
     .single()
 
@@ -62,6 +62,14 @@ const requireProfile = async (userId: string) => {
   const profile = await fetchProfile(userId)
   if (!profile) throw new Error('No se pudo cargar tu perfil. Intenta cerrar sesion e iniciar de nuevo.')
   return profile
+}
+
+const getErrorMessage = (error: unknown) => {
+  if (error instanceof Error) return error.message
+  if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') {
+    return error.message
+  }
+  return 'Ocurrió un error inesperado.'
 }
 
 export const loadAuthUser = createAsyncThunk('auth/loadAuthUser', async (_, { rejectWithValue }) => {
@@ -217,6 +225,39 @@ export const updateAvatar = createAsyncThunk(
   }
 )
 
+export const updateProfileSettings = createAsyncThunk(
+  'auth/updateProfileSettings',
+  async ({ userId, username, bio }: { userId: string; username: string; bio: string }, { rejectWithValue }) => {
+    try {
+      const cleanUsername = username.trim()
+      const cleanBio = bio.trim()
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          username: cleanUsername,
+          bio: cleanBio || null,
+        })
+        .eq('id', userId)
+
+      if (error) {
+        if (error.code === '23505') {
+          throw new Error('Ese username ya está en uso.')
+        }
+        if (error.code === '23514') {
+          throw new Error('El username debe tener 3-30 caracteres y usar solo letras, números o _.')
+        }
+        throw error
+      }
+
+      const profile = await requireProfile(userId)
+      return profile
+    } catch (error: unknown) {
+      return rejectWithValue(getErrorMessage(error))
+    }
+  }
+)
+
 const authSlice = createSlice({
   name: 'auth',
   initialState,
@@ -304,6 +345,9 @@ const authSlice = createSlice({
         if (state.profile) {
           state.profile.avatar_url = action.payload
         }
+      })
+      .addCase(updateProfileSettings.fulfilled, (state, action) => {
+        state.profile = action.payload
       })
   },
 })

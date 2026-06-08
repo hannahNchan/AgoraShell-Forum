@@ -14,6 +14,7 @@ import TagPage from '../features/tags/pages/TagPage'
 import VerifyEmailPage from '../features/auth/pages/VerifyEmailPage'
 import AuthCallbackPage from '../features/auth/pages/AuthCallbackPage'
 import ThreadPage from '../features/threads/pages/ThreadPage'
+import UserProfilePage from '../features/profile/pages/UserProfilePage'
 
 const MAINTENANCE_MODE = false
 
@@ -36,6 +37,7 @@ const appRoutes = [
       { path: 'admin', element: <AdminPage /> },
       { path: 'hot', element: <HotTopicsPage /> },
       { path: 'settings', element: <SettingsPage /> },
+      { path: 'users/:username', element: <UserProfilePage /> },
       { path: 'search', element: <SearchPage /> },
     ],
   },

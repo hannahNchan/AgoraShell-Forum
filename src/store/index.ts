@@ -8,6 +8,7 @@ import notificationsReducer from '../features/notifications/store/notificationsS
 import feedReducer from '../features/forums/store/feedSlice'
 import tagsReducer from '../features/tags/store/tagsSlice'
 import reportsReducer from '../features/reports/store/reportsSlice'
+import adminAuditReducer from '../features/adminAudit/store/adminAuditSlice'
 
 export const store = configureStore({
   reducer: {
@@ -19,7 +20,8 @@ export const store = configureStore({
     notifications: notificationsReducer,
     feed: feedReducer,
     tags: tagsReducer,
-    reports: reportsReducer
+    reports: reportsReducer,
+    adminAudit: adminAuditReducer,
   },
 })
 export type RootState = ReturnType<typeof store.getState>

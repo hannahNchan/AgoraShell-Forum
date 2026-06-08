@@ -3,6 +3,7 @@ import { supabase } from '../../../services/supabase'
 import { type Profile, type Report, type ReportReason, type ReportStatus, type ReportTargetType } from '../../../types'
 import { can, canModerateTarget } from '../../../services/permissions'
 import { type RootState } from '../../../store'
+import { logAdminAction } from '../../../services/adminAudit'
 import {
   buildModerationReasonText,
   moderationDeletedReplyHtml,
@@ -148,6 +149,14 @@ export const updateReportStatus = createAsyncThunk(
         .select(REPORT_SELECT)
         .single()
       if (error) throw error
+      await logAdminAction({
+        actor: profile,
+        action: status === 'dismissed' ? 'report.dismiss' : 'report.resolve',
+        targetType: 'report',
+        targetId: reportId,
+        targetLabel: status,
+        metadata: { moderatorNote: moderatorNote?.trim() || null },
+      })
       return data as Report
     } catch (error: unknown) {
       return rejectWithValue(getErrorMessage(error))
@@ -257,6 +266,44 @@ export const resolveReportWithAction = createAsyncThunk(
         .select(REPORT_SELECT)
         .single()
       if (error) throw error
+      await logAdminAction({
+        actor: actorProfile,
+        action: 'report.resolve',
+        targetType: 'report',
+        targetId: report.id,
+        targetLabel: report.reported_user?.username ?? report.target_type,
+        metadata: {
+          penalty,
+          reasonId,
+          durationDays: penalty === 'suspend' ? Math.max(1, durationDays ?? 1) : null,
+          deleteReply: !!deleteReply,
+          reportedUserId: report.reported_user_id,
+        },
+      })
+      if (deleteReply && report.target_type === 'reply' && report.target_reply_id) {
+        await logAdminAction({
+          actor: actorProfile,
+          action: 'reply.moderation_delete',
+          targetType: 'reply',
+          targetId: report.target_reply_id,
+          targetLabel: report.reported_user?.username ? `Respuesta de ${report.reported_user.username}` : null,
+          metadata: { reportId: report.id, reason: reasonText },
+        })
+      }
+      if (penalty === 'ban' || penalty === 'suspend') {
+        await logAdminAction({
+          actor: actorProfile,
+          action: penalty === 'ban' ? 'user.ban' : 'user.suspend',
+          targetType: 'user',
+          targetId: report.reported_user_id,
+          targetLabel: report.reported_user?.username,
+          metadata: {
+            reportId: report.id,
+            reason: reasonText,
+            durationDays: penalty === 'suspend' ? Math.max(1, durationDays ?? 1) : null,
+          },
+        })
+      }
       return data as Report
     } catch (error: unknown) {
       return rejectWithValue(getErrorMessage(error))
@@ -284,6 +331,12 @@ export const claimReport = createAsyncThunk(
         .select(REPORT_SELECT)
         .single()
       if (error) throw error
+      await logAdminAction({
+        actor: profile,
+        action: 'report.claim',
+        targetType: 'report',
+        targetId: reportId,
+      })
       return data as Report
     } catch (error: unknown) {
       return rejectWithValue(getErrorMessage(error))
@@ -311,6 +364,12 @@ export const releaseReport = createAsyncThunk(
         .select(REPORT_SELECT)
         .single()
       if (error) throw error
+      await logAdminAction({
+        actor: profile,
+        action: 'report.release',
+        targetType: 'report',
+        targetId: reportId,
+      })
       return data as Report
     } catch (error: unknown) {
       return rejectWithValue(getErrorMessage(error))

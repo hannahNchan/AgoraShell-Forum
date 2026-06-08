@@ -10,6 +10,8 @@ import Spinner from '../../../components/shared/Spinner'
 import ReportsAdminPanel from '../../reports/components/ReportsAdminPanel'
 import { MODERATION_REASONS, buildModerationReasonText, getModerationReason } from '../../reports/constants/moderationCatalog'
 import { can } from '../../../services/permissions'
+import { logAdminAction } from '../../../services/adminAudit'
+import AdminAuditPanel from '../../adminAudit/components/AdminAuditPanel'
 
 interface UserRow {
   id: string
@@ -118,7 +120,7 @@ const AdminPage = () => {
     setUserError('')
     const { data, error } = await supabase
       .from('profiles')
-      .select('*, roles(name)')
+      .select('*, roles!profiles_role_id_fkey(name)')
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -178,7 +180,7 @@ const AdminPage = () => {
       .from('profiles')
       .update(payload)
       .eq('id', userId)
-      .select('*, roles(name)')
+      .select('*, roles!profiles_role_id_fkey(name)')
       .single()
 
     if (error) throw error
@@ -222,6 +224,14 @@ const AdminPage = () => {
           }
           : {}),
       })
+      await logAdminAction({
+        actor: profile,
+        action: 'user.role_change',
+        targetType: 'user',
+        targetId: user.id,
+        targetLabel: user.username,
+        metadata: { fromRoleId: user.role_id, toRoleId: roleId, toRole: getRoleValue(roleId) },
+      })
     } catch (error: unknown) {
       setUserError(getErrorMessage(error))
     } finally {
@@ -254,11 +264,27 @@ const AdminPage = () => {
           suspension_reason: null,
           moderation_previous_role_id: target.role_id === 4 ? target.moderation_previous_role_id ?? 3 : target.role_id,
         })
+        await logAdminAction({
+          actor: profile,
+          action: 'user.ban',
+          targetType: 'user',
+          targetId: target.id,
+          targetLabel: target.username,
+          metadata: { reason: cleanReason, previousRoleId: target.role_id },
+        })
       } else {
         await updateProfile(target.id, {
           suspended_until: new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000).toISOString(),
           suspension_reason: cleanReason,
           banned_reason: null,
+        })
+        await logAdminAction({
+          actor: profile,
+          action: 'user.suspend',
+          targetType: 'user',
+          targetId: target.id,
+          targetLabel: target.username,
+          metadata: { reason: cleanReason, durationDays },
         })
       }
       setRestrictionModal(null)
@@ -282,6 +308,14 @@ const AdminPage = () => {
         banned_reason: null,
         moderation_previous_role_id: null,
       })
+      await logAdminAction({
+        actor: profile,
+        action: 'user.restriction_lift',
+        targetType: 'user',
+        targetId: user.id,
+        targetLabel: user.username,
+        metadata: { restoredRoleId },
+      })
     } catch (error: unknown) {
       setUserError(getErrorMessage(error))
     } finally {
@@ -303,6 +337,14 @@ const AdminPage = () => {
       setBloqueoError(error.message)
     } else {
       setForoBloqueado(data.foro_bloqueado ?? false)
+      await logAdminAction({
+        actor: profile,
+        action: next ? 'forum.lock' : 'forum.unlock',
+        targetType: 'forum',
+        targetId: null,
+        targetLabel: 'Foro',
+        metadata: { foroBloqueado: next },
+      })
     }
     setSavingBloqueo(false)
   }
@@ -311,6 +353,13 @@ const AdminPage = () => {
     if (maxTagsInput < 1 || maxTagsInput > 10) return
     setSavingSettings(true)
     await dispatch(updateMaxTags(maxTagsInput)).unwrap()
+    await logAdminAction({
+      actor: profile,
+      action: 'settings.update',
+      targetType: 'settings',
+      targetLabel: 'max_tags_per_topic',
+      metadata: { maxTags: maxTagsInput },
+    })
     setSavingSettings(false)
     setSettingsSaved(true)
     setTimeout(() => setSettingsSaved(false), 2000)
@@ -320,6 +369,13 @@ const AdminPage = () => {
     if (maxDepthInput < 1 || maxDepthInput > 20) return
     setSavingDepth(true)
     await dispatch(updateMaxReplyDepth(maxDepthInput)).unwrap()
+    await logAdminAction({
+      actor: profile,
+      action: 'settings.update',
+      targetType: 'settings',
+      targetLabel: 'max_reply_depth',
+      metadata: { maxReplyDepth: maxDepthInput },
+    })
     setSavingDepth(false)
     setDepthSaved(true)
     setTimeout(() => setDepthSaved(false), 2000)
@@ -386,6 +442,7 @@ const AdminPage = () => {
       <div className="space-y-8">
         <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">Panel de moderacion</h1>
         <ReportsAdminPanel />
+        <AdminAuditPanel />
       </div>
     )
   }
@@ -395,6 +452,8 @@ const AdminPage = () => {
       <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">Panel de administracion</h1>
 
       <ReportsAdminPanel />
+
+      <AdminAuditPanel />
 
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800">
         <div className="flex items-center gap-2 border-b border-slate-100 px-5 py-4 dark:border-slate-700">
