@@ -15,6 +15,7 @@ import { type Topic } from '../../../types'
 import { useRole } from '../../auth/hooks/useRole'
 import { useConfirm } from '../../../hooks/useConfirm'
 import UserLink from '../../../components/shared/UserLink'
+import ReputationBadge from '../../reputation/components/ReputationBadge'
 
 interface TopicCardProps {
   topic: Topic
@@ -101,6 +102,7 @@ const TopicCard = ({ topic }: TopicCardProps) => {
           </Link>
           <div className="flex items-center gap-3 mt-1.5 text-xs text-slate-400">
             <UserLink profile={topic.author} className="font-medium text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400" />
+            <ReputationBadge userId={topic.author?.id} compact />
             <span className="flex items-center gap-1">
               <Clock size={11} />
               {formatDistanceToNow(new Date(topic.created_at), { addSuffix: true, locale: es })}
