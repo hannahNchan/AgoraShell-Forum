@@ -41,7 +41,7 @@ const normalizeProfile = (profile: ProfileWithRole): Profile => {
 const fetchProfile = async (userId: string): Promise<Profile | null> => {
   const { data, error } = await supabase
     .from('profiles')
-    .select('*, roles(name)')
+    .select('*, roles!profiles_role_id_fkey(name)')
     .eq('id', userId)
     .single()
 
@@ -64,7 +64,13 @@ const requireProfile = async (userId: string) => {
   return profile
 }
 
-const getErrorMessage = (error: unknown) => error instanceof Error ? error.message : 'Ocurrió un error inesperado.'
+const getErrorMessage = (error: unknown) => {
+  if (error instanceof Error) return error.message
+  if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') {
+    return error.message
+  }
+  return 'Ocurrió un error inesperado.'
+}
 
 export const loadAuthUser = createAsyncThunk('auth/loadAuthUser', async (_, { rejectWithValue }) => {
   try {
@@ -233,7 +239,7 @@ export const updateProfileSettings = createAsyncThunk(
           bio: cleanBio || null,
         })
         .eq('id', userId)
-        .select('*, roles(name)')
+        .select('*, roles!profiles_role_id_fkey(name)')
         .single()
 
       if (error) {
