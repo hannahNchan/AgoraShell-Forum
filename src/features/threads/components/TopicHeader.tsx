@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Star, Clock, Pencil, Check, Tag as TagIcon, Lock, LockOpen, Flag } from 'lucide-react'
+import { Star, Clock, Pencil, Check, Tag as TagIcon, Lock, LockOpen, Flag, ScrollText } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { useHighlightCode } from '../../../hooks/useHighlightCode'
@@ -13,6 +13,7 @@ import { type Topic, type Tag } from '../../../types'
 import ReportModal from '../../reports/components/ReportModal'
 import UserLink from '../../../components/shared/UserLink'
 import ReputationBadge from '../../reputation/components/ReputationBadge'
+import TopicRulesEditor from './TopicRulesEditor'
 
 interface TopicHeaderProps {
   topic: Topic
@@ -21,22 +22,26 @@ interface TopicHeaderProps {
   isAuthenticated: boolean
   isBanned: boolean
   canEdit: boolean
+  canManageRules: boolean
   canReport: boolean
   maxTags: number
   onStar: () => void
   onClose: () => void
-  onSaveEdit: (title: string, content: string, tagIds: string[]) => Promise<void>
+  onSaveEdit: (title: string, content: string, tagIds: string[], rules?: string[]) => Promise<void>
 }
 
 const TopicHeader = ({
-  topic, isClosed, isModerator, isAuthenticated, isBanned, canEdit, canReport, maxTags,
+  topic, isClosed, isModerator, isAuthenticated, isBanned, canEdit, canManageRules, canReport, maxTags,
   onStar, onClose, onSaveEdit,
 }: TopicHeaderProps) => {
   const [isEditing, setIsEditing] = useState(false)
   const [editTitle, setEditTitle] = useState(topic.title)
   const [editContent, setEditContent] = useState(topic.content)
   const [editTags, setEditTags] = useState<Tag[]>(topic.tags || [])
+  const [editRules, setEditRules] = useState<string[]>(topic.rules?.length ? topic.rules.map((rule) => rule.body) : [''])
   const [saving, setSaving] = useState(false)
+  const [isEditingRules, setIsEditingRules] = useState(false)
+  const [savingRules, setSavingRules] = useState(false)
   const [reportOpen, setReportOpen] = useState(false)
   const topicContentRef = useRef<HTMLDivElement>(null)
   useHighlightCode(topicContentRef)
@@ -46,10 +51,25 @@ const TopicHeader = ({
     if (!editTitle.trim() || !editContent || editContent === '<p></p>') return
     setSaving(true)
     try {
-      await onSaveEdit(editTitle.trim(), editContent, editTags.map((t) => t.id))
+      await onSaveEdit(editTitle.trim(), editContent, editTags.map((t) => t.id), canManageRules ? editRules : undefined)
       setIsEditing(false)
     } finally {
       setSaving(false)
+    }
+  }
+
+  const startRulesEdit = () => {
+    setEditRules(topic.rules?.length ? topic.rules.map((rule) => rule.body) : [''])
+    setIsEditingRules(true)
+  }
+
+  const handleSaveRules = async () => {
+    setSavingRules(true)
+    try {
+      await onSaveEdit(topic.title, topic.content, (topic.tags ?? []).map((t) => t.id), editRules)
+      setIsEditingRules(false)
+    } finally {
+      setSavingRules(false)
     }
   }
 
@@ -111,6 +131,45 @@ const TopicHeader = ({
             </div>
           )}
 
+          {!isEditing && !isEditingRules && topic.rules && topic.rules.length > 0 && (
+            <div className="mt-4 rounded-lg border border-indigo-100 bg-indigo-50/60 p-3 dark:border-indigo-900/60 dark:bg-indigo-950/20">
+              <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-800 dark:text-slate-100">
+                <ScrollText size={15} className="text-indigo-500" />
+                Reglas del tema
+              </div>
+              <ol className="space-y-1.5">
+                {topic.rules.map((rule) => (
+                  <li key={rule.id} className="flex gap-2 text-sm text-slate-600 dark:text-slate-300">
+                    <span className="shrink-0 font-semibold text-indigo-500">{rule.position}.</span>
+                    <span className="min-w-0 break-words">{rule.body}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
+
+          {!isEditing && isEditingRules && (
+            <div className="mt-4 space-y-3">
+              <TopicRulesEditor rules={editRules} onChange={setEditRules} />
+              <div className="flex flex-wrap justify-end gap-2">
+                <button
+                  onClick={() => setIsEditingRules(false)}
+                  className="rounded-lg px-4 py-2 text-sm text-slate-500 transition-colors hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleSaveRules}
+                  disabled={savingRules}
+                  className="flex items-center gap-2 rounded-lg bg-indigo-600 px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-indigo-700 disabled:opacity-50"
+                >
+                  {savingRules ? <Spinner size="sm" /> : <Check size={14} />}
+                  Guardar reglas
+                </button>
+              </div>
+            </div>
+          )}
+
 
 
 
@@ -128,6 +187,9 @@ const TopicHeader = ({
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Tags</label>
                 <TagInput selected={editTags} onChange={setEditTags} maxTags={maxTags} />
               </div>
+              {canManageRules && (
+                <TopicRulesEditor rules={editRules} onChange={setEditRules} />
+              )}
               <div className="flex justify-end gap-2">
                 <button
                   onClick={() => setIsEditing(false)}
@@ -171,6 +233,9 @@ const TopicHeader = ({
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Tags</label>
             <TagInput selected={editTags} onChange={setEditTags} maxTags={maxTags} />
           </div>
+          {canManageRules && (
+            <TopicRulesEditor rules={editRules} onChange={setEditRules} />
+          )}
           <div className="flex justify-end gap-2">
             <button
               onClick={() => setIsEditing(false)}
@@ -206,7 +271,16 @@ const TopicHeader = ({
             <span className="hidden sm:inline">{isClosed ? 'Reabrir' : 'Cerrar'}</span>
           </button>
         )}
-        {canEdit && isAuthenticated && !isBanned && !isEditing && (
+        {canManageRules && isAuthenticated && !isBanned && !isEditing && !isEditingRules && (
+          <button
+            onClick={startRulesEdit}
+            className="hover:cursor-pointer flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:border-indigo-300 hover:text-indigo-500 dark:hover:border-indigo-600 dark:hover:text-indigo-400 text-sm transition-colors"
+          >
+            <ScrollText size={14} />
+            <span className="hidden sm:inline">{topic.rules?.length ? 'Editar reglas' : 'Añadir reglas'}</span>
+          </button>
+        )}
+        {canEdit && isAuthenticated && !isBanned && !isEditing && !isEditingRules && (
           <button
             onClick={() => setIsEditing(true)}
             className="hover:cursor-pointer flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:border-indigo-300 hover:text-indigo-500 dark:hover:border-indigo-600 dark:hover:text-indigo-400 text-sm transition-colors"

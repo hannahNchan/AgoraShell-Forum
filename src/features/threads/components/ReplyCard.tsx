@@ -11,10 +11,11 @@ import { useReply } from '../hooks/useReply'
 import ReplyBottomSheet from './ReplyBottomSheet'
 import RichTextEditor from '../../../components/shared/RichTextEditor'
 import Spinner from '../../../components/shared/Spinner'
-import { type Profile, type Reply } from '../../../types'
+import { type Profile, type Reply, type TopicRule } from '../../../types'
 import ReportModal from '../../reports/components/ReportModal'
 import UserLink from '../../../components/shared/UserLink'
 import ReputationBadge from '../../reputation/components/ReputationBadge'
+import TopicRulesReminder from './TopicRulesReminder'
 
 interface AvatarProps {
   profile?: Profile | null
@@ -49,11 +50,13 @@ interface ReplyCardProps {
   reply: Reply
   topicId: string
   topicClosed: boolean
+  topicRules?: TopicRule[]
+  onOpenRules?: () => void
   depth?: number
   maxDepth?: number
 }
 
-const ReplyCard = ({ reply, topicId, topicClosed, depth = 0, maxDepth = 5 }: ReplyCardProps) => {
+const ReplyCard = ({ reply, topicId, topicClosed, topicRules = [], onOpenRules, depth = 0, maxDepth = 5 }: ReplyCardProps) => {
   const replyContentRef = useRef<HTMLDivElement>(null)
   const linesRef = useRef<LeaderLineInstance[]>([])
   const scrollHandlerRef = useRef<(() => void) | null>(null)
@@ -315,6 +318,7 @@ const ReplyCard = ({ reply, topicId, topicClosed, depth = 0, maxDepth = 5 }: Rep
 
           {showReplyEditor && (
             <div className="mt-3 space-y-3 rounded-lg border border-slate-200 bg-white/70 p-3 shadow-sm dark:border-slate-700 dark:bg-slate-900/40 md:p-4">
+              {onOpenRules && <TopicRulesReminder rules={topicRules} onOpen={onOpenRules} />}
               <RichTextEditor onChange={setReplyContent} placeholder={`Respondiendo a ${reply.author?.username}...`} minHeight="100px" />
               <div className="flex flex-wrap justify-end gap-2">
                 <button
@@ -341,6 +345,8 @@ const ReplyCard = ({ reply, topicId, topicClosed, depth = 0, maxDepth = 5 }: Rep
             onSubmit={handleSubmitReply}
             replyingTo={reply.author?.username || ''}
             submitting={submitting}
+            topicRules={topicRules}
+            onOpenRules={onOpenRules}
           />
 
           <ReportModal
@@ -373,6 +379,8 @@ const ReplyCard = ({ reply, topicId, topicClosed, depth = 0, maxDepth = 5 }: Rep
                   reply={child}
                   topicId={topicId}
                   topicClosed={topicClosed}
+                  topicRules={topicRules}
+                  onOpenRules={onOpenRules}
                   depth={depth + 1}
                   maxDepth={maxDepth}
                 />

@@ -9,6 +9,7 @@ import TagInput from '../../tags/components/TagInput'
 import { useRole } from '../../auth/hooks/useRole'
 import { useForoBloqueado } from '../../../hooks/useForoBloqueado'
 import { type Tag } from '../../../types'
+import TopicRulesEditor from './TopicRulesEditor'
 
 interface CreateTopicModalProps {
   channelId: string
@@ -23,7 +24,9 @@ const CreateTopicModal = ({ channelId, onClose, maxTags }: CreateTopicModalProps
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
   const [selectedTags, setSelectedTags] = useState<Tag[]>([])
+  const [rules, setRules] = useState<string[]>([''])
   const [submitting, setSubmitting] = useState(false)
+  const canManageRules = can('close_topic')
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -35,6 +38,7 @@ const CreateTopicModal = ({ channelId, onClose, maxTags }: CreateTopicModalProps
         title: title.trim(),
         content,
         tagIds: selectedTags.map((t) => t.id),
+        rules: canManageRules ? rules : undefined,
       })).unwrap()
       onClose()
     } finally {
@@ -89,6 +93,9 @@ const CreateTopicModal = ({ channelId, onClose, maxTags }: CreateTopicModalProps
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Tags</label>
             <TagInput selected={selectedTags} onChange={setSelectedTags} maxTags={maxTags} />
           </div>
+          {canManageRules && (
+            <TopicRulesEditor rules={rules} onChange={setRules} />
+          )}
           <div className="flex gap-3 pt-2">
             <button
               type="button"

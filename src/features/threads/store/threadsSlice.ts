@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk, type PayloadAction } from '@reduxjs/toolkit'
 import { supabase } from '../../../services/supabase'
-import { type Topic, type Tag } from '../../../types'
+import { type Topic, type Tag, type TopicRule } from '../../../types'
 import { ensureForumCanPublish } from '../../../services/forumLock'
 import { ensureUserCanCreateContent } from '../../../services/userRestrictions'
 import { requireSyncedAuthUser } from '../../../services/authGuard'
@@ -12,20 +12,29 @@ const PAGE_SIZE = 20
 const TOPIC_SELECT = `
   *,
   author:profiles(id, username, avatar_url, role),
-  tags:topic_tags(tag:tags(*))
+  tags:topic_tags(tag:tags(*)),
+  rules:topic_rules(*)
 `
 
 const TOPIC_SELECT_WITH_CHANNEL = `
   *,
   author:profiles(id, username, avatar_url, role),
   channel:channels(id, name, slug, icon),
-  tags:topic_tags(tag:tags(*))
+  tags:topic_tags(tag:tags(*)),
+  rules:topic_rules(*)
 `
 
 const normalizeTags = (data: any): Topic => ({
   ...data,
   tags: (data.tags || []).map((tt: any) => tt.tag).filter(Boolean) as Tag[],
+  rules: ((data.rules || []) as TopicRule[]).slice().sort((a, b) => a.position - b.position),
 })
+
+const normalizeRules = (rules?: string[]) =>
+  (rules ?? [])
+    .map((rule) => rule.trim())
+    .filter(Boolean)
+    .slice(0, 10)
 
 interface TopicsState {
   items: Topic[]
@@ -183,14 +192,14 @@ export const fetchTopicById = createAsyncThunk(
 export const createTopic = createAsyncThunk(
   'topics/create',
   async (
-    payload: { channel_id: string; title: string; content: string; tagIds?: string[] },
+    payload: { channel_id: string; title: string; content: string; tagIds?: string[]; rules?: string[] },
     { getState, rejectWithValue }
   ) => {
     try {
       const user = await requireSyncedAuthUser(getState() as RootState)
       await ensureForumCanPublish(user.id)
       await ensureUserCanCreateContent(user.id)
-      const { tagIds, ...topicPayload } = payload
+      const { tagIds, rules, ...topicPayload } = payload
       const { data, error } = await supabase
         .from('topics')
         .insert([{ ...topicPayload, author_id: user.id }])
@@ -202,6 +211,19 @@ export const createTopic = createAsyncThunk(
         await supabase.from('topic_tags').insert(
           tagIds.map((tag_id) => ({ topic_id: data.id, tag_id }))
         )
+      }
+
+      const cleanRules = normalizeRules(rules)
+      if (cleanRules.length > 0) {
+        const { error: rulesError } = await supabase.from('topic_rules').insert(
+          cleanRules.map((body, index) => ({
+            topic_id: data.id,
+            body,
+            position: index + 1,
+            created_by: user.id,
+          }))
+        )
+        if (rulesError) throw rulesError
       }
 
       const { data: full, error: err2 } = await supabase
@@ -220,10 +242,11 @@ export const createTopic = createAsyncThunk(
 export const updateTopic = createAsyncThunk(
   'topics/update',
   async (
-    { topicId, title, content, tagIds }: { topicId: string; title: string; content: string; tagIds?: string[] },
-    { rejectWithValue }
+    { topicId, title, content, tagIds, rules }: { topicId: string; title: string; content: string; tagIds?: string[]; rules?: string[] },
+    { getState, rejectWithValue }
   ) => {
     try {
+      const state = getState() as RootState
       const { error } = await supabase
         .from('topics')
         .update({ title, content, updated_at: new Date().toISOString() })
@@ -236,6 +259,24 @@ export const updateTopic = createAsyncThunk(
           await supabase.from('topic_tags').insert(
             tagIds.map((tag_id) => ({ topic_id: topicId, tag_id }))
           )
+        }
+      }
+
+      if (rules !== undefined) {
+        const user = await requireSyncedAuthUser(state)
+        const { error: deleteRulesError } = await supabase.from('topic_rules').delete().eq('topic_id', topicId)
+        if (deleteRulesError) throw deleteRulesError
+        const cleanRules = normalizeRules(rules)
+        if (cleanRules.length > 0) {
+          const { error: rulesError } = await supabase.from('topic_rules').insert(
+            cleanRules.map((body, index) => ({
+              topic_id: topicId,
+              body,
+              position: index + 1,
+              created_by: user.id,
+            }))
+          )
+          if (rulesError) throw rulesError
         }
       }
 

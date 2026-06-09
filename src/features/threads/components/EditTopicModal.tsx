@@ -6,20 +6,25 @@ import { updateTopic } from '../store/threadsSlice'
 import RichTextEditor from '../../../components/shared/RichTextEditor'
 import TagInput from '../../tags/components/TagInput'
 import Spinner from '../../../components/shared/Spinner'
-import { type Tag } from '../../../types'
+import { type Tag, type Topic } from '../../../types'
+import { useRole } from '../../auth/hooks/useRole'
+import TopicRulesEditor from './TopicRulesEditor'
 
 interface EditTopicModalProps {
-  topic: any
+  topic: Topic
   onClose: () => void
   maxTags: number
 }
 
 const EditTopicModal = ({ topic, onClose, maxTags }: EditTopicModalProps) => {
   const dispatch = useDispatch<AppDispatch>()
+  const { can } = useRole()
   const [title, setTitle] = useState(topic.title)
   const [content, setContent] = useState(topic.content)
   const [selectedTags, setSelectedTags] = useState<Tag[]>(topic.tags || [])
+  const [rules, setRules] = useState<string[]>(topic.rules?.length ? topic.rules.map((rule) => rule.body) : [''])
   const [submitting, setSubmitting] = useState(false)
+  const canManageRules = can('close_topic')
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -31,6 +36,7 @@ const EditTopicModal = ({ topic, onClose, maxTags }: EditTopicModalProps) => {
         title: title.trim(),
         content,
         tagIds: selectedTags.map((t) => t.id),
+        rules: canManageRules ? rules : undefined,
       })).unwrap()
       onClose()
     } finally {
@@ -73,6 +79,9 @@ const EditTopicModal = ({ topic, onClose, maxTags }: EditTopicModalProps) => {
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Tags</label>
             <TagInput selected={selectedTags} onChange={setSelectedTags} maxTags={maxTags} />
           </div>
+          {canManageRules && (
+            <TopicRulesEditor rules={rules} onChange={setRules} />
+          )}
           <div className="flex gap-3 pt-2">
             <button
               type="button"
