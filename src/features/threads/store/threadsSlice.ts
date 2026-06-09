@@ -12,16 +12,14 @@ const PAGE_SIZE = 20
 const TOPIC_SELECT = `
   *,
   author:profiles(id, username, avatar_url, role),
-  tags:topic_tags(tag:tags(*)),
-  rules:topic_rules(*)
+  tags:topic_tags(tag:tags(*))
 `
 
 const TOPIC_SELECT_WITH_CHANNEL = `
   *,
   author:profiles(id, username, avatar_url, role),
   channel:channels(id, name, slug, icon),
-  tags:topic_tags(tag:tags(*)),
-  rules:topic_rules(*)
+  tags:topic_tags(tag:tags(*))
 `
 
 const normalizeTags = (data: any): Topic => ({
@@ -29,6 +27,28 @@ const normalizeTags = (data: any): Topic => ({
   tags: (data.tags || []).map((tt: any) => tt.tag).filter(Boolean) as Tag[],
   rules: ((data.rules || []) as TopicRule[]).slice().sort((a, b) => a.position - b.position),
 })
+
+const isTopicRulesUnavailable = (error: { code?: string; message?: string } | null) =>
+  !!error && (
+    error.code === '42P01'
+    || error.code === 'PGRST200'
+    || (error.message ?? '').toLowerCase().includes('topic_rules')
+  )
+
+const fetchTopicRules = async (topicId: string): Promise<TopicRule[]> => {
+  const { data, error } = await supabase
+    .from('topic_rules')
+    .select('*')
+    .eq('topic_id', topicId)
+    .order('position', { ascending: true })
+
+  if (error) {
+    if (isTopicRulesUnavailable(error)) return []
+    throw error
+  }
+
+  return (data ?? []) as TopicRule[]
+}
 
 const normalizeRules = (rules?: string[]) =>
   (rules ?? [])
@@ -172,6 +192,7 @@ export const fetchTopicById = createAsyncThunk(
         .eq('id', topicId)
         .single()
       if (error) throw error
+      const rules = await fetchTopicRules(topicId)
       let is_starred = false
       if (user) {
         const { data: star } = await supabase
@@ -182,7 +203,7 @@ export const fetchTopicById = createAsyncThunk(
           .maybeSingle()
         is_starred = !!star
       }
-      return { ...normalizeTags(data), is_starred } as Topic
+      return { ...normalizeTags({ ...data, rules }), is_starred } as Topic
     } catch (error: any) {
       return rejectWithValue(error.message)
     }
@@ -223,7 +244,7 @@ export const createTopic = createAsyncThunk(
             created_by: user.id,
           }))
         )
-        if (rulesError) throw rulesError
+        if (rulesError && !isTopicRulesUnavailable(rulesError)) throw rulesError
       }
 
       const { data: full, error: err2 } = await supabase
@@ -232,7 +253,8 @@ export const createTopic = createAsyncThunk(
         .eq('id', data.id)
         .single()
       if (err2) throw err2
-      return normalizeTags(full) as Topic
+      const savedRules = await fetchTopicRules(data.id)
+      return normalizeTags({ ...full, rules: savedRules }) as Topic
     } catch (error: any) {
       return rejectWithValue(error.message)
     }
@@ -265,9 +287,9 @@ export const updateTopic = createAsyncThunk(
       if (rules !== undefined) {
         const user = await requireSyncedAuthUser(state)
         const { error: deleteRulesError } = await supabase.from('topic_rules').delete().eq('topic_id', topicId)
-        if (deleteRulesError) throw deleteRulesError
+        if (deleteRulesError && !isTopicRulesUnavailable(deleteRulesError)) throw deleteRulesError
         const cleanRules = normalizeRules(rules)
-        if (cleanRules.length > 0) {
+        if (cleanRules.length > 0 && !isTopicRulesUnavailable(deleteRulesError)) {
           const { error: rulesError } = await supabase.from('topic_rules').insert(
             cleanRules.map((body, index) => ({
               topic_id: topicId,
@@ -276,7 +298,7 @@ export const updateTopic = createAsyncThunk(
               created_by: user.id,
             }))
           )
-          if (rulesError) throw rulesError
+          if (rulesError && !isTopicRulesUnavailable(rulesError)) throw rulesError
         }
       }
 
@@ -286,7 +308,8 @@ export const updateTopic = createAsyncThunk(
         .eq('id', topicId)
         .single()
       if (err2) throw err2
-      return normalizeTags(full) as Topic
+      const savedRules = await fetchTopicRules(topicId)
+      return normalizeTags({ ...full, rules: savedRules }) as Topic
     } catch (error: any) {
       return rejectWithValue(error.message)
     }
