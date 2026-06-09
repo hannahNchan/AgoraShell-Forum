@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from 'react'
+import { useCallback, useRef, useEffect, useState } from 'react'
 import { Clock, Smile, Send, Trash2, MessageCircle, Pencil, Check, Flag } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -11,14 +11,25 @@ import { useReply } from '../hooks/useReply'
 import ReplyBottomSheet from './ReplyBottomSheet'
 import RichTextEditor from '../../../components/shared/RichTextEditor'
 import Spinner from '../../../components/shared/Spinner'
-import { type Reply } from '../../../types'
+import { type Profile, type Reply } from '../../../types'
 import ReportModal from '../../reports/components/ReportModal'
 import UserLink from '../../../components/shared/UserLink'
 
 interface AvatarProps {
-  profile: any
+  profile?: Profile | null
   id?: string
 }
+
+interface LeaderLineInstance {
+  position: () => void
+  remove: () => void
+}
+
+type LeaderLineConstructor = new (
+  startElement: HTMLElement,
+  endElement: HTMLElement,
+  options: Record<string, unknown>
+) => LeaderLineInstance
 
 export const Avatar = ({ profile, id }: AvatarProps) => (
   <div
@@ -43,7 +54,7 @@ interface ReplyCardProps {
 
 const ReplyCard = ({ reply, topicId, topicClosed, depth = 0, maxDepth = 5 }: ReplyCardProps) => {
   const replyContentRef = useRef<HTMLDivElement>(null)
-  const linesRef = useRef<any[]>([])
+  const linesRef = useRef<LeaderLineInstance[]>([])
   const scrollHandlerRef = useRef<(() => void) | null>(null)
   const repositionTimersRef = useRef<ReturnType<typeof setTimeout>[]>([])
   const containerRef = useRef<HTMLDivElement>(null)
@@ -52,23 +63,48 @@ const ReplyCard = ({ reply, topicId, topicClosed, depth = 0, maxDepth = 5 }: Rep
   useHighlightCode(replyContentRef)
   useCodeCollapse(replyContentRef)
 
-  const handleReposition = () => {
+  const positionLines = useCallback(() => {
+    linesRef.current.forEach((line) => {
+      try {
+        line.position()
+      } catch {
+        return
+      }
+    })
+  }, [])
+
+  const removeLines = useCallback(() => {
+    linesRef.current.forEach((line) => {
+      try {
+        line.remove()
+      } catch {
+        return
+      }
+    })
+    linesRef.current = []
+  }, [])
+
+  const handleReposition = useCallback(() => {
     const timers = [50, 100, 200, 350].map((delay) =>
       setTimeout(() => {
-        linesRef.current.forEach((l) => { try { l.position() } catch (_) { } })
+        positionLines()
       }, delay)
     )
     repositionTimersRef.current = timers
-  }
+  }, [positionLines])
 
   useEffect(() => {
     window.addEventListener('reply-editor-toggle', handleReposition)
-    if (!reply.children?.length) return
+    if (!reply.children?.length || window.matchMedia('(max-width: 767px)').matches) {
+      return () => {
+        window.removeEventListener('reply-editor-toggle', handleReposition)
+        repositionTimersRef.current.forEach(clearTimeout)
+      }
+    }
     const raf = requestAnimationFrame(() => {
       requestAnimationFrame(() => {
-        linesRef.current.forEach((l) => { try { l.remove() } catch (_) { } })
-        linesRef.current = []
-        const LL = (window as any).LeaderLine
+        removeLines()
+        const LL = (window as Window & { LeaderLine?: LeaderLineConstructor }).LeaderLine
         const parentEl = document.getElementById(`avatar-${reply.id}`)
         if (!parentEl || !LL) return
         reply.children!.forEach((child) => {
@@ -80,10 +116,12 @@ const ReplyCard = ({ reply, topicId, topicClosed, depth = 0, maxDepth = 5 }: Rep
               color: '#cbd5e1', size: 1, startPlug: 'behind', endPlug: 'arrow2', endSocketGravity: 8,
             })
             linesRef.current.push(line)
-          } catch (_) { }
+          } catch {
+            return
+          }
         })
         const handleScroll = () => {
-          linesRef.current.forEach((l) => { try { l.position() } catch (_) { } })
+          positionLines()
         }
         scrollHandlerRef.current = handleScroll
         window.addEventListener('scroll', handleScroll, true)
@@ -96,19 +134,18 @@ const ReplyCard = ({ reply, topicId, topicClosed, depth = 0, maxDepth = 5 }: Rep
       }
       window.removeEventListener('reply-editor-toggle', handleReposition)
       repositionTimersRef.current.forEach(clearTimeout)
-      linesRef.current.forEach((l) => { try { l.remove() } catch (_) { } })
-      linesRef.current = []
+      removeLines()
     }
-  }, [reply.children?.length, reply.id])
+  }, [handleReposition, positionLines, removeLines, reply.children, reply.id])
 
   useEffect(() => {
     if (!containerRef.current) return
     const observer = new ResizeObserver(() => {
-      linesRef.current.forEach((l) => { try { l.position() } catch (_) { } })
+      positionLines()
     })
     observer.observe(containerRef.current)
     return () => observer.disconnect()
-  }, [reply.children?.length])
+  }, [positionLines, reply.children?.length])
 
   const {
     user,
@@ -146,13 +183,13 @@ const ReplyCard = ({ reply, topicId, topicClosed, depth = 0, maxDepth = 5 }: Rep
   const depthExceeded = depth >= maxDepth
 
   return (
-    <div ref={containerRef} className={depth > 0 ? 'relative pl-0 md:pl-5' : ''}>
-      <div className="flex items-start gap-1">
+    <div ref={containerRef} className={depth > 0 ? 'relative border-l border-slate-200 pl-3 dark:border-slate-800 md:pl-5' : 'relative'}>
+      <div className="flex min-w-0 items-start gap-2 border-t border-slate-200/80 py-3 first:border-t-0 dark:border-slate-800 md:gap-3">
         <Avatar profile={reply.author} id={`avatar-${reply.id}`} />
         <div className="flex-1 min-w-0">
-          <div className="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl px-3 py-2">
-            <div className="flex items-center gap-2 mb-2">
-              <UserLink profile={reply.author} className="text-sm font-semibold text-slate-800 hover:text-indigo-600 dark:text-slate-100 dark:hover:text-indigo-400" />
+          <div className="px-0 py-0">
+            <div className="mb-2 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+              <UserLink profile={reply.author} className="min-w-0 text-sm font-semibold text-slate-800 hover:text-indigo-600 dark:text-slate-100 dark:hover:text-indigo-400" />
               {reply.author?.role && reply.author.role !== 'user' && (
                 <span className="text-xs bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 px-1.5 py-0.5 rounded-full font-medium capitalize">
                   {reply.author.role}
@@ -192,19 +229,19 @@ const ReplyCard = ({ reply, topicId, topicClosed, depth = 0, maxDepth = 5 }: Rep
                 </div>
               </div>
             ) : (
-              <div ref={replyContentRef} className="prose prose-sm max-w-none text-slate-700 dark:text-slate-300" dangerouslySetInnerHTML={{ __html: reply.content }} />
+              <div ref={replyContentRef} className="prose prose-sm max-w-none overflow-hidden break-words text-slate-700 dark:text-slate-300" dangerouslySetInnerHTML={{ __html: reply.content }} />
             )}
 
             {!isEditing && (
-              <div className="flex items-center gap-2 mt-3 flex-wrap">
+              <div className="mt-3 flex min-w-0 flex-wrap items-center gap-2">
                 {reactionGroups.map((group) => (
                   <button
                     key={group.emoji}
                     onClick={() => handleReaction(group.emoji)}
                     title={`${group.count} reacciones`}
-                    className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-sm border transition-colors ${group.reacted
+                    className={`flex items-center gap-1 rounded-full border px-2 py-0.5 text-sm transition-colors ${group.reacted
                       ? 'bg-indigo-50 dark:bg-indigo-900/40 border-indigo-300 dark:border-indigo-600 text-indigo-700 dark:text-indigo-300'
-                      : 'bg-slate-50 dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-600'
+                      : 'border-slate-200 bg-transparent text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-900'
                       }`}
                   >
                     <span>{group.emoji}</span>
@@ -215,7 +252,7 @@ const ReplyCard = ({ reply, topicId, topicClosed, depth = 0, maxDepth = 5 }: Rep
                 {isAuthenticated && canReply && !topicClosed && !foroBloqueado && (
                   <button
                     onClick={handleReplyClick}
-                    className="hover:cursor-pointer flex items-center gap-1 px-2 py-0.5 rounded-full border border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-indigo-500 hover:border-indigo-300 transition-colors text-xs"
+                    className="hover:cursor-pointer flex items-center gap-1 rounded-full border border-slate-200 px-2 py-0.5 text-xs text-slate-500 transition-colors hover:border-indigo-300 hover:bg-slate-100 hover:text-indigo-500 dark:border-slate-700 dark:text-slate-500 dark:hover:bg-slate-900"
                   >
                     <MessageCircle size={13} />
                     <span>Responder</span>
@@ -225,7 +262,7 @@ const ReplyCard = ({ reply, topicId, topicClosed, depth = 0, maxDepth = 5 }: Rep
                 {canEdit && isAuthenticated && (
                   <button
                     onClick={startEditing}
-                    className="hover:cursor-pointer flex items-center gap-1 px-2 py-0.5 rounded-full border border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-indigo-500 hover:border-indigo-300 transition-colors text-xs"
+                    className="hover:cursor-pointer flex items-center gap-1 rounded-full border border-slate-200 px-2 py-0.5 text-xs text-slate-500 transition-colors hover:border-indigo-300 hover:bg-slate-100 hover:text-indigo-500 dark:border-slate-700 dark:text-slate-500 dark:hover:bg-slate-900"
                   >
                     <Pencil size={12} />
                     <span>Editar</span>
@@ -235,7 +272,7 @@ const ReplyCard = ({ reply, topicId, topicClosed, depth = 0, maxDepth = 5 }: Rep
                 {isAuthenticated && canReport && (
                   <button
                     onClick={() => setReportOpen(true)}
-                    className="hover:cursor-pointer flex items-center gap-1 px-2 py-0.5 rounded-full border border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-red-500 hover:border-red-300 transition-colors text-xs"
+                    className="hover:cursor-pointer flex items-center gap-1 rounded-full border border-slate-200 px-2 py-0.5 text-xs text-slate-500 transition-colors hover:border-red-300 hover:bg-slate-100 hover:text-red-500 dark:border-slate-700 dark:text-slate-500 dark:hover:bg-slate-900"
                   >
                     <Flag size={12} />
                     <span>Reportar</span>
@@ -255,7 +292,7 @@ const ReplyCard = ({ reply, topicId, topicClosed, depth = 0, maxDepth = 5 }: Rep
                   <div className="relative">
                     <button
                       onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                      className="hover:cursor-pointer flex items-center gap-1 px-2 py-0.5 rounded-full border border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-slate-600 transition-colors text-sm"
+                      className="hover:cursor-pointer flex items-center gap-1 rounded-full border border-slate-200 px-2 py-0.5 text-sm text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-600 dark:border-slate-700 dark:text-slate-500 dark:hover:bg-slate-900"
                     >
                       <Smile size={13} />
                       <span className="text-xs">+</span>
@@ -263,8 +300,8 @@ const ReplyCard = ({ reply, topicId, topicClosed, depth = 0, maxDepth = 5 }: Rep
                     {showEmojiPicker && (
                       <>
                         <div className="fixed inset-0 z-10" onClick={() => setShowEmojiPicker(false)} />
-                        <div className="absolute bottom-8 left-0 z-20 shadow-xl rounded-xl overflow-hidden">
-                          <EmojiPicker onEmojiClick={(e) => handleReaction(e.emoji)} width={300} height={350} searchDisabled skinTonesDisabled />
+                        <div className="absolute bottom-8 right-0 z-20 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl shadow-xl sm:left-0 sm:right-auto">
+                          <EmojiPicker onEmojiClick={(e) => handleReaction(e.emoji)} width="min(300px, calc(100vw - 2rem))" height={350} searchDisabled skinTonesDisabled />
                         </div>
                       </>
                     )}
@@ -275,9 +312,9 @@ const ReplyCard = ({ reply, topicId, topicClosed, depth = 0, maxDepth = 5 }: Rep
           </div>
 
           {showReplyEditor && (
-            <div className="mt-2 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 p-4 space-y-3">
+            <div className="mt-3 space-y-3 rounded-lg border border-slate-200 bg-white/70 p-3 shadow-sm dark:border-slate-700 dark:bg-slate-900/40 md:p-4">
               <RichTextEditor onChange={setReplyContent} placeholder={`Respondiendo a ${reply.author?.username}...`} minHeight="100px" />
-              <div className="flex justify-end gap-2">
+              <div className="flex flex-wrap justify-end gap-2">
                 <button
                   onClick={() => { setShowBottomSheet(false); setReplyContent('') }}
                   className="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 px-3 py-1.5 rounded-lg transition-colors hover:cursor-pointer"
