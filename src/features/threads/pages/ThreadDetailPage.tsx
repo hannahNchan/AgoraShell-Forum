@@ -13,6 +13,8 @@ import ReplyCard from '../components/ReplyCard'
 import Spinner from '../../../components/shared/Spinner'
 import RichTextEditor from '../../../components/shared/RichTextEditor'
 import { useForoBloqueado } from '../../../hooks/useForoBloqueado'
+import TopicRulesModal from '../components/TopicRulesModal'
+import TopicRulesReminder from '../components/TopicRulesReminder'
 
 const ThreadDetailPage = () => {
   const { topicId } = useParams<{ topicId: string }>()
@@ -39,13 +41,16 @@ const ThreadDetailPage = () => {
 
   const [replyContent, setReplyContent] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [rulesOpen, setRulesOpen] = useState(false)
 
   const isClosed = topic?.is_closed ?? false
   const foroBloqueado = useForoBloqueado()
   const canEditTopic = !!(topic && profile?.id === topic.author_id && can('edit_own_content'))
   const canCreateReply = can('create_reply')
   const canCloseTopic = can('close_topic')
+  const canManageRules = canCloseTopic
   const canReport = can('report_content')
+  const topicRules = topic?.rules ?? []
 
   const handleSubmitReply = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -71,6 +76,7 @@ const ThreadDetailPage = () => {
         isAuthenticated={isAuthenticated}
         isBanned={isBanned}
         canEdit={canEditTopic}
+        canManageRules={canManageRules}
         canReport={canReport}
         maxTags={maxTags}
         onStar={handleStar}
@@ -89,7 +95,7 @@ const ThreadDetailPage = () => {
       ) : (
         <div className="min-w-0">
           {replies.map((reply) => (
-            <ReplyCard key={reply.id} reply={reply} topicId={topicId!} topicClosed={isClosed} depth={0} />
+            <ReplyCard key={reply.id} reply={reply} topicId={topicId!} topicClosed={isClosed} topicRules={topicRules} onOpenRules={() => setRulesOpen(true)} depth={0} />
           ))}
           {!isClosed && replies.length === 0 && (
             <div className="text-center py-8 text-slate-400 text-sm">Nadie ha respondido todavía. ¡Sé el primero!</div>
@@ -134,6 +140,7 @@ const ThreadDetailPage = () => {
         ) : canCreateReply ? (
           <form onSubmit={handleSubmitReply} className="space-y-3 rounded-lg border border-slate-200 bg-white/70 p-3 shadow-sm dark:border-slate-700 dark:bg-slate-900/40 md:p-5">
             <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Agregar respuesta</h3>
+            <TopicRulesReminder rules={topicRules} onOpen={() => setRulesOpen(true)} />
             <RichTextEditor
               key={submitting ? 'submitting' : 'idle'}
               onChange={setReplyContent}
@@ -161,6 +168,7 @@ const ThreadDetailPage = () => {
           <Link to="/login" className="text-indigo-600 dark:text-indigo-400 font-medium hover:underline">Inicia sesión</Link> para responder
         </div>
       )}
+      <TopicRulesModal open={rulesOpen} rules={topicRules} onClose={() => setRulesOpen(false)} />
     </div>
   )
 }

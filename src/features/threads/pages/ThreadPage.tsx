@@ -14,6 +14,8 @@ import Spinner from '../../../components/shared/Spinner'
 import RichTextEditor from '../../../components/shared/RichTextEditor'
 import { type Reply } from '../../../types'
 import { useForoBloqueado } from '../../../hooks/useForoBloqueado'
+import TopicRulesModal from '../components/TopicRulesModal'
+import TopicRulesReminder from '../components/TopicRulesReminder'
 
 const findReplyById = (replies: Reply[], id: string): Reply | null => {
   for (const r of replies) {
@@ -38,13 +40,16 @@ const ThreadPage = () => {
 
   const [replyContent, setReplyContent] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [rulesOpen, setRulesOpen] = useState(false)
 
   const isClosed = topic?.is_closed ?? false
   const foroBloqueado = useForoBloqueado()
   const canEditTopic = !!(topic && profile?.id === topic.author_id && can('edit_own_content'))
   const canCreateReply = can('create_reply')
   const canCloseTopic = can('close_topic')
+  const canManageRules = canCloseTopic
   const canReport = can('report_content')
+  const topicRules = topic?.rules ?? []
 
   const rootReply = replyId ? findReplyById(replies, replyId) : null
 
@@ -72,6 +77,7 @@ const ThreadPage = () => {
         isAuthenticated={isAuthenticated}
         isBanned={isBanned}
         canEdit={canEditTopic}
+        canManageRules={canManageRules}
         canReport={canReport}
         maxTags={maxTags}
         onStar={handleStar}
@@ -101,6 +107,8 @@ const ThreadPage = () => {
             reply={rootReply}
             topicId={topicId!}
             topicClosed={isClosed}
+            topicRules={topicRules}
+            onOpenRules={() => setRulesOpen(true)}
             depth={0}
             maxDepth={maxDepth}
           />
@@ -121,6 +129,7 @@ const ThreadPage = () => {
           ) : canCreateReply ? (
             <form onSubmit={handleSubmitReply} className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5 space-y-3">
               <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Responder en este hilo</h3>
+              <TopicRulesReminder rules={topicRules} onOpen={() => setRulesOpen(true)} />
               <RichTextEditor
                 key={submitting ? 'submitting' : 'idle'}
                 onChange={setReplyContent}
@@ -149,6 +158,7 @@ const ThreadPage = () => {
           </div>
         )
       )}
+      <TopicRulesModal open={rulesOpen} rules={topicRules} onClose={() => setRulesOpen(false)} />
     </div>
   )
 }

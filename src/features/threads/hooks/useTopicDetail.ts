@@ -122,9 +122,9 @@ export const useTopicDetail = (topicId: string | undefined, replyId?: string) =>
     dispatch(closeTopic({ topicId: topic.id, isClosed: topic.is_closed ?? false }))
   }
 
-  const handleSaveEdit = async (title: string, content: string, tagIds: string[]) => {
+  const handleSaveEdit = async (title: string, content: string, tagIds: string[], rules?: string[]) => {
     if (!topic) return
-    await dispatch(updateTopic({ topicId: topic.id, title, content, tagIds })).unwrap()
+    await dispatch(updateTopic({ topicId: topic.id, title, content, tagIds, rules })).unwrap()
   }
 
   return {
