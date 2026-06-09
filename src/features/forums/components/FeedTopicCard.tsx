@@ -12,6 +12,7 @@ import Spinner from '../../../components/shared/Spinner'
 import { type Topic } from '../../../types'
 import ImageCarousel from '../../threads/components/ImageCarousel'
 import UserLink from '../../../components/shared/UserLink'
+import ReputationBadge from '../../reputation/components/ReputationBadge'
 
 interface FeedTopicCardProps {
   topic: Topic
@@ -83,6 +84,7 @@ const FeedTopicCard = ({ topic }: FeedTopicCardProps) => {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap mb-1">
               <UserLink profile={topic.author} className="text-sm font-semibold text-slate-700 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400" />
+              <ReputationBadge userId={topic.author?.id} compact />
               {topic.channel && (
                 <Link
                   to={`/channels/${topic.channel.id}`}
