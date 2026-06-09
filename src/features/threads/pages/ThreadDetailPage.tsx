@@ -63,7 +63,7 @@ const ThreadDetailPage = () => {
   if (!topic) return <div className="text-center py-16 text-slate-400">Tema no encontrado</div>
 
   return (
-    <div className="space-y-4">
+    <div className="min-w-0 space-y-4 overflow-x-hidden">
       <TopicHeader
         topic={topic}
         isClosed={isClosed}
@@ -87,7 +87,7 @@ const ThreadDetailPage = () => {
       {repliesLoading ? (
         <div className="flex justify-center py-8"><Spinner /></div>
       ) : (
-        <div className="space-y-3">
+        <div className="min-w-0">
           {replies.map((reply) => (
             <ReplyCard key={reply.id} reply={reply} topicId={topicId!} topicClosed={isClosed} depth={0} />
           ))}
@@ -132,7 +132,7 @@ const ThreadDetailPage = () => {
             Tu cuenta ha sido suspendida y no puedes publicar contenido.
           </div>
         ) : canCreateReply ? (
-          <form onSubmit={handleSubmitReply} className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5 space-y-3">
+          <form onSubmit={handleSubmitReply} className="space-y-3 rounded-lg border border-slate-200 bg-white/70 p-3 shadow-sm dark:border-slate-700 dark:bg-slate-900/40 md:p-5">
             <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Agregar respuesta</h3>
             <RichTextEditor
               key={submitting ? 'submitting' : 'idle'}

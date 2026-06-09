@@ -55,7 +55,7 @@ const CodeBlockView = ({ node, updateAttributes }: NodeViewProps) => {
           </div>
 
           <pre className="flex-1 p-4 m-0 bg-transparent overflow-visible">
-            <NodeViewContent as={"code" as any} className={`language-${lang} text-xs font-mono leading-6 text-slate-200`} />
+            <NodeViewContent as={'code' as 'div'} className={`language-${lang} text-xs font-mono leading-6 text-slate-200`} />
           </pre>
         </div>
       </div>
@@ -132,7 +132,7 @@ const LinkPopover = ({ onConfirm, onClose, initialUrl = '' }: LinkPopoverProps) 
   }
 
   return (
-    <div className="absolute top-full left-0 mt-1 z-50 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg p-2 flex items-center gap-1.5 min-w-[280px]">
+    <div className="absolute left-0 top-full z-50 mt-1 flex w-[min(280px,calc(100vw-2rem))] items-center gap-1.5 rounded-lg border border-slate-200 bg-white p-2 shadow-lg dark:border-slate-600 dark:bg-slate-800">
       <input
         ref={inputRef}
         type="text"
@@ -264,8 +264,8 @@ export const RichTextEditor = ({
   }
 
   return (
-    <div className="border border-slate-200 dark:border-slate-600 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-transparent bg-white dark:bg-slate-700">
-      <div className="flex items-center gap-0.5 p-2 border-b border-slate-100 dark:border-slate-600 flex-wrap bg-slate-50 dark:bg-slate-700/80">
+    <div className="min-w-0 overflow-hidden rounded-lg border border-slate-200 bg-white focus-within:border-transparent focus-within:ring-2 focus-within:ring-indigo-500 dark:border-slate-600 dark:bg-slate-800">
+      <div className="flex min-w-0 flex-wrap items-center gap-0.5 border-b border-slate-100 bg-slate-50 p-2 dark:border-slate-700 dark:bg-slate-800">
         <ToolbarButton onClick={() => editor.chain().focus().toggleBold().run()} active={editor.isActive('bold')} title="Negrita">
           <Bold size={15} />
         </ToolbarButton>
