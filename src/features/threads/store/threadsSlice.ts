@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk, type PayloadAction } from '@reduxjs/toolkit'
 import { supabase } from '../../../services/supabase'
-import { type Topic, type Tag } from '../../../types'
+import { type Topic, type Tag, type TopicRule } from '../../../types'
 import { ensureForumCanPublish } from '../../../services/forumLock'
 import { ensureUserCanCreateContent } from '../../../services/userRestrictions'
 import { requireSyncedAuthUser } from '../../../services/authGuard'
@@ -25,7 +25,36 @@ const TOPIC_SELECT_WITH_CHANNEL = `
 const normalizeTags = (data: any): Topic => ({
   ...data,
   tags: (data.tags || []).map((tt: any) => tt.tag).filter(Boolean) as Tag[],
+  rules: ((data.rules || []) as TopicRule[]).slice().sort((a, b) => a.position - b.position),
 })
+
+const isTopicRulesUnavailable = (error: { code?: string; message?: string } | null) =>
+  !!error && (
+    error.code === '42P01'
+    || error.code === 'PGRST200'
+    || (error.message ?? '').toLowerCase().includes('topic_rules')
+  )
+
+const fetchTopicRules = async (topicId: string): Promise<TopicRule[]> => {
+  const { data, error } = await supabase
+    .from('topic_rules')
+    .select('*')
+    .eq('topic_id', topicId)
+    .order('position', { ascending: true })
+
+  if (error) {
+    if (isTopicRulesUnavailable(error)) return []
+    throw error
+  }
+
+  return (data ?? []) as TopicRule[]
+}
+
+const normalizeRules = (rules?: string[]) =>
+  (rules ?? [])
+    .map((rule) => rule.trim())
+    .filter(Boolean)
+    .slice(0, 10)
 
 interface TopicsState {
   items: Topic[]
@@ -163,6 +192,7 @@ export const fetchTopicById = createAsyncThunk(
         .eq('id', topicId)
         .single()
       if (error) throw error
+      const rules = await fetchTopicRules(topicId)
       let is_starred = false
       if (user) {
         const { data: star } = await supabase
@@ -173,7 +203,7 @@ export const fetchTopicById = createAsyncThunk(
           .maybeSingle()
         is_starred = !!star
       }
-      return { ...normalizeTags(data), is_starred } as Topic
+      return { ...normalizeTags({ ...data, rules }), is_starred } as Topic
     } catch (error: any) {
       return rejectWithValue(error.message)
     }
@@ -183,14 +213,14 @@ export const fetchTopicById = createAsyncThunk(
 export const createTopic = createAsyncThunk(
   'topics/create',
   async (
-    payload: { channel_id: string; title: string; content: string; tagIds?: string[] },
+    payload: { channel_id: string; title: string; content: string; tagIds?: string[]; rules?: string[] },
     { getState, rejectWithValue }
   ) => {
     try {
       const user = await requireSyncedAuthUser(getState() as RootState)
       await ensureForumCanPublish(user.id)
       await ensureUserCanCreateContent(user.id)
-      const { tagIds, ...topicPayload } = payload
+      const { tagIds, rules, ...topicPayload } = payload
       const { data, error } = await supabase
         .from('topics')
         .insert([{ ...topicPayload, author_id: user.id }])
@@ -204,13 +234,27 @@ export const createTopic = createAsyncThunk(
         )
       }
 
+      const cleanRules = normalizeRules(rules)
+      if (cleanRules.length > 0) {
+        const { error: rulesError } = await supabase.from('topic_rules').insert(
+          cleanRules.map((body, index) => ({
+            topic_id: data.id,
+            body,
+            position: index + 1,
+            created_by: user.id,
+          }))
+        )
+        if (rulesError && !isTopicRulesUnavailable(rulesError)) throw rulesError
+      }
+
       const { data: full, error: err2 } = await supabase
         .from('topics')
         .select(TOPIC_SELECT)
         .eq('id', data.id)
         .single()
       if (err2) throw err2
-      return normalizeTags(full) as Topic
+      const savedRules = await fetchTopicRules(data.id)
+      return normalizeTags({ ...full, rules: savedRules }) as Topic
     } catch (error: any) {
       return rejectWithValue(error.message)
     }
@@ -220,10 +264,11 @@ export const createTopic = createAsyncThunk(
 export const updateTopic = createAsyncThunk(
   'topics/update',
   async (
-    { topicId, title, content, tagIds }: { topicId: string; title: string; content: string; tagIds?: string[] },
-    { rejectWithValue }
+    { topicId, title, content, tagIds, rules }: { topicId: string; title: string; content: string; tagIds?: string[]; rules?: string[] },
+    { getState, rejectWithValue }
   ) => {
     try {
+      const state = getState() as RootState
       const { error } = await supabase
         .from('topics')
         .update({ title, content, updated_at: new Date().toISOString() })
@@ -239,13 +284,32 @@ export const updateTopic = createAsyncThunk(
         }
       }
 
+      if (rules !== undefined) {
+        const user = await requireSyncedAuthUser(state)
+        const { error: deleteRulesError } = await supabase.from('topic_rules').delete().eq('topic_id', topicId)
+        if (deleteRulesError && !isTopicRulesUnavailable(deleteRulesError)) throw deleteRulesError
+        const cleanRules = normalizeRules(rules)
+        if (cleanRules.length > 0 && !isTopicRulesUnavailable(deleteRulesError)) {
+          const { error: rulesError } = await supabase.from('topic_rules').insert(
+            cleanRules.map((body, index) => ({
+              topic_id: topicId,
+              body,
+              position: index + 1,
+              created_by: user.id,
+            }))
+          )
+          if (rulesError && !isTopicRulesUnavailable(rulesError)) throw rulesError
+        }
+      }
+
       const { data: full, error: err2 } = await supabase
         .from('topics')
         .select(TOPIC_SELECT_WITH_CHANNEL)
         .eq('id', topicId)
         .single()
       if (err2) throw err2
-      return normalizeTags(full) as Topic
+      const savedRules = await fetchTopicRules(topicId)
+      return normalizeTags({ ...full, rules: savedRules }) as Topic
     } catch (error: any) {
       return rejectWithValue(error.message)
     }

@@ -32,6 +32,15 @@ export interface Tag {
   created_by: string | null
   created_at: string
 }
+export interface TopicRule {
+  id: string
+  topic_id: string
+  body: string
+  position: number
+  created_by: string | null
+  created_at: string
+  updated_at: string
+}
 export interface Topic {
   id: string
   channel_id: string
@@ -46,6 +55,7 @@ export interface Topic {
   channel?: Channel
   is_starred?: boolean
   tags?: Tag[]
+  rules?: TopicRule[]
   is_pinned?: boolean
   is_closed?: boolean
 }
