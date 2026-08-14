@@ -15,7 +15,7 @@ Para contexto global del sistema, ver [CODEX.md](../../../../CODEX.md).
 | N/A | N/A | No | N/A | No recibe props públicas; obtiene datos por hooks, router o store. |
 
 ## Estado interno
-- `digits`: estado local inicializado con `Array(OTP_LENGTH).fill('')`; `OTP_LENGTH` vale 6 para coincidir con `supabase/config.toml`.
+- `digits`: estado local inicializado con `Array(OTP_LENGTH).fill('')`; `OTP_LENGTH` vale 8 para coincidir con la configuración remota de Supabase Auth.
 - `verifying`: estado local inicializado con `false`; se invalida por interacción del usuario, cierre del flujo o recarga de datos.
 - `resending`: estado local inicializado con `false`; se invalida por interacción del usuario, cierre del flujo o recarga de datos.
 - `error`: estado local inicializado con `''`; se invalida por interacción del usuario, cierre del flujo o recarga de datos.

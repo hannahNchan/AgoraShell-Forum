@@ -5,7 +5,7 @@ import { type AppDispatch } from '../../../store'
 import { verifyOtp, resendVerificationEmail } from '../store/authSlice'
 import Spinner from '../../../components/shared/Spinner'
 
-const OTP_LENGTH = 6
+const OTP_LENGTH = 8
 const OTP_EXPIRY_MINUTES = 60
 
 type VerifyEmailLocationState = {
