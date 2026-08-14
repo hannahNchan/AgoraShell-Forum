@@ -94,7 +94,7 @@ const ThreadDetailPage = () => {
         </div>
       )}
 
-      {isInteractiveMapTopic && <TopicMapView />}
+      {isInteractiveMapTopic && topicId && <TopicMapView topicId={topicId} />}
 
       {repliesLoading ? (
         <div className="flex justify-center py-8"><Spinner /></div>
