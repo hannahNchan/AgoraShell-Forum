@@ -2,6 +2,8 @@ import { createSlice, createAsyncThunk, type PayloadAction } from '@reduxjs/tool
 import { supabase } from '../../../services/supabase'
 import { type Topic } from '../../../types'
 import { toggleStar } from '../../threads/store/threadsSlice'
+import { type RootState } from '../../../store'
+import { filterAccessibleTopics } from '../../../services/channelAccess'
 
 const PAGE_SIZE = 20
 
@@ -95,13 +97,15 @@ const mergeUniqueTopics = (current: Topic[], incoming: Topic[]) => {
 
 export const fetchFeed = createAsyncThunk(
   'feed/fetch',
-  async (filter: FeedFilter, { rejectWithValue }) => {
+  async (filter: FeedFilter, { getState, rejectWithValue }) => {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       const { data, error } = await buildQuery(filter, 0, PAGE_SIZE - 1)
       if (error) throw error
-      if (user && data) return await fetchStars(data, user.id)
-      return (data ?? []) as Topic[]
+      const email = (getState() as RootState).auth.user?.email
+      const accessibleTopics = filterAccessibleTopics((data ?? []) as Topic[], email)
+      if (user && accessibleTopics.length > 0) return await fetchStars(accessibleTopics, user.id)
+      return accessibleTopics
     } catch (error: any) {
       return rejectWithValue(error.message)
     }
@@ -110,15 +114,17 @@ export const fetchFeed = createAsyncThunk(
 
 export const fetchMoreFeed = createAsyncThunk(
   'feed/fetchMore',
-  async ({ filter, page }: { filter: FeedFilter; page: number }, { rejectWithValue }) => {
+  async ({ filter, page }: { filter: FeedFilter; page: number }, { getState, rejectWithValue }) => {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       const from = page * PAGE_SIZE
       const to = from + PAGE_SIZE - 1
       const { data, error } = await buildQuery(filter, from, to)
       if (error) throw error
-      if (user && data && data.length > 0) return await fetchStars(data, user.id)
-      return (data ?? []) as Topic[]
+      const email = (getState() as RootState).auth.user?.email
+      const accessibleTopics = filterAccessibleTopics((data ?? []) as Topic[], email)
+      if (user && accessibleTopics.length > 0) return await fetchStars(accessibleTopics, user.id)
+      return accessibleTopics
     } catch (error: any) {
       return rejectWithValue(error.message)
     }
