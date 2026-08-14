@@ -133,6 +133,50 @@ ReplyBottomSheet/ReplyCard
 `-- vite.config.ts
 ```
 
+### Indice de documentacion por componente
+
+Estos documentos viven junto al componente o carpeta documentada. Para contexto global de arquitectura, Supabase y reglas de agentes, volver a este archivo.
+
+- [App](src/App.md)
+- [GlobalSearch](src/components/GlobalSearch.md)
+- [Componentes compartidos simples](src/components/README.md)
+- [ConfirmModal](src/components/shared/ConfirmModal.md)
+- [MentionList](src/components/shared/MentionList.md)
+- [ProtectedRoute](src/components/shared/ProtectedRoute.md)
+- [Shared README](src/components/shared/README.md)
+- [RichTextEditor](src/components/shared/RichTextEditor.md)
+- [AdminAuditPanel](src/features/adminAudit/components/AdminAuditPanel.md)
+- [AdminPage](src/features/auth/pages/AdminPage.md)
+- [AuthCallbackPage](src/features/auth/pages/AuthCallbackPage.md)
+- [LoginPage](src/features/auth/pages/LoginPage.md)
+- [SettingsPage](src/features/auth/pages/SettingsPage.md)
+- [VerifyEmailPage](src/features/auth/pages/VerifyEmailPage.md)
+- [FeedTopicCard](src/features/forums/components/FeedTopicCard.md)
+- [ForumsPage](src/features/forums/pages/ForumsPage.md)
+- [HomePage](src/features/forums/pages/HomePage.md)
+- [NotificationPanel](src/features/notifications/components/NotificationPanel.md)
+- [UserProfilePage](src/features/profile/pages/UserProfilePage.md)
+- [ReportModal](src/features/reports/components/ReportModal.md)
+- [ReportsAdminPanel](src/features/reports/components/ReportsAdminPanel.md)
+- [ReputationBadge](src/features/reputation/components/ReputationBadge.md)
+- [SearchPage](src/features/search/pages/SearchPage.md)
+- [TagInput](src/features/tags/components/TagInput.md)
+- [TagPage](src/features/tags/pages/TagPage.md)
+- [ChannelTopicCard](src/features/threads/components/ChannelTopicCard.md)
+- [CreateTopicModal](src/features/threads/components/CreateTopicModal.md)
+- [EditTopicModal](src/features/threads/components/EditTopicModal.md)
+- [Componentes presentacionales de threads](src/features/threads/components/README.md)
+- [ReplyBottomSheet](src/features/threads/components/ReplyBottomSheet.md)
+- [ReplyCard](src/features/threads/components/ReplyCard.md)
+- [TopicCard](src/features/threads/components/TopicCard.md)
+- [TopicHeader](src/features/threads/components/TopicHeader.md)
+- [HotTopicsPage](src/features/threads/pages/HotTopicsPage.md)
+- [ThreadDetailPage](src/features/threads/pages/ThreadDetailPage.md)
+- [ThreadPage](src/features/threads/pages/ThreadPage.md)
+- [ThreadsPage](src/features/threads/pages/ThreadsPage.md)
+- [MainLayout](src/layouts/MainLayout.md)
+- [Routes](src/routes/index.md)
+
 ## 5. Supabase
 
 ### Cliente y variables
