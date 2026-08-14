@@ -29,6 +29,7 @@
     "leader-line": "^1.0.8",
     "lowlight": "^3.3.0",
     "lucide-react": "^0.575.0",
+    "maplibre-gl": "^6.3.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-easy-crop": "^5.5.6",
