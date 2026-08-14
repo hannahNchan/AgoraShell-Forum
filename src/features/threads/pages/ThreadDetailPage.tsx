@@ -16,15 +16,18 @@ import { useForoBloqueado } from '../../../hooks/useForoBloqueado'
 import TopicRulesModal from '../components/TopicRulesModal'
 import TopicRulesReminder from '../components/TopicRulesReminder'
 import TopicMapView from '../components/TopicMapView'
+import { MAGISTRANS_EMAIL_DOMAIN, canAccessChannel, isRestrictedChannel } from '../../../services/channelAccess'
 
 const INTERACTIVE_MAP_TOPIC_ID = '1d59a539-7bd2-4891-8287-64e512002f02'
 
 const ThreadDetailPage = () => {
-  const { topicId } = useParams<{ topicId: string }>()
+  const { channelId, topicId } = useParams<{ channelId: string; topicId: string }>()
   const dispatch = useDispatch<AppDispatch>()
-  const { isAuthenticated } = useAuth()
+  const { user, isAuthenticated, loading: authLoading } = useAuth()
   const { isBanned, can } = useRole()
   const profile = useSelector(selectProfile)
+  const canViewChannel = canAccessChannel(channelId, user?.email)
+  const restrictedChannel = isRestrictedChannel(channelId)
 
   const {
     topic,
@@ -40,7 +43,7 @@ const ThreadDetailPage = () => {
     handleClose,
     handleSaveEdit,
     handleLoadMoreReplies,
-  } = useTopicDetail(topicId)
+  } = useTopicDetail(canViewChannel ? topicId : undefined)
 
   const [replyContent, setReplyContent] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -68,7 +71,18 @@ const ThreadDetailPage = () => {
     }
   }
 
-  if (topicLoading) return <div className="flex justify-center py-16"><Spinner size="lg" /></div>
+  if (authLoading || topicLoading) return <div className="flex justify-center py-16"><Spinner size="lg" /></div>
+  if (restrictedChannel && !canViewChannel) {
+    return (
+      <div className="rounded-xl border border-slate-200 bg-white p-8 text-center shadow-sm dark:border-slate-700 dark:bg-slate-900">
+        <Lock size={34} className="mx-auto text-slate-400" />
+        <h1 className="mt-4 text-xl font-bold text-slate-800 dark:text-slate-100">Tema restringido</h1>
+        <p className="mx-auto mt-2 max-w-md text-sm text-slate-500 dark:text-slate-400">
+          Este tema solo esta disponible para cuentas registradas con el dominio {MAGISTRANS_EMAIL_DOMAIN}.
+        </p>
+      </div>
+    )
+  }
   if (!topic) return <div className="text-center py-16 text-slate-400">Tema no encontrado</div>
 
   return (

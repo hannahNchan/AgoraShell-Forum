@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { Plus, MessageSquare, Tag as TagIcon, X } from 'lucide-react'
+import { Lock, Plus, MessageSquare, Tag as TagIcon, X } from 'lucide-react'
 import { useAuth } from '../../auth/hooks/useAuth'
 import { useRole } from '../../auth/hooks/useRole'
 import { useChannel } from '../hooks/useChannel'
@@ -8,21 +8,36 @@ import CreateTopicModal from '../components/CreateTopicModal'
 import ChannelTopicCard from '../components/ChannelTopicCard'
 import Spinner from '../../../components/shared/Spinner'
 import { type Tag } from '../../../types'
+import { MAGISTRANS_EMAIL_DOMAIN, canAccessChannel, isRestrictedChannel } from '../../../services/channelAccess'
 
 const ThreadsPage = () => {
   const { channelId } = useParams<{ channelId: string }>()
-  const { isAuthenticated } = useAuth()
+  const { user, isAuthenticated, loading: authLoading } = useAuth()
   const { can } = useRole()
   const [showCreate, setShowCreate] = useState(false)
+  const canViewChannel = canAccessChannel(channelId, user?.email)
+  const restrictedChannel = isRestrictedChannel(channelId)
 
   const {
     topics, loading, loadingMore, hasMore, loadMoreError,
     maxTags, currentChannel, channelTags, activeTags,
     loaderRef, handleLoadMore, handleTagFilter, clearTagFilters,
-  } = useChannel(channelId)
+  } = useChannel(canViewChannel ? channelId : undefined)
 
   const pinnedTopics = topics.filter((t) => t.is_pinned)
   const normalTopics = topics.filter((t) => !t.is_pinned)
+
+  if (!authLoading && restrictedChannel && !canViewChannel) {
+    return (
+      <div className="rounded-xl border border-slate-200 bg-white p-8 text-center shadow-sm dark:border-slate-700 dark:bg-slate-900">
+        <Lock size={34} className="mx-auto text-slate-400" />
+        <h1 className="mt-4 text-xl font-bold text-slate-800 dark:text-slate-100">Canal restringido</h1>
+        <p className="mx-auto mt-2 max-w-md text-sm text-slate-500 dark:text-slate-400">
+          Este canal solo esta disponible para cuentas registradas con el dominio {MAGISTRANS_EMAIL_DOMAIN}.
+        </p>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-4">

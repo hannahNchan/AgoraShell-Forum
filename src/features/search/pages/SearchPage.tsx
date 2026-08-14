@@ -2,14 +2,17 @@ import { useState, useEffect } from 'react'
 import { useSearchParams, Link } from 'react-router-dom'
 import { Hash, FileText, MessageSquare, Search, Tag } from 'lucide-react'
 import { supabase } from '../../../services/supabase'
+import { useAuth } from '../../auth/hooks/useAuth'
+import { canAccessChannel, filterAccessibleChannels } from '../../../services/channelAccess'
 
 interface ChannelResult { id: string; name: string; description: string | null; icon: string }
 interface TopicResult { id: string; title: string; channel_id: string; created_at: string }
-interface ReplyResult { id: string; content: string; topic_id: string; created_at: string }
+interface ReplyResult { id: string; content: string; topic_id: string; created_at: string; topic?: { channel_id: string } | { channel_id: string }[] | null }
 interface TagResult { id: string; name: string; slug: string }
 
 const SearchPage = () => {
   const [searchParams] = useSearchParams()
+  const { user } = useAuth()
   const q = searchParams.get('q') ?? ''
 
   const [channels, setChannels] = useState<ChannelResult[]>([])
@@ -41,18 +44,21 @@ const SearchPage = () => {
         const [c, t, r] = await Promise.all([
           supabase.from('channels').select('id, name, description, icon').ilike('name', pattern).limit(10),
           supabase.from('topics').select('id, title, channel_id, created_at').ilike('title', pattern).limit(10),
-          supabase.from('replies').select('id, content, topic_id, created_at').ilike('content', pattern).limit(10),
+          supabase.from('replies').select('id, content, topic_id, created_at, topic:topics(channel_id)').ilike('content', pattern).limit(10),
         ])
-        setChannels(c.data ?? [])
-        setTopics(t.data ?? [])
-        setReplies(r.data ?? [])
+        setChannels(filterAccessibleChannels(c.data ?? [], user?.email))
+        setTopics((t.data ?? []).filter((topic) => canAccessChannel(topic.channel_id, user?.email)))
+        setReplies((r.data ?? []).filter((reply) => {
+          const topic = Array.isArray(reply.topic) ? reply.topic[0] : reply.topic
+          return canAccessChannel(topic?.channel_id, user?.email)
+        }) as ReplyResult[])
         setTags([])
       }
 
       setLoading(false)
     }
     run()
-  }, [q])
+  }, [q, user?.email])
 
   const total = isTagSearch
     ? tags.length

@@ -19,6 +19,7 @@ import EmojiPicker, { type EmojiClickData } from 'emoji-picker-react'
 import GlobalSearch from '../components/GlobalSearch'
 import NotificationPanel from '../features/notifications/components/NotificationPanel'
 import { useForoBloqueado } from '../hooks/useForoBloqueado'
+import { filterAccessibleChannels } from '../services/channelAccess'
 
 const CreateChannelModal = ({ onClose }: { onClose: () => void }) => {
   const dispatch = useDispatch<AppDispatch>()
@@ -175,9 +176,10 @@ export const MainLayout = () => {
   const location = useLocation()
   const { channelId } = useParams()
 
-  const { profile, isAuthenticated, loading: authLoading } = useAuth()
+  const { user, profile, isAuthenticated, loading: authLoading } = useAuth()
   const { can } = useRole()
   const channels = useSelector((state: RootState) => state.channels.items)
+  const visibleChannels = filterAccessibleChannels(channels, user?.email)
   const channelsLoading = useSelector((state: RootState) => state.channels.loading)
   const unreadCount = useSelector((state: RootState) => state.notifications.unreadCount)
   const { confirm } = useConfirm()
@@ -267,7 +269,7 @@ export const MainLayout = () => {
             <Spinner size="sm" />
           </div>
         ) : (
-          channels.map((channel) => (
+          visibleChannels.map((channel) => (
             <div key={channel.id} className="group relative">
               <Link
                 to={`/channels/${channel.id}`}
@@ -406,7 +408,7 @@ export const MainLayout = () => {
 
   const Breadcrumb = () => {
     const parts = location.pathname.split('/').filter(Boolean)
-    const activeChannel = channels.find((c) => c.id === channelId)
+    const activeChannel = visibleChannels.find((c) => c.id === channelId)
 
     if (parts.length === 0) return null
 

@@ -6,6 +6,7 @@ import { ensureUserCanCreateContent } from '../../../services/userRestrictions'
 import { requireSyncedAuthUser } from '../../../services/authGuard'
 import { type RootState } from '../../../store'
 import { logAdminAction } from '../../../services/adminAudit'
+import { canAccessChannel, filterAccessibleTopics } from '../../../services/channelAccess'
 
 const PAGE_SIZE = 20
 
@@ -116,9 +117,11 @@ export const fetchTopicsByChannel = createAsyncThunk(
   'topics/fetchByChannel',
   async (
     { channelId, tagId, tagIds }: { channelId: string; tagId?: string; tagIds?: string[] },
-    { rejectWithValue }
+    { getState, rejectWithValue }
   ) => {
     try {
+      const email = (getState() as RootState).auth.user?.email
+      if (!canAccessChannel(channelId, email)) return []
       const { data: { user } } = await supabase.auth.getUser()
       let query = supabase
         .from('topics')
@@ -137,8 +140,9 @@ export const fetchTopicsByChannel = createAsyncThunk(
 
       const { data, error } = await query
       if (error) throw error
-      if (user && data) return await fetchStars(data, user.id)
-      return (data || []).map(normalizeTags) as Topic[]
+      const accessibleRows = filterAccessibleTopics((data || []) as Topic[], email)
+      if (user && accessibleRows.length > 0) return await fetchStars(accessibleRows, user.id)
+      return accessibleRows.map(normalizeTags) as Topic[]
     } catch (error: any) {
       return rejectWithValue(error.message)
     }
@@ -149,9 +153,11 @@ export const fetchMoreTopics = createAsyncThunk(
   'topics/fetchMore',
   async (
     { channelId, page, tagId, tagIds }: { channelId: string; page: number; tagId?: string; tagIds?: string[] },
-    { rejectWithValue }
+    { getState, rejectWithValue }
   ) => {
     try {
+      const email = (getState() as RootState).auth.user?.email
+      if (!canAccessChannel(channelId, email)) return []
       const { data: { user } } = await supabase.auth.getUser()
       const from = page * PAGE_SIZE
       const to = from + PAGE_SIZE - 1
@@ -173,8 +179,9 @@ export const fetchMoreTopics = createAsyncThunk(
 
       const { data, error } = await query
       if (error) throw error
-      if (user && data && data.length > 0) return await fetchStars(data, user.id)
-      return (data ?? []).map(normalizeTags) as Topic[]
+      const accessibleRows = filterAccessibleTopics((data ?? []) as Topic[], email)
+      if (user && accessibleRows.length > 0) return await fetchStars(accessibleRows, user.id)
+      return accessibleRows.map(normalizeTags) as Topic[]
     } catch (error: any) {
       return rejectWithValue(error.message)
     }
@@ -183,7 +190,7 @@ export const fetchMoreTopics = createAsyncThunk(
 
 export const fetchTopicById = createAsyncThunk(
   'topics/fetchById',
-  async (topicId: string, { rejectWithValue }) => {
+  async (topicId: string, { getState, rejectWithValue }) => {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       const { data, error } = await supabase
@@ -192,6 +199,8 @@ export const fetchTopicById = createAsyncThunk(
         .eq('id', topicId)
         .single()
       if (error) throw error
+      const email = (getState() as RootState).auth.user?.email
+      if (!canAccessChannel(data.channel_id, email)) throw new Error('No tienes acceso a este tema.')
       const rules = await fetchTopicRules(topicId)
       let is_starred = false
       if (user) {
@@ -218,6 +227,9 @@ export const createTopic = createAsyncThunk(
   ) => {
     try {
       const user = await requireSyncedAuthUser(getState() as RootState)
+      if (!canAccessChannel(payload.channel_id, user.email)) {
+        throw new Error('Este canal solo permite cuentas registradas con el dominio autorizado.')
+      }
       await ensureForumCanPublish(user.id)
       await ensureUserCanCreateContent(user.id)
       const { tagIds, rules, ...topicPayload } = payload
