@@ -15,7 +15,7 @@ Para contexto global del sistema, ver [CODEX.md](../../../../CODEX.md).
 | N/A | N/A | No | N/A | No recibe props públicas; obtiene datos por hooks, router o store. |
 
 ## Estado interno
-- `digits`: estado local inicializado con `Array(8).fill('')`; se invalida por interacción del usuario, cierre del flujo o recarga de datos.
+- `digits`: estado local inicializado con `Array(OTP_LENGTH).fill('')`; `OTP_LENGTH` vale 6 para coincidir con `supabase/config.toml`.
 - `verifying`: estado local inicializado con `false`; se invalida por interacción del usuario, cierre del flujo o recarga de datos.
 - `resending`: estado local inicializado con `false`; se invalida por interacción del usuario, cierre del flujo o recarga de datos.
 - `error`: estado local inicializado con `''`; se invalida por interacción del usuario, cierre del flujo o recarga de datos.
@@ -57,4 +57,4 @@ Para contexto global del sistema, ver [CODEX.md](../../../../CODEX.md).
 - Hay manejo de refs/foco o medición; mantener cleanup y orden de foco.
 
 ## Pendientes
-- Deuda: usa `any`; tipar contra `types.db.ts` o tipos de dominio cuando se toque.
+- No se detectaron TODOs directos en el componente.

@@ -5,13 +5,20 @@ import { type AppDispatch } from '../../../store'
 import { verifyOtp, resendVerificationEmail } from '../store/authSlice'
 import Spinner from '../../../components/shared/Spinner'
 
+const OTP_LENGTH = 6
+const OTP_EXPIRY_MINUTES = 60
+
+type VerifyEmailLocationState = {
+  email?: string
+} | null
+
 const VerifyEmailPage = () => {
   const dispatch = useDispatch<AppDispatch>()
   const navigate = useNavigate()
   const location = useLocation()
-  const email = (location.state as any)?.email ?? ''
+  const email = (location.state as VerifyEmailLocationState)?.email ?? ''
 
-  const [digits, setDigits] = useState<string[]>(Array(8).fill(''))
+  const [digits, setDigits] = useState<string[]>(Array(OTP_LENGTH).fill(''))
   const [verifying, setVerifying] = useState(false)
   const [resending, setResending] = useState(false)
   const [error, setError] = useState('')
@@ -23,7 +30,7 @@ const VerifyEmailPage = () => {
   useEffect(() => {
     if (!email) navigate('/register', { replace: true })
     inputRefs.current[0]?.focus()
-  }, [])
+  }, [email, navigate])
 
   useEffect(() => {
     return () => { if (cooldownRef.current) clearInterval(cooldownRef.current) }
@@ -49,11 +56,11 @@ const VerifyEmailPage = () => {
     setDigits(next)
     setError('')
 
-    if (value && index < 5) {
+    if (value && index < OTP_LENGTH - 1) {
       inputRefs.current[index + 1]?.focus()
     }
 
-    if (next.every((d) => d !== '') && next.join('').length === 6) {
+    if (next.every((d) => d !== '') && next.join('').length === OTP_LENGTH) {
       handleVerify(next.join(''))
     }
   }
@@ -63,32 +70,32 @@ const VerifyEmailPage = () => {
       inputRefs.current[index - 1]?.focus()
     }
     if (e.key === 'ArrowLeft' && index > 0) inputRefs.current[index - 1]?.focus()
-    if (e.key === 'ArrowRight' && index < 5) inputRefs.current[index + 1]?.focus()
+    if (e.key === 'ArrowRight' && index < OTP_LENGTH - 1) inputRefs.current[index + 1]?.focus()
   }
 
   const handlePaste = (e: React.ClipboardEvent) => {
     e.preventDefault()
-    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 8)
+    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, OTP_LENGTH)
     if (!pasted) return
-    const next = Array(6).fill('')
+    const next = Array(OTP_LENGTH).fill('')
     pasted.split('').forEach((ch, i) => { next[i] = ch })
     setDigits(next)
-    const focusIndex = Math.min(pasted.length, 5)
+    const focusIndex = Math.min(pasted.length, OTP_LENGTH - 1)
     inputRefs.current[focusIndex]?.focus()
-    if (pasted.length === 6) handleVerify(pasted)
+    if (pasted.length === OTP_LENGTH) handleVerify(pasted)
   }
 
   const handleVerify = async (code?: string) => {
     const otp = code ?? digits.join('')
-    if (otp.length < 6) { setError('Ingresa los 8 dígitos del código'); return }
+    if (otp.length < OTP_LENGTH) { setError(`Ingresa los ${OTP_LENGTH} dígitos del código`); return }
     setVerifying(true)
     setError('')
     try {
       await dispatch(verifyOtp({ email, token: otp })).unwrap()
       navigate('/', { replace: true })
-    } catch (err: any) {
-      setError(err ?? 'Código inválido o expirado. Solicita uno nuevo.')
-      setDigits(Array(8).fill(''))
+    } catch (err: unknown) {
+      setError(typeof err === 'string' ? err : 'Código inválido o expirado. Solicita uno nuevo.')
+      setDigits(Array(OTP_LENGTH).fill(''))
       inputRefs.current[0]?.focus()
     } finally {
       setVerifying(false)
@@ -104,7 +111,7 @@ const VerifyEmailPage = () => {
       await dispatch(resendVerificationEmail(email)).unwrap()
       setResendSuccess(true)
       startCooldown()
-      setDigits(Array(8).fill(''))
+      setDigits(Array(OTP_LENGTH).fill(''))
       inputRefs.current[0]?.focus()
     } catch {
       setError('No se pudo reenviar el email. Intenta de nuevo.')
@@ -114,7 +121,7 @@ const VerifyEmailPage = () => {
   }
 
   const code = digits.join('')
-  const isComplete = code.length === 8
+  const isComplete = code.length === OTP_LENGTH
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-100 to-indigo-50 flex items-center justify-center px-4">
@@ -125,7 +132,7 @@ const VerifyEmailPage = () => {
           </div>
           <h1 className="text-2xl font-bold text-slate-800">Verifica tu email</h1>
           <p className="text-slate-500 text-sm mt-2 leading-relaxed">
-            Enviamos un código de 8 dígitos a<br />
+            Enviamos un código de {OTP_LENGTH} dígitos a<br />
             <span className="font-semibold text-slate-700">{email}</span>
           </p>
         </div>
@@ -184,7 +191,7 @@ const VerifyEmailPage = () => {
         </div>
 
         <p className="text-center text-xs text-slate-400 mt-6">
-          El código expira en 10 minutos.<br />
+          El código expira en {OTP_EXPIRY_MINUTES} minutos.<br />
           Revisa también tu carpeta de spam.
         </p>
       </div>
