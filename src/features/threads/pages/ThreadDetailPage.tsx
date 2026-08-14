@@ -15,6 +15,9 @@ import RichTextEditor from '../../../components/shared/RichTextEditor'
 import { useForoBloqueado } from '../../../hooks/useForoBloqueado'
 import TopicRulesModal from '../components/TopicRulesModal'
 import TopicRulesReminder from '../components/TopicRulesReminder'
+import TopicMapView from '../components/TopicMapView'
+
+const INTERACTIVE_MAP_TOPIC_ID = '1d59a539-7bd2-4891-8287-64e512002f02'
 
 const ThreadDetailPage = () => {
   const { topicId } = useParams<{ topicId: string }>()
@@ -51,6 +54,7 @@ const ThreadDetailPage = () => {
   const canManageRules = canCloseTopic
   const canReport = can('report_content')
   const topicRules = topic?.rules ?? []
+  const isInteractiveMapTopic = topicId === INTERACTIVE_MAP_TOPIC_ID
 
   const handleSubmitReply = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -68,7 +72,7 @@ const ThreadDetailPage = () => {
   if (!topic) return <div className="text-center py-16 text-slate-400">Tema no encontrado</div>
 
   return (
-    <div className="min-w-0 space-y-4 overflow-x-hidden">
+    <div className="min-w-0 space-y-4">
       <TopicHeader
         topic={topic}
         isClosed={isClosed}
@@ -89,6 +93,8 @@ const ThreadDetailPage = () => {
           {topic.replies_count} {topic.replies_count === 1 ? 'respuesta' : 'respuestas'}
         </div>
       )}
+
+      {isInteractiveMapTopic && <TopicMapView />}
 
       {repliesLoading ? (
         <div className="flex justify-center py-8"><Spinner /></div>
