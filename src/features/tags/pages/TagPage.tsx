@@ -6,6 +6,7 @@ import { es } from 'date-fns/locale'
 import { supabase } from '../../../services/supabase'
 import Spinner from '../../../components/shared/Spinner'
 import { type Tag, type Topic, type Channel } from '../../../types'
+import { getAvatarInitial, getDisplayUsername } from '../../../services/deletedUser'
 
 interface TopicWithChannel extends Topic {
   channel: Channel
@@ -150,7 +151,7 @@ const TagPage = () => {
                   {topic.author?.avatar_url ? (
                     <img src={topic.author.avatar_url} alt="" className="w-full h-full object-cover" />
                   ) : (
-                    topic.author?.username?.charAt(0).toUpperCase()
+                    getAvatarInitial(topic.author)
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -172,7 +173,7 @@ const TagPage = () => {
                   </Link>
 
                   <div className="flex items-center gap-3 mt-1.5 flex-wrap">
-                    <span className="text-xs text-slate-400 font-medium">{topic.author?.username}</span>
+                    <span className="text-xs text-slate-400 font-medium">{getDisplayUsername(topic.author)}</span>
                     <span className="text-xs text-slate-400 dark:text-slate-500 flex items-center gap-1">
                       <Clock size={11} />
                       {formatDistanceToNow(new Date(topic.created_at), { addSuffix: true, locale: es })}

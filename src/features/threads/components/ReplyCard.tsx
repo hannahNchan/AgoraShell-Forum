@@ -16,6 +16,7 @@ import ReportModal from '../../reports/components/ReportModal'
 import UserLink from '../../../components/shared/UserLink'
 import ReputationBadge from '../../reputation/components/ReputationBadge'
 import TopicRulesReminder from './TopicRulesReminder'
+import { getAvatarInitial, getDisplayUsername } from '../../../services/deletedUser'
 
 interface AvatarProps {
   profile?: Profile | null
@@ -41,7 +42,7 @@ export const Avatar = ({ profile, id }: AvatarProps) => (
     {profile?.avatar_url ? (
       <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
     ) : (
-      profile?.username?.charAt(0).toUpperCase() || '?'
+      getAvatarInitial(profile)
     )}
   </div>
 )
@@ -185,6 +186,21 @@ const ReplyCard = ({ reply, topicId, topicClosed, topicRules = [], onOpenRules, 
   const wasEdited = reply.updated_at && reply.updated_at !== reply.created_at
   const hasChildren = reply.children && reply.children.length > 0
   const depthExceeded = depth >= maxDepth
+  const reportOptions = [
+    {
+      type: 'reply' as const,
+      label: 'Respuesta',
+      targetTopicId: topicId,
+      targetReplyId: reply.id,
+      reportedUserId: reply.author_id,
+    },
+    ...(reply.author_id ? [{
+      type: 'user' as const,
+      label: 'Autor',
+      targetUserId: reply.author_id,
+      reportedUserId: reply.author_id,
+    }] : []),
+  ]
 
   return (
     <div ref={containerRef} className={depth > 0 ? 'relative border-l border-slate-200 pl-3 dark:border-slate-800 md:pl-5' : 'relative'}>
@@ -319,7 +335,7 @@ const ReplyCard = ({ reply, topicId, topicClosed, topicRules = [], onOpenRules, 
           {showReplyEditor && (
             <div className="mt-3 space-y-3 rounded-lg border border-slate-200 bg-white/70 p-3 shadow-sm dark:border-slate-700 dark:bg-slate-900/40 md:p-4">
               {onOpenRules && <TopicRulesReminder rules={topicRules} onOpen={onOpenRules} />}
-              <RichTextEditor onChange={setReplyContent} placeholder={`Respondiendo a ${reply.author?.username}...`} minHeight="100px" />
+              <RichTextEditor onChange={setReplyContent} placeholder={`Respondiendo a ${getDisplayUsername(reply.author)}...`} minHeight="100px" />
               <div className="flex flex-wrap justify-end gap-2">
                 <button
                   onClick={() => { setShowBottomSheet(false); setReplyContent('') }}
@@ -343,7 +359,7 @@ const ReplyCard = ({ reply, topicId, topicClosed, topicRules = [], onOpenRules, 
             open={showBottomSheet}
             onClose={() => setShowBottomSheet(false)}
             onSubmit={handleSubmitReply}
-            replyingTo={reply.author?.username || ''}
+            replyingTo={getDisplayUsername(reply.author)}
             submitting={submitting}
             topicRules={topicRules}
             onOpenRules={onOpenRules}
@@ -354,21 +370,7 @@ const ReplyCard = ({ reply, topicId, topicClosed, topicRules = [], onOpenRules, 
             onClose={() => setReportOpen(false)}
             title="Reportar respuesta"
             author={reply.author}
-            options={[
-              {
-                type: 'reply',
-                label: 'Respuesta',
-                targetTopicId: topicId,
-                targetReplyId: reply.id,
-                reportedUserId: reply.author_id,
-              },
-              {
-                type: 'user',
-                label: 'Autor',
-                targetUserId: reply.author_id,
-                reportedUserId: reply.author_id,
-              },
-            ]}
+            options={reportOptions}
           />
 
           {hasChildren && !depthExceeded && (

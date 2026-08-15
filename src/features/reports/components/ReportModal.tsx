@@ -6,6 +6,7 @@ import { createReport } from '../store/reportsSlice'
 import Spinner from '../../../components/shared/Spinner'
 import { selectUser } from '../../auth/store/authSelectors'
 import { type Profile, type ReportReason, type ReportTargetType } from '../../../types'
+import { getDisplayUsername } from '../../../services/deletedUser'
 
 interface ReportTargetOption {
   type: ReportTargetType
@@ -91,7 +92,7 @@ const ReportModal = ({ open, onClose, title, author, options }: ReportModalProps
         <form onSubmit={handleSubmit} className="p-4 sm:p-5 space-y-4 overflow-y-auto">
           {author && (
             <div className="text-xs text-slate-500 dark:text-slate-400">
-              Autor: <span className="font-medium text-slate-700 dark:text-slate-300">{author.username}</span>
+              Autor: <span className="font-medium text-slate-700 dark:text-slate-300">{getDisplayUsername(author)}</span>
             </div>
           )}
 

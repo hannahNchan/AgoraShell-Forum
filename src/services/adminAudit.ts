@@ -20,6 +20,8 @@ export type AdminAuditAction =
   | 'user.suspend'
   | 'user.ban'
   | 'user.restriction_lift'
+  | 'user.delete_requested'
+  | 'user.deleted'
   | 'settings.update'
   | 'forum.lock'
   | 'forum.unlock'

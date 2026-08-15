@@ -46,6 +46,20 @@ const TopicHeader = ({
   const topicContentRef = useRef<HTMLDivElement>(null)
   useHighlightCode(topicContentRef)
   useCodeCollapse(topicContentRef)
+  const reportOptions = [
+    {
+      type: 'topic' as const,
+      label: 'Tema',
+      targetTopicId: topic.id,
+      reportedUserId: topic.author_id,
+    },
+    ...(topic.author_id ? [{
+      type: 'user' as const,
+      label: 'Autor',
+      targetUserId: topic.author_id,
+      reportedUserId: topic.author_id,
+    }] : []),
+  ]
 
   const handleSave = async () => {
     if (!editTitle.trim() || !editContent || editContent === '<p></p>') return
@@ -316,20 +330,7 @@ const TopicHeader = ({
         onClose={() => setReportOpen(false)}
         title="Reportar tema"
         author={topic.author}
-        options={[
-          {
-            type: 'topic',
-            label: 'Tema',
-            targetTopicId: topic.id,
-            reportedUserId: topic.author_id,
-          },
-          {
-            type: 'user',
-            label: 'Autor',
-            targetUserId: topic.author_id,
-            reportedUserId: topic.author_id,
-          },
-        ]}
+        options={reportOptions}
       />
     </div>
   )

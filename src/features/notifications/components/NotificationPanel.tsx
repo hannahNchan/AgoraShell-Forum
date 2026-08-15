@@ -10,6 +10,7 @@ import { useAuth } from '../../auth/hooks/useAuth'
 import { supabase } from '../../../services/supabase'
 import { type Notification } from '../../../types'
 import Spinner from '../../../components/shared/Spinner'
+import { getAvatarInitial, getDisplayUsername } from '../../../services/deletedUser'
 
 interface NotificationPanelProps {
   open: boolean
@@ -29,7 +30,7 @@ const NotificationItem = ({ notification, onRead }: { notification: Notification
     if (notification.type === 'mention') {
       return (
         <span>
-          <span className="font-semibold text-slate-800 dark:text-slate-100">{notification.actor?.username}</span>
+          <span className="font-semibold text-slate-800 dark:text-slate-100">{getDisplayUsername(notification.actor)}</span>
           <span className="text-slate-600 dark:text-slate-400"> te mencionó en </span>
           <span className="font-medium text-indigo-600 dark:text-indigo-400">{notification.topic?.title ?? 'un tema'}</span>
         </span>
@@ -38,7 +39,7 @@ const NotificationItem = ({ notification, onRead }: { notification: Notification
     if (notification.type === 'reply') {
       return (
         <span>
-          <span className="font-semibold text-slate-800 dark:text-slate-100">{notification.actor?.username}</span>
+          <span className="font-semibold text-slate-800 dark:text-slate-100">{getDisplayUsername(notification.actor)}</span>
           <span className="text-slate-600 dark:text-slate-400"> respondió a tu mensaje en </span>
           <span className="font-medium text-indigo-600 dark:text-indigo-400">{notification.topic?.title ?? 'un tema'}</span>
         </span>
@@ -58,7 +59,7 @@ const NotificationItem = ({ notification, onRead }: { notification: Notification
           <img src={notification.actor.avatar_url} alt="" className="w-full h-full object-cover" />
         ) : (
           <span className="text-xs font-semibold text-indigo-700 dark:text-indigo-300">
-            {notification.actor?.username?.charAt(0).toUpperCase() ?? '?'}
+            {getAvatarInitial(notification.actor)}
           </span>
         )}
       </div>

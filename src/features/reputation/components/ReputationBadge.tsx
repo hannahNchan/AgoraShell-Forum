@@ -38,6 +38,8 @@ const ReputationBadge = ({ userId, summary, compact = false }: ReputationBadgePr
     return () => { cancelled = true }
   }, [summary, userId])
 
+  if (!summary && !userId) return null
+
   const currentFetchedSummary = fetchedSummary && fetchedSummary.userId === userId ? fetchedSummary.summary : null
   const currentSummary = summary ?? currentFetchedSummary
   const score = currentSummary?.shell_score ?? 0

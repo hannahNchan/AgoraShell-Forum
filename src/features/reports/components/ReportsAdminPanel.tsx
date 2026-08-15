@@ -12,6 +12,7 @@ import { claimReport, fetchReports, releaseReport, resolveReportWithAction, upda
 import Spinner from '../../../components/shared/Spinner'
 import { type Report, type ReportReason, type ReportStatus, type ReportTargetType } from '../../../types'
 import { MODERATION_REASONS, getModerationReason, type ModerationPenalty } from '../constants/moderationCatalog'
+import { getDisplayUsername } from '../../../services/deletedUser'
 
 type StatusFilter = 'open' | ReportStatus | 'all'
 type TargetFilter = ReportTargetType | 'all'
@@ -62,7 +63,7 @@ const reportLink = (report: Report) => {
 const previewText = (report: Report) => {
   if (report.target_type === 'reply') return stripHtml(report.target_reply?.content)
   if (report.target_type === 'topic') return report.target_topic?.title ?? ''
-  return report.reported_user?.username ? `Usuario: ${report.reported_user.username}` : 'Usuario reportado'
+  return `Usuario: ${getDisplayUsername(report.reported_user)}`
 }
 
 const isHighPriority = (report: Report) =>
@@ -113,8 +114,8 @@ const ReportsAdminPanel = () => {
         if (!cleanQuery) return true
 
         const haystack = [
-          report.reporter?.username,
-          report.reported_user?.username,
+          getDisplayUsername(report.reporter),
+          getDisplayUsername(report.reported_user),
           report.details,
           previewText(report),
           reasonLabel[report.reason],
@@ -307,13 +308,13 @@ const ReportsAdminPanel = () => {
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs text-slate-500 dark:text-slate-400">
                       <div>
-                        Reportó <span className="font-medium text-slate-700 dark:text-slate-300">{report.reporter?.username ?? 'Usuario'}</span>
+                        Reportó <span className="font-medium text-slate-700 dark:text-slate-300">{getDisplayUsername(report.reporter)}</span>
                       </div>
                       <div>
-                        Reportado <span className="font-medium text-slate-700 dark:text-slate-300">{report.reported_user?.username ?? 'Contenido'}</span>
+                        Reportado <span className="font-medium text-slate-700 dark:text-slate-300">{report.reported_user ? getDisplayUsername(report.reported_user) : 'Contenido'}</span>
                       </div>
                       <div>
-                        Moderador <span className="font-medium text-slate-700 dark:text-slate-300">{report.assigned_moderator?.username ?? report.handled_by?.username ?? 'Sin asignar'}</span>
+                        Moderador <span className="font-medium text-slate-700 dark:text-slate-300">{report.assigned_moderator ? getDisplayUsername(report.assigned_moderator) : report.handled_by ? getDisplayUsername(report.handled_by) : 'Sin asignar'}</span>
                       </div>
                     </div>
 

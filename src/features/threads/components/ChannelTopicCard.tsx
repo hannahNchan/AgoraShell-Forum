@@ -15,6 +15,7 @@ import Spinner from '../../../components/shared/Spinner'
 import EditTopicModal from './EditTopicModal'
 import { type Tag } from '../../../types'
 import ImageCarousel from './ImageCarousel'
+import { getAvatarInitial, getDisplayUsername } from '../../../services/deletedUser'
 
 const stripHtml = (html: string) => {
   const tmp = document.createElement('div')
@@ -123,14 +124,14 @@ const ChannelTopicCard = ({ topic, maxTags }: ChannelTopicCardProps) => {
             {topic.author?.avatar_url ? (
               <img src={topic.author.avatar_url} alt="" className="w-9 h-9 object-cover" />
             ) : (
-              topic.author?.username?.charAt(0).toUpperCase()
+              getAvatarInitial(topic.author)
             )}
           </div>
 
           <div className="flex flex-col md:flex-row md:items-start md:w-full">
             <div className="flex-1 min-w-0 flex flex-col">
               <div className="flex justify-end md:justify-start md:items-center gap-3 md:py-2 -mt-2 mb-2 md:mb-0 md:mt-1 text-xs text-slate-400 order-first md:order-3">
-                <span className="font-medium text-slate-500 dark:text-slate-400">{topic.author?.username}</span>
+                <span className="font-medium text-slate-500 dark:text-slate-400">{getDisplayUsername(topic.author)}</span>
                 <span className="flex items-center gap-1">
                   <Clock size={11} />
                   {formatDistanceToNow(new Date(topic.created_at), { addSuffix: true, locale: es })}
@@ -261,7 +262,7 @@ const ChannelTopicCard = ({ topic, maxTags }: ChannelTopicCardProps) => {
                           {r.author?.avatar_url ? (
                             <img src={r.author.avatar_url} alt="" className="w-full h-full object-cover" />
                           ) : (
-                            r.author?.username?.charAt(0).toUpperCase()
+                            getAvatarInitial(r.author)
                           )}
                         </div>
                       ))}
@@ -277,11 +278,11 @@ const ChannelTopicCard = ({ topic, maxTags }: ChannelTopicCardProps) => {
                         {r.author?.avatar_url ? (
                           <img src={r.author.avatar_url} alt="" className="w-full h-full object-cover" />
                         ) : (
-                          r.author?.username?.charAt(0).toUpperCase()
+                          getAvatarInitial(r.author)
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <span className="text-xs font-medium text-slate-600 dark:text-slate-300">{r.author?.username} </span>
+                        <span className="text-xs font-medium text-slate-600 dark:text-slate-300">{getDisplayUsername(r.author)} </span>
                         <span className="text-xs text-slate-400 dark:text-slate-500">
                           {stripHtml(r.content).slice(0, 80)}{stripHtml(r.content).length > 80 ? '…' : ''}
                         </span>

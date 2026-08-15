@@ -3,15 +3,16 @@ import { Star, MessageCircle, Clock } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { type HotTopic } from '../hooks/useHotTopics'
+import { getAvatarInitial, getDisplayUsername } from '../../../services/deletedUser'
 
 const MEDALS = ['🥇', '🥈', '🥉']
 
-const Avatar = ({ profile }: { profile: { username: string; avatar_url: string | null } }) => (
+const Avatar = ({ profile }: { profile?: { username?: string | null; avatar_url?: string | null } | null }) => (
   <div className="w-7 h-7 rounded-full bg-indigo-100 shrink-0 flex items-center justify-center text-indigo-700 font-semibold text-xs overflow-hidden">
-    {profile.avatar_url ? (
+    {profile?.avatar_url ? (
       <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
     ) : (
-      profile.username.charAt(0).toUpperCase()
+      getAvatarInitial(profile)
     )}
   </div>
 )
@@ -32,7 +33,7 @@ const HotTopicCard = ({ topic, rank }: { topic: HotTopic; rank: number }) => (
     <div className="flex-1 min-w-0">
       <div className="flex items-center gap-2 mb-1.5">
         <Avatar profile={topic.author} />
-        <span className="text-xs text-slate-500 font-medium">{topic.author.username}</span>
+        <span className="text-xs text-slate-500 font-medium">{getDisplayUsername(topic.author)}</span>
         <span className="text-slate-300 text-xs">·</span>
         <span className="text-xs text-slate-400 flex items-center gap-1">
           <Clock size={10} />

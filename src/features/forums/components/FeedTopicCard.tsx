@@ -12,6 +12,7 @@ import Spinner from '../../../components/shared/Spinner'
 import { type Topic } from '../../../types'
 import ImageCarousel from '../../threads/components/ImageCarousel'
 import UserLink from '../../../components/shared/UserLink'
+import { getAvatarInitial, getDisplayUsername } from '../../../services/deletedUser'
 import ReputationBadge from '../../reputation/components/ReputationBadge'
 
 interface FeedTopicCardProps {
@@ -77,7 +78,7 @@ const FeedTopicCard = ({ topic }: FeedTopicCardProps) => {
             {topic.author?.avatar_url ? (
               <img src={topic.author.avatar_url} alt="" className="w-9 h-9 object-cover" />
             ) : (
-              topic.author?.username?.charAt(0).toUpperCase()
+              getAvatarInitial(topic.author)
             )}
           </div>
 
@@ -149,12 +150,12 @@ const FeedTopicCard = ({ topic }: FeedTopicCardProps) => {
                     {r.author?.avatar_url ? (
                       <img src={r.author.avatar_url} alt="" className="w-full h-full object-cover" />
                     ) : (
-                      r.author?.username?.charAt(0).toUpperCase()
+                      getAvatarInitial(r.author)
                     )}
                   </div>
                   <div className="flex-1 min-w-0 bg-slate-50 dark:bg-slate-700/50 rounded-lg px-3 py-2">
                     <UserLink profile={r.author} className="text-xs font-semibold text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400">
-                      {r.author?.username}{' '}
+                      {getDisplayUsername(r.author)}{' '}
                     </UserLink>
                     <span className="text-xs text-slate-500 dark:text-slate-400">
                       {stripHtml(r.content).slice(0, 100)}{stripHtml(r.content).length > 100 ? '…' : ''}

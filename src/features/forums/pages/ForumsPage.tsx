@@ -7,6 +7,7 @@ import { useRole } from '../../auth/hooks/useRole'
 import { useConfirm } from '../../../hooks/useConfirm'
 import { deleteChannel } from '../store/forumsSlice'
 import { supabase } from '../../../services/supabase'
+import { getDisplayUsername } from '../../../services/deletedUser'
 
 export const ForumsPage = () => {
   const dispatch = useDispatch<AppDispatch>()
@@ -73,7 +74,7 @@ export const ForumsPage = () => {
                 <div className="flex items-center gap-4 px-5 pb-3">
                   <span className="text-xs text-slate-400 dark:text-slate-500">
                     Creado por @<span className="font-medium">
-                      {channel.created_by_profile?.username ?? 'bot >'}
+                      {channel.created_by_profile ? getDisplayUsername(channel.created_by_profile) : 'bot >'}
                     </span>
                   </span>
                   <button

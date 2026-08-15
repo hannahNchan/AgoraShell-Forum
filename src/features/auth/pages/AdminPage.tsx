@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { Ban, Clock, MessageSquare, RotateCcw, Settings, ShieldAlert, Tag as TagIcon, Users, X } from 'lucide-react'
+import { Ban, Clock, MessageSquare, RotateCcw, Settings, ShieldAlert, Tag as TagIcon, Trash2, Users, X } from 'lucide-react'
 import { selectIsAdmin, selectProfile } from '../store/authSelectors'
 import { supabase } from '../../../services/supabase'
 import { type UserRole } from '../../../types'
@@ -26,6 +26,9 @@ interface UserRow {
   moderation_previous_role_id: number | null
   moderation_updated_by: string | null
   moderation_updated_at: string | null
+  deletion_status: 'active' | 'deletion_requested' | 'deleting' | 'failed'
+  deletion_requested_at: string | null
+  deletion_requested_by: string | null
 }
 
 type UserQueryRow = UserRow & {
@@ -106,6 +109,9 @@ const AdminPage = () => {
   const [savingBloqueo, setSavingBloqueo] = useState(false)
   const [bloqueoError, setBloqueoError] = useState('')
   const [restrictionModal, setRestrictionModal] = useState<{ user: UserRow; action: RestrictionAction } | null>(null)
+  const [deletionModal, setDeletionModal] = useState<UserRow | null>(null)
+  const [deletionReason, setDeletionReason] = useState('')
+  const [deletionError, setDeletionError] = useState('')
   const [reason, setReason] = useState('')
   const [reasonId, setReasonId] = useState(MODERATION_REASONS[0].id)
   const [durationDays, setDurationDays] = useState(7)
@@ -114,6 +120,7 @@ const AdminPage = () => {
   const restrictionTarget = restrictionModal?.user
   const modalTitle = restrictionModal?.action === 'ban' ? 'Banear usuario' : 'Suspender usuario'
   const modalSaving = restrictionTarget ? saving === restrictionTarget.id : false
+  const deletionSaving = deletionModal ? saving === deletionModal.id : false
 
   const fetchUsers = async () => {
     setLoading(true)
@@ -187,6 +194,59 @@ const AdminPage = () => {
 
     const updated = data as UserQueryRow
     updateUserInList({ ...updated, role: resolveUserRole(updated) })
+  }
+
+  const canRequestDeletion = (user: UserRow) => {
+    if (!profile?.id || profile.id === user.id) return false
+    if (user.deletion_status && user.deletion_status !== 'active' && user.deletion_status !== 'failed') return false
+    if (user.role_id === 1) return false
+    if (profile.role_id === 1 || profile.role === 'admin') return true
+    return (profile.role_id === 2 || profile.role === 'moderator') && user.role_id === 3
+  }
+
+  const openDeletionModal = (user: UserRow) => {
+    if (!canRequestDeletion(user)) return
+    setDeletionModal(user)
+    setDeletionReason('')
+    setDeletionError('')
+  }
+
+  const closeDeletionModal = () => {
+    if (deletionSaving) return
+    setDeletionModal(null)
+    setDeletionError('')
+  }
+
+  const handleRequestDeletion = async () => {
+    if (!deletionModal) return
+    setSaving(deletionModal.id)
+    setDeletionError('')
+    setUserError('')
+
+    try {
+      const { data, error } = await supabase.functions.invoke('request-user-deletion', {
+        body: {
+          userId: deletionModal.id,
+          reason: deletionReason.trim() || null,
+        },
+      })
+      if (error) throw error
+      const job = data?.job
+      setUsers((prev) => prev.map((user) => user.id === deletionModal.id
+        ? {
+          ...user,
+          deletion_status: job?.status === 'processing' ? 'deleting' : 'deletion_requested',
+          deletion_requested_at: job?.requested_at ?? new Date().toISOString(),
+          deletion_requested_by: profile?.id ?? null,
+        }
+        : user
+      ))
+      setDeletionModal(null)
+    } catch (error: unknown) {
+      setDeletionError(getErrorMessage(error))
+    } finally {
+      setSaving(null)
+    }
   }
 
   const openRestrictionModal = (user: UserRow, action: RestrictionAction) => {
@@ -385,18 +445,30 @@ const AdminPage = () => {
     const restriction = getRestrictionState(user)
     const isProtectedAdmin = user.role_id === 1
     const isRestricted = user.role_id === 4 || (user.suspended_until ? new Date(user.suspended_until).getTime() > Date.now() : false)
+    const isDeleting = user.deletion_status === 'deletion_requested' || user.deletion_status === 'deleting'
+    const deletionFailed = user.deletion_status === 'failed'
 
     return (
       <div className="flex flex-col gap-2">
-        <span className={`inline-flex w-fit max-w-full items-center rounded-md border px-2 py-1 text-xs font-medium ${restriction.className}`}>
-          {restriction.label}
-        </span>
+        {isDeleting ? (
+          <span className="inline-flex w-fit max-w-full items-center rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-medium text-slate-600 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-300">
+            Eliminando usuario...
+          </span>
+        ) : deletionFailed ? (
+          <span className="inline-flex w-fit max-w-full items-center rounded-md border border-red-200 bg-red-50 px-2 py-1 text-xs font-medium text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">
+            Borrado fallido
+          </span>
+        ) : (
+          <span className={`inline-flex w-fit max-w-full items-center rounded-md border px-2 py-1 text-xs font-medium ${restriction.className}`}>
+            {restriction.label}
+          </span>
+        )}
         {restriction.detail && <p className="max-w-xs text-xs leading-5 text-slate-500 dark:text-slate-400">{restriction.detail}</p>}
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
             onClick={() => openRestrictionModal(user, 'suspend')}
-            disabled={saving === user.id || isProtectedAdmin || user.role_id === 4}
+            disabled={saving === user.id || isProtectedAdmin || user.role_id === 4 || isDeleting}
             className="inline-flex items-center gap-1.5 rounded-lg border border-amber-200 px-3 py-1.5 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-45 dark:border-amber-900 dark:text-amber-300 dark:hover:bg-amber-950/30"
           >
             <Clock size={13} />
@@ -405,7 +477,7 @@ const AdminPage = () => {
           <button
             type="button"
             onClick={() => openRestrictionModal(user, 'ban')}
-            disabled={saving === user.id || isProtectedAdmin || user.role_id === 4}
+            disabled={saving === user.id || isProtectedAdmin || user.role_id === 4 || isDeleting}
             className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-700 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-45 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/30"
           >
             <Ban size={13} />
@@ -415,13 +487,22 @@ const AdminPage = () => {
             <button
               type="button"
               onClick={() => handleLiftRestriction(user)}
-              disabled={saving === user.id}
+              disabled={saving === user.id || isDeleting}
               className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 px-3 py-1.5 text-xs font-medium text-emerald-700 transition-colors hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-45 dark:border-emerald-900 dark:text-emerald-300 dark:hover:bg-emerald-950/30"
             >
               <RotateCcw size={13} />
               Levantar
             </button>
           )}
+          <button
+            type="button"
+            onClick={() => openDeletionModal(user)}
+            disabled={saving === user.id || !canRequestDeletion(user)}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-700 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-45 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/30"
+          >
+            <Trash2 size={13} />
+            {deletionFailed ? 'Reintentar' : 'Borrar'}
+          </button>
           {isProtectedAdmin && <span className="self-center text-xs text-slate-400">Admin protegido</span>}
           {saving === user.id && <Spinner size="sm" />}
         </div>
@@ -579,7 +660,7 @@ const AdminPage = () => {
                     <select
                       value={user.role_id}
                       onChange={(event) => handleRoleChange(user, Number(event.target.value))}
-                      disabled={saving === user.id}
+                      disabled={saving === user.id || user.deletion_status === 'deletion_requested' || user.deletion_status === 'deleting'}
                       className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300"
                     >
                       {ROLES.map((role) => (
@@ -623,7 +704,7 @@ const AdminPage = () => {
                       <select
                         value={user.role_id}
                         onChange={(event) => handleRoleChange(user, Number(event.target.value))}
-                        disabled={saving === user.id}
+                        disabled={saving === user.id || user.deletion_status === 'deletion_requested' || user.deletion_status === 'deleting'}
                         className="rounded-lg border border-slate-200 px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300"
                       >
                         {ROLES.map((role) => (
@@ -796,6 +877,68 @@ const AdminPage = () => {
               >
                 {modalSaving && <Spinner size="sm" />}
                 {restrictionModal.action === 'ban' ? 'Banear usuario' : 'Suspender usuario'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deletionModal && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/50 px-0 sm:items-center sm:px-4">
+          <div className="w-full rounded-t-2xl border border-slate-200 bg-white p-5 shadow-xl dark:border-slate-700 dark:bg-slate-800 sm:max-w-lg sm:rounded-2xl">
+            <div className="mb-4 flex items-start justify-between gap-4">
+              <div>
+                <h3 className="text-base font-semibold text-slate-800 dark:text-slate-100">Borrar usuario</h3>
+                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                  {deletionModal.username}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={closeDeletionModal}
+                disabled={deletionSaving}
+                className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 disabled:opacity-50 dark:hover:bg-slate-700 dark:hover:text-slate-200"
+                aria-label="Cerrar"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-300">
+              El contenido publicado se conservara y aparecera como <strong>Deleted User</strong>. El perfil y acceso de Auth se borraran en segundo plano.
+            </p>
+
+            <label className="mt-4 block text-sm font-medium text-slate-700 dark:text-slate-300">
+              Motivo interno
+              <textarea
+                value={deletionReason}
+                onChange={(event) => setDeletionReason(event.target.value)}
+                rows={3}
+                maxLength={1000}
+                placeholder="Opcional. Queda registrado en auditoria."
+                className="mt-2 w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100"
+              />
+            </label>
+
+            {deletionError && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950/30 dark:text-red-300">{deletionError}</p>}
+
+            <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={closeDeletionModal}
+                disabled={deletionSaving}
+                className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleRequestDeletion}
+                disabled={deletionSaving}
+                className="flex items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-50"
+              >
+                {deletionSaving ? <Spinner size="sm" /> : <Trash2 size={14} />}
+                Borrar en segundo plano
               </button>
             </div>
           </div>
