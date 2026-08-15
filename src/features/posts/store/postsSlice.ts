@@ -7,6 +7,7 @@ import { ensureUserCanCreateContent } from '../../../services/userRestrictions'
 import { requireSyncedAuthUser } from '../../../services/authGuard'
 import { type RootState } from '../../../store'
 import { logAdminAction } from '../../../services/adminAudit'
+import { getDisplayUsername } from '../../../services/deletedUser'
 
 const REPLIES_PAGE_SIZE = 20
 const REPLY_SELECT = '*, author:profiles(id, username, avatar_url, role), reactions:reply_reactions(id, user_id, emoji)'
@@ -215,7 +216,7 @@ export const deleteReply = createAsyncThunk(
           action: 'reply.delete',
           targetType: 'reply',
           targetId: replyId,
-          targetLabel: reply.author?.username ? `Respuesta de ${reply.author.username}` : undefined,
+          targetLabel: reply.author ? `Respuesta de ${getDisplayUsername(reply.author)}` : undefined,
           metadata: { topicId },
         })
       }

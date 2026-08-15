@@ -4,6 +4,7 @@ import { type Profile, type Report, type ReportReason, type ReportStatus, type R
 import { can, canModerateTarget } from '../../../services/permissions'
 import { type RootState } from '../../../store'
 import { logAdminAction } from '../../../services/adminAudit'
+import { getDisplayUsername } from '../../../services/deletedUser'
 import {
   buildModerationReasonText,
   moderationDeletedReplyHtml,
@@ -271,7 +272,7 @@ export const resolveReportWithAction = createAsyncThunk(
         action: 'report.resolve',
         targetType: 'report',
         targetId: report.id,
-        targetLabel: report.reported_user?.username ?? report.target_type,
+        targetLabel: report.reported_user ? getDisplayUsername(report.reported_user) : report.target_type,
         metadata: {
           penalty,
           reasonId,
@@ -286,7 +287,7 @@ export const resolveReportWithAction = createAsyncThunk(
           action: 'reply.moderation_delete',
           targetType: 'reply',
           targetId: report.target_reply_id,
-          targetLabel: report.reported_user?.username ? `Respuesta de ${report.reported_user.username}` : null,
+          targetLabel: report.reported_user ? `Respuesta de ${getDisplayUsername(report.reported_user)}` : null,
           metadata: { reportId: report.id, reason: reasonText },
         })
       }
@@ -296,7 +297,7 @@ export const resolveReportWithAction = createAsyncThunk(
           action: penalty === 'ban' ? 'user.ban' : 'user.suspend',
           targetType: 'user',
           targetId: report.reported_user_id,
-          targetLabel: report.reported_user?.username,
+          targetLabel: report.reported_user ? getDisplayUsername(report.reported_user) : undefined,
           metadata: {
             reportId: report.id,
             reason: reasonText,

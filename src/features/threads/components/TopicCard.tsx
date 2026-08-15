@@ -16,6 +16,7 @@ import { useRole } from '../../auth/hooks/useRole'
 import { useConfirm } from '../../../hooks/useConfirm'
 import UserLink from '../../../components/shared/UserLink'
 import ReputationBadge from '../../reputation/components/ReputationBadge'
+import { getAvatarInitial, getDisplayUsername } from '../../../services/deletedUser'
 
 interface TopicCardProps {
   topic: Topic
@@ -79,7 +80,7 @@ const TopicCard = ({ topic }: TopicCardProps) => {
           {topic.author?.avatar_url ? (
             <img src={topic.author.avatar_url} alt="" className="w-9 h-9 object-cover" />
           ) : (
-            topic.author?.username?.charAt(0).toUpperCase()
+            getAvatarInitial(topic.author)
           )}
         </div>
 
@@ -160,7 +161,7 @@ const TopicCard = ({ topic }: TopicCardProps) => {
                       {r.author?.avatar_url ? (
                         <img src={r.author.avatar_url} alt="" className="w-full h-full object-cover" />
                       ) : (
-                        r.author?.username?.charAt(0).toUpperCase()
+                        getAvatarInitial(r.author)
                       )}
                     </div>
                   ))}
@@ -177,12 +178,12 @@ const TopicCard = ({ topic }: TopicCardProps) => {
                       {r.author?.avatar_url ? (
                         <img src={r.author.avatar_url} alt="" className="w-full h-full object-cover" />
                       ) : (
-                        r.author?.username?.charAt(0).toUpperCase()
+                        getAvatarInitial(r.author)
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <UserLink profile={r.author} className="text-xs font-medium text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400">
-                        {r.author?.username}{' '}
+                        {getDisplayUsername(r.author)}{' '}
                       </UserLink>
                       <span className="text-xs text-slate-400 dark:text-slate-500">
                         {stripHtml(r.content).slice(0, 80)}{stripHtml(r.content).length > 80 ? '…' : ''}

@@ -12,6 +12,9 @@ export interface Profile {
   moderation_previous_role_id?: number | null
   moderation_updated_by?: string | null
   moderation_updated_at?: string | null
+  deletion_status?: 'active' | 'deletion_requested' | 'deleting' | 'failed'
+  deletion_requested_at?: string | null
+  deletion_requested_by?: string | null
   created_at: string
 }
 export interface Channel {
@@ -46,7 +49,7 @@ export interface Topic {
   channel_id: string
   title: string
   content: string
-  author_id: string
+  author_id: string | null
   stars_count: number
   replies_count: number
   created_at: string
@@ -64,7 +67,7 @@ export interface Reply {
   topic_id: string
   parent_id: string | null
   content: string
-  author_id: string
+  author_id: string | null
   created_at: string
   updated_at: string
   author?: Profile

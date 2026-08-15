@@ -24,6 +24,8 @@ const actionLabel: Record<string, string> = {
   'user.role_change': 'Rol cambiado',
   'user.suspend': 'Usuario suspendido',
   'user.ban': 'Usuario baneado',
+  'user.delete_requested': 'Borrado de usuario solicitado',
+  'user.deleted': 'Usuario borrado',
   'user.restriction_lift': 'Restriccion levantada',
   'settings.update': 'Configuracion actualizada',
   'forum.lock': 'Foro bloqueado',
